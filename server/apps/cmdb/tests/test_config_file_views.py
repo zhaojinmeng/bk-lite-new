@@ -140,6 +140,67 @@ def test_diff_no_content(superuser, version):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+@pytest.mark.django_db
+def test_diff_rejects_cross_instance_version_2(superuser, monkeypatch):
+    v1 = ConfigFileVersion.objects.create(
+        instance_id="5",
+        model_id="host",
+        version="v1",
+        file_path="/etc/app.conf",
+        file_name="app.conf",
+        status="success",
+        content="v1.conf",
+    )
+    v2 = ConfigFileVersion.objects.create(
+        instance_id="6",
+        model_id="host",
+        version="v2",
+        file_path="/etc/app.conf",
+        file_name="app.conf",
+        status="success",
+        content="v2.conf",
+    )
+    read_calls = []
+    monkeypatch.setattr(ConfigFileVersion, "read_content", lambda self: read_calls.append(self.id) or f"content-{self.id}")
+
+    response = ConfigFileVersionViewSet.as_view({"get": "diff"})(
+        _req("get", superuser, query=f"version_id_1={v1.id}&version_id_2={v2.id}")
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert read_calls == []
+
+
+@pytest.mark.django_db
+def test_diff_same_instance_success(superuser, monkeypatch):
+    v1 = ConfigFileVersion.objects.create(
+        instance_id="5",
+        model_id="host",
+        version="v1",
+        file_path="/etc/app.conf",
+        file_name="app.conf",
+        status="success",
+        content="v1.conf",
+    )
+    v2 = ConfigFileVersion.objects.create(
+        instance_id="5",
+        model_id="host",
+        version="v2",
+        file_path="/etc/app.conf",
+        file_name="app.conf",
+        status="success",
+        content="v2.conf",
+    )
+    monkeypatch.setattr(ConfigFileVersion, "read_content", lambda self: f"content-{self.version}")
+
+    response = ConfigFileVersionViewSet.as_view({"get": "diff"})(
+        _req("get", superuser, query=f"version_id_1={v1.id}&version_id_2={v2.id}")
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert _body(response)["data"]["version_2"] == "v2"
+
+
 # --------------------------------------------------------------------------
 # file_list
 # --------------------------------------------------------------------------

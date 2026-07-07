@@ -6,6 +6,7 @@
 import datetime
 
 import pytest
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.alerts.constants.constants import AlertStatus, LevelType
@@ -194,6 +195,42 @@ def test_authorized_queryset_uses_alert_permission_rules(monkeypatch):
     assert set(qs.values_list("id", flat=True)) == {team_alert.id, instance_alert.id}
     assert hidden_alert.id not in set(qs.values_list("id", flat=True))
     assert calls == [("alice", "tenant.example", 1, "alerts", "alert", True)]
+
+
+def test_authorized_queryset_instance_only_does_not_include_current_team(monkeypatch):
+    monkeypatch.setattr(
+        N,
+        "Alert",
+        type(
+            "FakeAlert",
+            (),
+            {
+                "objects": type(
+                    "FakeAlertObjects",
+                    (),
+                    {"filter": staticmethod(lambda query: query), "none": staticmethod(lambda: "none")},
+                )()
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        N,
+        "get_permission_rules",
+        lambda *args, **kwargs: {"team": [], "instance": [{"id": 42, "permission": ["View"]}]},
+    )
+
+    query, err = N._get_authorized_alert_queryset(
+        {
+            "team": 1,
+            "user": "alice",
+            "domain": "tenant.example",
+            "is_superuser": False,
+            "permission": {"alarm": ["Alarms-View"]},
+        }
+    )
+
+    assert err is None
+    assert query == Q(id__in=[42])
 
 
 @pytest.mark.django_db

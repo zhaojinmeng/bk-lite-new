@@ -115,7 +115,7 @@ def _get_authorized_alert_queryset(user_info: dict):
     if not instance_ids and not permission_team_ids:
         return Alert.objects.none(), None
 
-    query = team_query
+    query = Q()
     if instance_ids:
         query |= Q(id__in=instance_ids)
 
