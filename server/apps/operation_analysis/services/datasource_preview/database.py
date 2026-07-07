@@ -5,6 +5,7 @@ from urllib.parse import quote_plus
 from sqlalchemy import create_engine, text
 
 from apps.operation_analysis.services.datasource_preview.base import BaseConnectorExecutor, ConnectorError, PreviewResult
+from apps.operation_analysis.services.datasource_preview.network_guard import validate_preview_host
 from apps.operation_analysis.services.datasource_preview.schema import infer_fields
 
 SELECT_RE = re.compile(r"^\s*select\b", re.IGNORECASE)
@@ -57,6 +58,16 @@ def normalize_db_rows(rows: list[Any]) -> list[dict[str, Any]]:
     return normalized
 
 
+def redact_connection_error(exc: Exception, connection_config: dict[str, Any]) -> str:
+    message = str(exc)
+    password = connection_config.get("password")
+    if password:
+        password_text = str(password)
+        message = message.replace(password_text, "******")
+        message = message.replace(quote_plus(password_text), "******")
+    return message
+
+
 def build_database_url(source_type: str, connection_config: dict[str, Any]) -> str:
     username = connection_config.get("username")
     password = connection_config.get("password")
@@ -66,14 +77,15 @@ def build_database_url(source_type: str, connection_config: dict[str, Any]) -> s
     if not all([username, password, host, port, database]):
         raise ConnectorError("数据库连接信息不完整", code="db_config_incomplete", status_code=400)
 
+    safe_host = validate_preview_host(host, port)
     encoded_username = quote_plus(str(username))
     encoded_password = quote_plus(str(password))
     encoded_database = quote_plus(str(database))
 
     if source_type == "mysql":
-        return f"mysql+pymysql://{encoded_username}:{encoded_password}@{host}:{port}/{encoded_database}?charset=utf8mb4"
+        return f"mysql+pymysql://{encoded_username}:{encoded_password}@{safe_host}:{port}/{encoded_database}?charset=utf8mb4"
     if source_type == "postgresql":
-        return f"postgresql+psycopg2://{encoded_username}:{encoded_password}@{host}:{port}/{encoded_database}"
+        return f"postgresql+psycopg2://{encoded_username}:{encoded_password}@{safe_host}:{port}/{encoded_database}"
     raise ConnectorError("数据库类型不支持", code="db_type_not_supported", status_code=400)
 
 
@@ -84,9 +96,15 @@ class DatabaseConnectorExecutor(BaseConnectorExecutor):
 
     def test_connection(self, connection_config: dict[str, Any]) -> None:
         database_url = build_database_url(self.source_type, connection_config)
-        engine = self.engine_factory(database_url, pool_pre_ping=True, connect_args={"connect_timeout": 5})
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        try:
+            engine = self.engine_factory(database_url, pool_pre_ping=True, connect_args={"connect_timeout": 5})
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        except ConnectorError:
+            raise
+        except Exception as exc:
+            message = redact_connection_error(exc, connection_config)
+            raise ConnectorError(f"数据库连接失败: {message}", code="db_connection_failed", status_code=502)
 
     def preview(
         self,
@@ -105,7 +123,8 @@ class DatabaseConnectorExecutor(BaseConnectorExecutor):
         except ConnectorError:
             raise
         except Exception as exc:
-            raise ConnectorError(f"数据库预览失败: {exc}", code="db_preview_failed", status_code=502)
+            message = redact_connection_error(exc, connection_config)
+            raise ConnectorError(f"数据库预览失败: {message}", code="db_preview_failed", status_code=502)
 
         items = normalize_db_rows(rows)
         return PreviewResult(items=items, count=len(items), fields=infer_fields(items))
