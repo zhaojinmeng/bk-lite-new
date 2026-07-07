@@ -51,8 +51,12 @@ def _load_collection_service():
     # 其余依赖占位
     _install_stub("core.yaml_reader", yaml_reader=object())
     _install_stub("core.plugin_executor", PluginExecutor=object)
-    _install_stub("plugins.base_utils", convert_to_prometheus_format=lambda x: x)
-    _install_stub("plugins", base_utils=sys.modules["plugins.base_utils"])
+    base_utils_stub = _install_stub("plugins.base_utils", convert_to_prometheus_format=lambda x: x)
+    try:
+        import plugins as plugins_pkg
+    except ImportError:
+        plugins_pkg = _install_stub("plugins")
+    setattr(plugins_pkg, "base_utils", base_utils_stub)
 
     path = Path(__file__).parent.parent / "service" / "collection_service.py"
     spec = importlib.util.spec_from_file_location("service.collection_service", path)
@@ -188,3 +192,58 @@ async def test_set_node_info_sends_ip_filter_and_page_size_one():
         query = captured[0]["args"][0]
         assert query.get("ip") == "192.168.1.100", f"org_id={org_id}: 应携带 ip 过滤"
         assert query.get("page_size") == 1, f"org_id={org_id}: page_size 应为 1"
+
+
+@pytest.mark.asyncio
+async def test_collect_logs_summary_without_sensitive_result_values():
+    svc = _make_service({
+        "host": "10.0.0.8",
+        "model_id": "config_file",
+        "plugin_name": "config_file_info",
+        "executor_type": "protocol",
+    })
+    svc.plugin_name = "config_file_info"
+    svc.model_id = "config_file"
+    svc.yaml_reader = types.SimpleNamespace(
+        get_executor_config_with_resolution=lambda *args, **kwargs: types.SimpleNamespace(
+            executor_config=types.SimpleNamespace(is_job=False),
+            plugin_resolution=types.SimpleNamespace(
+                source="oss",
+                plugin_path="plugins/inputs/config_file/plugin.yml",
+                has_oss_fallback=False,
+            ),
+            fallback_executor_config=None,
+        )
+    )
+
+    class FakeExecutor:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def execute(self):
+            return {
+                "success": True,
+                "result": {
+                    "config_file": [
+                        {
+                            "status": "success",
+                            "password": "plain-password",
+                            "token": "secret-token",
+                            "content_base64": "c2Vuc2l0aXZlLWNvbmZpZw==",
+                        }
+                    ]
+                },
+            }
+
+    messages = []
+    _mod.PluginExecutor = FakeExecutor
+    _mod.logger.info = lambda message: messages.append(str(message))
+
+    await svc.collect()
+
+    log_text = "\n".join(messages)
+    assert "plain-password" not in log_text
+    assert "secret-token" not in log_text
+    assert "c2Vuc2l0aXZlLWNvbmZpZw==" not in log_text
+    assert "Raw collection result" not in log_text
+    assert "success" in log_text

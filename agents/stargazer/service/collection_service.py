@@ -50,6 +50,28 @@ class CollectionService:
             return value.strip().lower() in {"1", "true", "yes", "on"}
         return bool(value)
 
+    @staticmethod
+    def _summarize_collection_result(result: Any) -> Dict[str, Any]:
+        if not isinstance(result, dict):
+            return {"type": type(result).__name__}
+
+        result_data = result.get("result")
+        summary: Dict[str, Any] = {
+            "success": result.get("success"),
+            "result_type": type(result_data).__name__,
+        }
+        if "error" in result:
+            summary["error_type"] = type(result.get("error")).__name__
+            summary["error_length"] = len(str(result.get("error") or ""))
+        if isinstance(result_data, dict):
+            summary["result_keys"] = sorted(str(key) for key in result_data.keys())
+            summary["result_size"] = len(result_data)
+        elif isinstance(result_data, list):
+            summary["result_size"] = len(result_data)
+        elif result_data is not None:
+            summary["result_length"] = len(str(result_data))
+        return summary
+
     def _is_config_file_callback(self) -> bool:
         return (
             str(self.params.get("callback_subject") or "") == "receive_config_file_result"
@@ -138,7 +160,11 @@ class CollectionService:
                 strict_enterprise=strict_enterprise,
             )
             result = await executor.execute()
-            logger.info("Raw collection result: {}".format(result))
+            logger.info(
+                "Collection result summary: {}".format(
+                    self._summarize_collection_result(result)
+                )
+            )
 
             if self.params.get("callback_subject"):
                 logger.info("✅ Collection completed successfully (callback mode)")

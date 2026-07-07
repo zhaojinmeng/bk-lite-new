@@ -1,9 +1,10 @@
 # -- coding: utf-8 --
 """IP 发现 collector：TCP 判活、ICMP 判活、并发聚合、best-effort MAC。规格 §13.2/§13.3。"""
 import asyncio
+import importlib
 import pytest
 from unittest.mock import patch
-from plugins.inputs.ip_discovery.ip_discovery_scanner import IPDiscoveryScanner
+from plugins.inputs.ip.ip_discovery_scanner import IPDiscoveryScanner
 
 pytestmark = pytest.mark.unit
 
@@ -89,12 +90,48 @@ class TestScanner:
             }
         ]
 
+    def test_拒绝超过上限的显式targets(self):
+        with pytest.raises(ValueError, match="目标数量"):
+            IPDiscoveryScanner({
+                "model_id": "ip",
+                "scan_method": "icmp",
+                "targets": [f"10.0.{idx // 256}.{idx % 256}" for idx in range(1025)],
+            })
+
+    def test_拒绝超过上限的cidr网段(self):
+        with pytest.raises(ValueError, match="目标数量"):
+            IPDiscoveryScanner({
+                "model_id": "ip",
+                "scan_method": "icmp",
+                "subnets": [{"subnet_id": 101, "cidr": "10.10.0.0/16"}],
+            })
+
+    def test_非法timeout回退到默认值(self):
+        scanner = IPDiscoveryScanner({
+            "model_id": "ip",
+            "scan_method": "icmp",
+            "targets": ["10.0.1.10"],
+            "timeout": "not-a-number",
+        })
+
+        assert scanner.timeout == 5
+
+    def test_拒绝超过上限的端口列表(self):
+        with pytest.raises(ValueError, match="端口数量"):
+            IPDiscoveryScanner({
+                "model_id": "ip",
+                "scan_method": "tcp",
+                "targets": ["10.0.1.10"],
+                "ports": list(range(1, 65)),
+            })
+
 
 def test_plugin_yml_loads_and_points_to_scanner():
     import os, yaml
-    path = os.path.join(os.path.dirname(__file__), "..", "plugins", "inputs", "ip_discovery", "plugin.yml")
+    path = os.path.join(os.path.dirname(__file__), "..", "plugins", "inputs", "ip", "plugin.yml")
     cfg = yaml.safe_load(open(os.path.abspath(path), encoding="utf-8"))
     assert cfg["metadata"]["model_id"] == "ip"
     proto = cfg["executors"]["protocol"]
     assert proto["collector"]["class"] == "IPDiscoveryScanner"
-    assert proto["collector"]["module"].endswith("ip_discovery_scanner")
+    module = importlib.import_module(proto["collector"]["module"])
+    assert getattr(module, proto["collector"]["class"]) is IPDiscoveryScanner

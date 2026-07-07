@@ -1,6 +1,14 @@
 DANGEROUS_EXACT_COMMANDS = {"conf t", "write erase"}
 DANGEROUS_COMMAND_PREFIXES = {
     "configure",
+    "request",
+    "do",
+    "shell",
+    "ssh",
+    "telnet",
+    "python",
+    "lua",
+    "debug",
     "reload",
     "reboot",
     "reset",

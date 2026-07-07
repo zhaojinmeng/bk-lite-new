@@ -5,11 +5,36 @@ import pytest
 from plugins.inputs.network_config_file.network_config_file_info import NetworkConfigFileInfo, validate_safe_command
 
 
-def test_validate_safe_command_allows_display_saved_configuration():
-    assert validate_safe_command("display saved-configuration") == "display saved-configuration"
+@pytest.mark.parametrize(
+    "command",
+    [
+        "show running-config",
+        "display current-configuration",
+        "display saved-configuration",
+        "get system status",
+    ],
+)
+def test_validate_safe_command_allows_read_only_commands(command):
+    assert validate_safe_command(command) == command
 
 
-@pytest.mark.parametrize("command", ["reload", "configure terminal", "write erase", "delete flash:/x"])
+@pytest.mark.parametrize(
+    "command",
+    [
+        "request shell",
+        "do shell",
+        "ssh 10.0.0.2",
+        "telnet 10.0.0.2",
+        "python",
+        "lua",
+        "debug ip packet",
+        "copy running-config startup-config",
+        "delete flash:/x",
+        "reload",
+        "configure terminal",
+        "write erase",
+    ],
+)
 def test_validate_safe_command_rejects_dangerous_commands(command):
     with pytest.raises(ValueError, match="高危"):
         validate_safe_command(command)
