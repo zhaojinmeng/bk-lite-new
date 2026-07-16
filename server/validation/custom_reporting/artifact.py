@@ -13,7 +13,13 @@ class ArtifactEntry:
 
 
 def build_manifest(root: Path) -> list[ArtifactEntry]:
-    files = sorted(path for path in root.rglob("*") if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc")
+    if root.is_symlink():
+        raise ValueError(f"制品目录不允许符号链接: {root}")
+    paths = sorted(root.rglob("*"))
+    for path in paths:
+        if path.is_symlink():
+            raise ValueError(f"制品目录不允许符号链接: {path.relative_to(root)}")
+    files = [path for path in paths if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"]
     return [
         ArtifactEntry(
             str(path.relative_to(root)),
@@ -57,14 +63,27 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _is_within(path: Path, directory: Path) -> bool:
+    return path == directory or path.is_relative_to(directory)
+
+
+def _validate_paths(source: Path, destination: Path, manifest: Path) -> None:
+    if _is_within(source, destination) or _is_within(destination, source):
+        raise SystemExit("overlay 来源目录与目标目录不能重叠")
+    if _is_within(manifest, source) or _is_within(manifest, destination):
+        raise SystemExit("overlay 清单文件不能位于来源目录或目标目录内")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
+    if args.source.is_symlink() or args.destination.is_symlink():
+        raise SystemExit("overlay 来源目录或目标目录不能是符号链接")
     source = args.source.resolve()
     destination = args.destination.resolve()
+    manifest = args.manifest.resolve()
     if not source.is_dir():
         raise SystemExit(f"overlay 来源目录不存在: {source}")
-    if source == destination:
-        raise SystemExit("overlay 来源与目标不能相同")
+    _validate_paths(source, destination, manifest)
 
     source_entries = build_manifest(source)
     _copy_manifest_files(source, destination, source_entries)
@@ -72,7 +91,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if destination_entries != source_entries:
         raise SystemExit("overlay 复制后逐文件 SHA-256 不一致")
 
-    _write_manifest(args.manifest, source_entries)
+    _write_manifest(manifest, source_entries)
     source_digest = aggregate_digest(source_entries)
     destination_digest = aggregate_digest(destination_entries)
     print(f"source aggregate sha256: {source_digest}")
