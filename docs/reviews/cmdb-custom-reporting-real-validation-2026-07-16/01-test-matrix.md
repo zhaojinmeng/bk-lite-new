@@ -162,7 +162,39 @@ URL/请求环境初始化阶段失败，`apps/cmdb/views/custom_reporting.py` �
 
 - 环境问题：原始 overlay 命令缺少 `ENABLE_CELERY` 和测试 `SECRET_KEY`，记录为
   projectmem #0288，并由最小环境复验确认。
-- 测试缺陷：本任务未确认。
-- 产品缺陷：本任务未确认；本任务不修改生产逻辑。
+- 测试缺陷：Task 3 未确认。
+- 产品缺陷：Task 3 未确认；Task 3 未修改生产逻辑。
 - 所有写入仅为 SQLite 内存测试库、coverage 运行制品和本审查文档；没有生产写入、
   外部 HTTP 写入、真实凭据轮换或 xfail 掩盖。
+
+## Task 4：控制面授权与 Token 能力边界
+
+执行环境沿用已确认合同：SQLite 内存库、`--nomigrations`、测试 MinIO，显式
+`ENABLE_CELERY=true`、`SECRET_KEY=test-secret-key`，应用集为
+`system_mgmt,node_mgmt,cmdb,cmdb_enterprise`。工厂只创建带 `crval_` 前缀的唯一
+任务、模型、凭据和原始 Token，没有读取、轮换或吊销任何既有资源。
+
+选择器：
+
+```bash
+/Users/windyzhao/Documents/Canway/weops_X/cmdb/bk-lite/server/.venv/bin/pytest \
+  -q -o addopts='' --nomigrations \
+  validation/custom_reporting/tests/test_runtime_contracts.py
+```
+
+| 边界 | 测试 | 首轮 RED / 正向结果 | 最终状态 | Finding |
+| --- | --- | --- | --- | --- |
+| create 组织授权 | `test_create_rejects_team_outside_requester_scope` | 期望 `(403, 0)`，实际 `(200, 1)` | strict xfail | CRV-F01 |
+| update 组织授权 | `test_update_rejects_moving_task_outside_requester_scope` | 期望 `(403, [1])`，实际 `(200, [2])` | strict xfail | CRV-F01 |
+| list 功能权限 | `test_list_allows_*` / `test_list_rejects_*` | 正向 200；空权限负向实际 200 | 1 passed / 1 strict xfail | CRV-F02 |
+| create 功能权限 | `test_create_allows_*` / `test_create_rejects_*` | 正向 200；仅 View 仍 200 且落库 | 1 passed / 1 strict xfail | CRV-F02 |
+| update 功能权限 | `test_update_allows_*` / `test_update_rejects_*` | 正向 200；仅 View 仍 200 且改名 | 1 passed / 1 strict xfail | CRV-F02 |
+| 合法 Token | `test_factory_token_is_accepted_by_ingest_capability` | 上报能力接受并更新任务时间 | passed | — |
+| Token 轮换 | `test_rotating_factory_token_invalidates_old_and_accepts_new` | 旧 Token 拒绝，新 Token 接受 | passed | — |
+| Token 吊销 | `test_revoking_factory_token_blocks_ingest_capability` | 吊销后拒绝 | passed | — |
+
+未标记 xfail 的首轮结果为 `5 failed, 6 passed in 1.57s`。完整 RED 断言、HTTP
+状态和副作用证据保存在 namespaced
+`.superpowers/sdd/cmdb-custom-reporting-real-validation/task-4-report.md` 的“真实 RED”
+章节。确认缺陷后只给对应测试增加 `xfail(strict=True, reason="CRV-Fxx")`，最终聚焦
+结果为 `6 passed, 5 xfailed in 1.76s`，没有把环境失败标成 xfail。
