@@ -254,3 +254,44 @@ CRV-F05 经真实 merge 捕获 `_id` 图写载荷，同时 caller 时间戳覆�
 最终聚焦为 `1 passed, 13 deselected, 7 xfailed in 1.04s`，整文件为
 `9 passed, 12 xfailed in 3.36s`。因此 500、环境错误及第三种产品行为仍会
 普通失败；产品修复后则因 strict XPASS 使门禁转红。
+
+## Task 6：owner、部分失败、关系与清理一致性
+
+执行环境继续显式固定 SQLite 内存库、`--nomigrations`、测试 MinIO、非敏感
+`SECRET_KEY=test-secret-key`、`ENABLE_CELERY=true` 与四应用集。测试只写内存数据库，
+图查询、图写和故障窗口均使用有界记录器或单次故障注入；没有执行真实图删除、外部请求
+或无界压力测试。
+
+选择器：
+
+```bash
+MINIO_ENDPOINT=localhost:9000 \
+MINIO_ACCESS_KEY=test \
+MINIO_SECRET_KEY=test \
+MINIO_USE_HTTPS=false \
+SECRET_KEY=test-secret-key \
+DB_ENGINE=sqlite \
+DB_NAME=:memory: \
+ENABLE_CELERY=true \
+INSTALL_APPS=system_mgmt,node_mgmt,cmdb,cmdb_enterprise \
+/Users/windyzhao/Documents/Canway/weops_X/cmdb/bk-lite/server/.venv/bin/pytest \
+  -q -o addopts='' --nomigrations \
+  validation/custom_reporting/tests/test_failure_boundaries.py
+```
+
+| 边界 | 测试 | 首轮 RED / 正向结果 | 最终状态 | Finding |
+| --- | --- | --- | --- | --- |
+| partial merge | `test_partial_merge_marks_batch_failed_and_skips_snapshot` | `errors=1` 未拒绝，Batch=`success`，snapshot 调用 1 次 | strict xfail | CRV-F07 |
+| owner/team old_data | `test_merge_query_is_scoped_by_owner_and_team` | GraphClient filters 仅含 `model_id`，缺 `collect_task` 与 `organization` | strict xfail | CRV-F08 |
+| 直接关系双端组织 | `test_direct_relation_rejects_endpoint_outside_task_team_before_side_effects` | source/target 任一声明组织越界均未拒绝，resolve=1、edge=1 | 2 strict xfailed | CRV-F09；source model 错配另见 CRV-F06 |
+| pending/backfill 组织 | `test_pending_backfill_rejects_endpoint_outside_task_team` | 未拒绝，resolve=1、edge=1，pending 被删除 | strict xfail | CRV-F09 |
+| 审核图成功/DB 失败 | `test_review_approval_does_not_delete_without_durable_approved_state` | 已删除 `[10,11]`，审核仍为 `pending` | strict xfail | CRV-F10 |
+| 审核图失败 | `test_review_graph_failure_keeps_review_pending` | 图删除异常后审核仍 `pending` 且无 reviewed_at | passed | — |
+| 阈值与 none | `test_snapshot_threshold_and_none_strategy_keep_safe_positive_branches` | ratio==threshold 直删；大于阈值建审核；none 不调用 snapshot | passed | — |
+
+未标记 xfail 的首轮结果为 `6 failed, 2 passed in 0.35s`。六个失败都仅在观察值
+精确匹配当前坏行为时抛 `KnownProductDefect`；登记 projectmem #0328—#0331 后增加
+`xfail(strict=True, raises=KnownProductDefect, reason="CRV-F07..F10")`，首轮收口为
+`2 passed, 6 xfailed in 0.40s`。因此第三种产品行为、普通断言、DB/setup 或环境异常仍会
+正常失败；生产修复会触发 strict XPASS。`covered_ids` 的安全前提依赖 F08 所要求的
+owner/team old_data 查询边界，当前不得把同模型全量 old_data 视为 snapshot 安全集合。
