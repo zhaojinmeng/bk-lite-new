@@ -53,3 +53,25 @@
   fixture；按 `server/pyproject.toml` 恢复锁定 dev 依赖后解除，projectmem #0275
   已关闭。
 - 格式化与同类型 LIFO 自审问题分别记录并关闭为 projectmem #0276、#0278。
+
+## 复审安全修复（2026-07-16）
+
+复审确认原实现可通过空 `run_id`、构造器 `_resources` 注入和非法 identifier
+绕过清理边界，已按 TDD 修复：
+
+- `run_id` 集中校验 `crval_YYYYMMDDTHHMMSSZ_nonce`，验证真实 UTC 时间且 nonce
+  仅允许字母数字、至少 6 位；`create`、直接构造与 JSON 恢复复用同一入口。
+- 默认 nonce 提升为 `secrets.token_hex(16)`（128-bit），测试验证调用参数与格式。
+- `_resources` 改为 `init=False`，构造器不能注入；JSON 恢复只能逐项通过
+  `record()`。
+- identifier 运行时只接受精确 `int` 或 `str`，拒绝 `bool`、容器、浮点和空类型；
+  名称型资源只接受字符串。
+- 名称型资源必须等于 `run_id` 或以 `run_id + "_"` 开头，拒绝前缀夹带与无
+  下划线后缀。
+- JSON 恢复先验证顶层与资源结构，再执行 run_id、资源类型、identifier 和名称
+  边界校验。
+
+TDD 证据：首轮安全测试为 `31 failed, 21 passed`；补充恶意 JSON 结构测试为
+`5 failed`；最小实现后最终 `57 passed in 0.19s`。`ledger.py` 70 条语句零遗漏，
+覆盖率 `100%`；black、isort、flake8 全部通过。缺陷与格式门禁分别记录并关闭为
+projectmem #0283、#0284。
