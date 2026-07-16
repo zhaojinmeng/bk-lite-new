@@ -41,13 +41,13 @@ class ResourceRef:
     identifier: ResourceIdentifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ValidationLedger:
     run_id: str
     _resources: list[ResourceRef] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
-        self.run_id = _validate_run_id(self.run_id)
+        _validate_run_id(self.run_id)
 
     @classmethod
     def create(cls, now: str | None = None, nonce: str | None = None) -> "ValidationLedger":

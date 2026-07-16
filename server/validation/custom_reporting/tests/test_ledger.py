@@ -1,5 +1,6 @@
 import json
 import re
+from dataclasses import FrozenInstanceError
 
 import pytest
 
@@ -47,6 +48,16 @@ def test_constructor_rejects_invalid_run_id(run_id):
 def test_create_reuses_strict_run_id_validation():
     with pytest.raises(ValueError, match="run_id 格式无效"):
         ValidationLedger.create(now="invalid-time", nonce="a1b2c3")
+
+
+def test_run_id_cannot_be_reassigned_after_construction():
+    ledger = ValidationLedger.create(now="20260716T071500Z", nonce="a1b2c3")
+
+    with pytest.raises(FrozenInstanceError):
+        ledger.run_id = "crval_20260716T071500Z_production"
+
+    ledger.record("instance", 101)
+    assert ledger.cleanup_plan() == [ResourceRef("instance", 101)]
 
 
 @pytest.mark.parametrize(

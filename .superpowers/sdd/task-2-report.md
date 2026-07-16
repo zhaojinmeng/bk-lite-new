@@ -75,3 +75,12 @@ TDD 证据：首轮安全测试为 `31 failed, 21 passed`；补充恶意 JSON �
 `5 failed`；最小实现后最终 `57 passed in 0.19s`。`ledger.py` 70 条语句零遗漏，
 覆盖率 `100%`；black、isort、flake8 全部通过。缺陷与格式门禁分别记录并关闭为
 projectmem #0283、#0284。
+
+## 第二轮复审修复（2026-07-16）
+
+复审确认严格校验后的 `run_id` 仍可在构造后公开改写。新增测试先得到真实 RED：
+直接赋值未抛 `FrozenInstanceError`。最小修复将 `ValidationLedger` 改为 frozen
+dataclass，`__post_init__` 只验证身份；内部资源列表仍可由 `record()` 安全追加。
+
+最终验证：`58 passed in 0.20s`，`ledger.py` 覆盖率 `100%`；black、isort、
+flake8 全部通过。projectmem #0287 已关闭。
