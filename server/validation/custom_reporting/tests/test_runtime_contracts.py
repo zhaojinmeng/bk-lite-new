@@ -1,3 +1,4 @@
+from copy import deepcopy
 from unittest.mock import Mock, patch
 
 import pytest
@@ -247,15 +248,12 @@ def _successful_relations(*args, **kwargs):
 )
 def test_empty_or_invalid_identity_keys_rejected_before_graph_write(monkeypatch, identity_keys):
     token_task = create_token_task(identity_keys=identity_keys)
-    graph_write = Mock(return_value={"success": [], "failed": []})
+    add_write = Mock(return_value={"success": [], "failed": []})
+    update_write = Mock(return_value={"success": [], "failed": []})
 
     monkeypatch.setattr(ModelManage, "search_model_attr", lambda model_id: [])
-    monkeypatch.setattr(merge_service.Management, "add_inst", graph_write)
-    monkeypatch.setattr(
-        merge_service.Management,
-        "update_inst",
-        Mock(return_value={"success": [], "failed": []}),
-    )
+    monkeypatch.setattr(merge_service.Management, "add_inst", add_write)
+    monkeypatch.setattr(merge_service.Management, "update_inst", update_write)
 
     class EmptyGraph:
         def __enter__(self):
@@ -282,9 +280,9 @@ def test_empty_or_invalid_identity_keys_rejected_before_graph_write(monkeypatch,
         rejected = True
 
     _assert_contract_or_known_defect(
-        actual=(rejected, graph_write.call_count),
-        expected=(True, 0),
-        known_bad=(False, 1),
+        actual=(rejected, add_write.call_count, update_write.call_count),
+        expected=(True, 0, 0),
+        known_bad=(False, 1, 1),
         finding="CRV-F03",
     )
 
@@ -319,16 +317,19 @@ def test_standard_schema_rejects_unknown_and_reserved_fields_before_merge(
 @pytest.mark.django_db
 def test_quick_mode_registers_new_business_field_before_merge(monkeypatch):
     token_task = create_token_task(mode="quick")
-    created_attrs = []
-    merge = Mock(side_effect=_successful_merge)
+    events = []
     monkeypatch.setattr(model_service, "get_declared_attr_ids", lambda model_id: {"inst_name"})
     monkeypatch.setattr(
         ModelManage,
         "create_model_attr",
-        lambda model_id, attr, username="admin": created_attrs.append((model_id, attr, username)),
+        lambda model_id, attr, username="admin": events.append(("register", model_id, attr["attr_id"], username)),
     )
     monkeypatch.setattr(field_service, "record_registrations", Mock())
-    monkeypatch.setattr(ingest_service.merge_service, "merge_instances", merge)
+    monkeypatch.setattr(
+        ingest_service.merge_service,
+        "merge_instances",
+        lambda task, model_id, instances, operator: events.append(("merge", instances)) or _successful_merge(),
+    )
     monkeypatch.setattr(ingest_service.relation_service, "process", _successful_relations)
     instances = [{"inst_name": "a", "crval_owner": "ops"}]
 
@@ -338,33 +339,62 @@ def test_quick_mode_registers_new_business_field_before_merge(monkeypatch):
         operator="crval_validator",
     )
 
-    assert [(model_id, attr["attr_id"], username) for model_id, attr, username in created_attrs] == [
-        (token_task.task.config["model_id"], "crval_owner", "crval_validator")
+    assert events == [
+        (
+            "register",
+            token_task.task.config["model_id"],
+            "crval_owner",
+            "crval_validator",
+        ),
+        ("merge", instances),
     ]
-    assert merge.call_args.args[2] == instances
 
 
 @pytest.mark.django_db
 @pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F05")
-def test_quick_mode_reserved_fields_are_neither_registered_nor_merged(monkeypatch):
+def test_quick_mode_reserved_id_field_is_not_registered_or_written(monkeypatch):
     token_task = create_token_task(mode="quick")
     created_attrs = []
-    merge = Mock(side_effect=_successful_merge)
-    monkeypatch.setattr(model_service, "get_declared_attr_ids", lambda model_id: {"inst_name"})
+    graph_add_payloads = []
+    caller_timestamp = "caller-controlled"
+    attrs = [{"attr_id": "inst_name", "attr_name": "名称", "attr_type": "str", "is_only": True}]
+    monkeypatch.setattr(ModelManage, "search_model_attr", lambda model_id: attrs)
     monkeypatch.setattr(
         ModelManage,
         "create_model_attr",
         lambda model_id, attr, username="admin": created_attrs.append(attr["attr_id"]),
     )
     monkeypatch.setattr(field_service, "record_registrations", Mock())
-    monkeypatch.setattr(ingest_service.merge_service, "merge_instances", merge)
     monkeypatch.setattr(ingest_service.relation_service, "process", _successful_relations)
+
+    class EmptyGraph:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def query_entity(self, *args, **kwargs):
+            return [], 0
+
+    monkeypatch.setattr(merge_service, "GraphClient", EmptyGraph)
+
+    def capture_add(instances):
+        graph_add_payloads.extend(deepcopy(instances))
+        return {"success": [], "failed": []}
+
+    monkeypatch.setattr(merge_service.Management, "add_inst", Mock(side_effect=capture_add))
+    monkeypatch.setattr(
+        merge_service.Management,
+        "update_inst",
+        Mock(return_value={"success": [], "failed": []}),
+    )
     payload_instances = [
         {
             "inst_name": "a",
             "crval_owner": "ops",
             "_id": 9001,
-            "cr_last_reported_at": "caller-controlled",
+            "cr_last_reported_at": caller_timestamp,
         }
     ]
 
@@ -374,11 +404,13 @@ def test_quick_mode_reserved_fields_are_neither_registered_nor_merged(monkeypatc
         operator="crval_validator",
     )
 
-    merged = merge.call_args.args[2]
+    assert len(graph_add_payloads) == 1
+    written = graph_add_payloads[0]
+    assert written["cr_last_reported_at"] != caller_timestamp
     _assert_contract_or_known_defect(
-        actual=(created_attrs, merged),
-        expected=(["crval_owner"], [{"inst_name": "a", "crval_owner": "ops"}]),
-        known_bad=(["crval_owner"], payload_instances),
+        actual=(created_attrs, written.get("_id")),
+        expected=(["crval_owner"], None),
+        known_bad=(["crval_owner"], 9001),
         finding="CRV-F05",
     )
 
@@ -508,7 +540,7 @@ def test_known_product_defect_classifier_and_markers_are_precise():
         test_update_rejects_user_without_model_management_edit_permission,
         test_empty_or_invalid_identity_keys_rejected_before_graph_write,
         test_standard_schema_rejects_unknown_and_reserved_fields_before_merge,
-        test_quick_mode_reserved_fields_are_neither_registered_nor_merged,
+        test_quick_mode_reserved_id_field_is_not_registered_or_written,
         test_relation_endpoint_rejects_source_model_mismatch_without_side_effects,
     )
     for test_case in defect_tests:

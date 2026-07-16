@@ -25,16 +25,28 @@
 5 failed, 1 passed, 13 deselected in 0.34s
 ```
 
-- CRV-F03：空 identity 未拒绝，`Management.add_inst` 调用 1 次；补充非法 identity
-  `[""]` / `["_id"]` 的真实 RED 为 `3 failed, 18 deselected in 0.32s`，观察值相同。
+- CRV-F03：空 identity 未拒绝，`Management.add_inst` 与 `update_inst` 均调用 1 次；
+  补充非法 identity `[""]` / `["_id"]` 的观察值相同。
 - CRV-F04：standard 的未知字段与 `_id` 均未拒绝，原样进入 merge。
-- quick 正向：合法新字段 `crval_owner` 被登记并进入 merge，普通通过。
-- CRV-F05：quick 未登记 `_id`/系统时间戳，但仍将其原样传入 merge。
+- quick 正向：统一事件列表严格证明合法新字段 `crval_owner` 的 register/create 事件先于
+  merge，普通通过。
+- CRV-F05：复审测试执行真实 merge 并捕获 `Management.add_inst` 入参；caller
+  `cr_last_reported_at` 已被服务端覆盖，但 `_id=9001` 仍进入图写载荷。精确
+  `KnownProductDefect` 只匹配该 `_id` 坏行为，不匹配时间戳。
 - CRV-F06：source model 错配未拒绝，process 产生 pending，随后同次 backfill 清掉
   pending 并调用图写 1 次。
 
 首轮曾有两项 quick 测试错误地 patch 函数内 import 的模块属性；修正为直接 patch
 真实 `field_service` 后，错误消失并得到上述纯产品 RED。该装配修正未改变产品期望。
+
+复审加固时再次移除 CRV-F03/F05 marker，真实 RED 为：
+
+```text
+4 failed, 1 passed, 16 deselected in 0.56s
+```
+
+这次 RED 精确证明 identity 的 add/update 双调用和 `_id` 最终图写载荷；quick 字段登记
+顺序与 caller 时间戳被服务端覆盖均为普通正向断言。
 
 ## 安全收口
 
@@ -49,8 +61,8 @@ strict XPASS 并使测试转红。
 
 ## Fresh 验证
 
-- 聚焦选择器：`1 passed, 13 deselected, 7 xfailed in 0.43s`。
-- 整个 `test_runtime_contracts.py`：`9 passed, 12 xfailed in 2.01s`。
+- 聚焦选择器：`1 passed, 13 deselected, 7 xfailed in 1.04s`，包含 CRV-F05。
+- 整个 `test_runtime_contracts.py`：`9 passed, 12 xfailed in 3.36s`。
 - `black --check`：2 files unchanged，退出码 0。
 - `isort --check-only`：退出码 0。
 - `flake8`：0 条告警，退出码 0。

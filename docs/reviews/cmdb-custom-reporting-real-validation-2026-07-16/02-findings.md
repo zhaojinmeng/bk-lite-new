@@ -54,14 +54,14 @@
 - Location：`server/apps/cmdb_enterprise/custom_reporting/services/merge_service.py:59-66,90-99`
 - Trigger：创建 `identity_keys=[]`、`[""]` 或 `["_id"]` 的 standard 任务，并一次上报
   两个不同 `inst_name` 的实例。
-- Evidence：真实 `merge_instances()` 没有抛出身份键异常，且 `Management.add_inst` 被调用
-  1 次；合同要求明确拒绝且图写调用为 0。
+- Evidence：真实 `merge_instances()` 没有抛出身份键异常，且 `Management.add_inst`、
+  `Management.update_inst` 各被调用 1 次；合同要求明确拒绝且两个图写入口调用均为 0。
 - Impact：任务失去稳定实例身份，多个实例可能被错误归类为同一无唯一键批次，产生重复、
   覆盖或不可预测的 merge 结果。
 - Root Cause：`task.config.get("identity_keys") or []` 将显式空列表作为合法配置继续处理，
   `Management` 仍以 `unique_keys=[]` 构造并执行 add/update，没有 fail-closed 前置校验。
 - Why Existing Tests Missed It：既有 merge 测试只覆盖非空 identity 强转和正常 upsert，
-  没有同时断言异常与 `add_inst` 无副作用。
+  没有同时断言异常与 add/update 两个入口均无副作用。
 - Required Tests：`test_empty_or_invalid_identity_keys_rejected_before_graph_write`；当前以
   `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F03")` 固化。
 - Projectmem：#0312（open；本验证任务不修改生产逻辑）。
@@ -87,24 +87,26 @@
   `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F04")` 固化。
 - Projectmem：#0313（open；本验证任务不修改生产逻辑）。
 
-## CRV-F05：quick 保留字段虽不登记但仍进入写入链路
+## CRV-F05：quick 保留 `_id` 未登记但仍进入图写载荷
 
 - Severity：P0
 - Location：`server/apps/cmdb_enterprise/custom_reporting/services/model_service.py:104-136`；
-  `server/apps/cmdb_enterprise/custom_reporting/services/ingest_service.py:69-83`
+  `server/apps/cmdb_enterprise/custom_reporting/services/merge_service.py:62-72,90-99`
 - Trigger：quick 任务同时上报合法新字段 `crval_owner`、`_id` 和调用方控制的
   `cr_last_reported_at`。
-- Evidence：真实字段登记只创建 `crval_owner`，证明登记过滤生效；但交给
-  `merge_instances` 的实例仍原样包含 `_id=9001` 和
-  `cr_last_reported_at="caller-controlled"`。合同要求保留字段既不登记也不写入。
-- Impact：调用方可把内部图 ID 或系统时间戳带入持久化路径，破坏系统字段所有权、审计
-  可信度及后续清理判断。
-- Root Cause：`register_model_fields()` 仅在属性创建阶段跳过保留字段，ingest 没有生成
-  经过 schema 过滤的实例副本，随后把原始 `instances` 传给 merge。
+- Evidence：测试执行真实 ingest 与真实 `merge_instances()`，捕获
+  `Management.add_inst` 的最终入参：字段登记只创建 `crval_owner`，服务端生成的
+  `cr_last_reported_at` 已覆盖 caller 值，但 `_id=9001` 仍存在于图写载荷。
+- Impact：调用方可把内部图 ID 带入图实体创建契约，形成标识冲突或内部标识伪造风险；
+  当前证据不宣称图存储已接受或持久化该 `_id`。
+- Root Cause：`register_model_fields()` 在属性创建阶段跳过 `_id`，但 merge 构造
+  `new_data` 时只覆盖上报时间戳，没有移除 `_id`，`Management.contrast()` 继续把它放入
+  `add_list`。
 - Why Existing Tests Missed It：既有 model_service 测试验证“未创建保留属性”，没有继续
   追踪同一载荷是否进入 merge；ingest quick 测试把登记函数替换为 no-op。
-- Required Tests：正向 `test_quick_mode_registers_new_business_field_before_merge` 普通通过；
-  负向 `test_quick_mode_reserved_fields_are_neither_registered_nor_merged` 当前以
+- Required Tests：正向 `test_quick_mode_registers_new_business_field_before_merge` 用统一事件
+  列表严格证明字段创建先于 merge；负向
+  `test_quick_mode_reserved_id_field_is_not_registered_or_written` 当前以
   `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F05")` 固化。
 - Projectmem：#0314（open；本验证任务不修改生产逻辑）。
 

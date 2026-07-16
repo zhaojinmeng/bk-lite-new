@@ -80,15 +80,6 @@ INSTALL_APPS=system_mgmt,node_mgmt,cmdb,cmdb_enterprise \
 `SECRET_KEY=test-secret-key`，测试选择器、数据库、应用范围和覆盖率参数不变：
 
 ```bash
-MINIO_ENDPOINT=localhost:9000 \
-MINIO_ACCESS_KEY=test \
-MINIO_SECRET_KEY=test \
-MINIO_USE_HTTPS=false \
-SECRET_KEY=test-secret-key \
-DB_ENGINE=sqlite \
-DB_NAME=:memory: \
-ENABLE_CELERY=true \
-INSTALL_APPS=system_mgmt,node_mgmt,cmdb,cmdb_enterprise \
 /Users/windyzhao/Documents/Canway/weops_X/cmdb/bk-lite/server/.venv/bin/pytest \
   -q -o addopts='' --nomigrations \
   apps/cmdb_enterprise/tests/test_custom_reporting_*.py \
@@ -177,6 +168,15 @@ URL/请求环境初始化阶段失败，`apps/cmdb/views/custom_reporting.py` �
 选择器：
 
 ```bash
+MINIO_ENDPOINT=localhost:9000 \
+MINIO_ACCESS_KEY=test \
+MINIO_SECRET_KEY=test \
+MINIO_USE_HTTPS=false \
+SECRET_KEY=test-secret-key \
+DB_ENGINE=sqlite \
+DB_NAME=:memory: \
+ENABLE_CELERY=true \
+INSTALL_APPS=system_mgmt,node_mgmt,cmdb,cmdb_enterprise \
 /Users/windyzhao/Documents/Canway/weops_X/cmdb/bk-lite/server/.venv/bin/pytest \
   -q -o addopts='' --nomigrations \
   validation/custom_reporting/tests/test_runtime_contracts.py
@@ -213,6 +213,15 @@ URL/请求环境初始化阶段失败，`apps/cmdb/views/custom_reporting.py` �
 聚焦选择器：
 
 ```bash
+MINIO_ENDPOINT=localhost:9000 \
+MINIO_ACCESS_KEY=test \
+MINIO_SECRET_KEY=test \
+MINIO_USE_HTTPS=false \
+SECRET_KEY=test-secret-key \
+DB_ENGINE=sqlite \
+DB_NAME=:memory: \
+ENABLE_CELERY=true \
+INSTALL_APPS=system_mgmt,node_mgmt,cmdb,cmdb_enterprise \
 /Users/windyzhao/Documents/Canway/weops_X/cmdb/bk-lite/server/.venv/bin/pytest \
   -q -o addopts='' --nomigrations \
   validation/custom_reporting/tests/test_runtime_contracts.py \
@@ -221,16 +230,18 @@ URL/请求环境初始化阶段失败，`apps/cmdb/views/custom_reporting.py` �
 
 | 边界 | 测试 | 首轮 RED / 正向结果 | 最终状态 | Finding |
 | --- | --- | --- | --- | --- |
-| 空/非法 identity | `test_empty_or_invalid_identity_keys_rejected_before_graph_write` | 空、空字符串、`_id` 均未拒绝，`add_inst=1` | 3 strict xfailed | CRV-F03 |
+| 空/非法 identity | `test_empty_or_invalid_identity_keys_rejected_before_graph_write` | 空、空字符串、`_id` 均未拒绝，`add_inst=1`、`update_inst=1` | 3 strict xfailed | CRV-F03 |
 | standard schema | `test_standard_schema_rejects_unknown_and_reserved_fields_before_merge` | unknown 与 `_id` 均未拒绝并原样进入 merge | 2 strict xfailed | CRV-F04 |
-| quick 新业务字段 | `test_quick_mode_registers_new_business_field_before_merge` | 只登记 `crval_owner`，随后进入 merge | passed | — |
-| quick 保留字段 | `test_quick_mode_reserved_fields_are_neither_registered_nor_merged` | 未登记 `_id`/时间戳，但两者仍进入 merge | strict xfail | CRV-F05 |
+| quick 新业务字段 | `test_quick_mode_registers_new_business_field_before_merge` | 统一事件序列严格为 `register(crval_owner)` 后 `merge` | passed | — |
+| quick 保留 `_id` | `test_quick_mode_reserved_id_field_is_not_registered_or_written` | 真实 merge 覆盖 caller 时间戳，但 `_id=9001` 仍进入 `Management.add_inst` 图写载荷 | strict xfail | CRV-F05 |
 | 关系源模型错配 | `test_relation_endpoint_rejects_source_model_mismatch_without_side_effects` | 未拒绝；同次 backfill 调用图写 1 次 | strict xfail | CRV-F06 |
 
 核心首轮为 `5 failed, 1 passed, 13 deselected in 0.34s`；补充非法 identity RED 为
 `3 failed, 18 deselected in 0.32s`，失败均精确
 抛出对应 `KnownProductDefect`。确认并登记 projectmem #0312—#0315 后，仅给缺陷用例
-增加 `strict=True, raises=KnownProductDefect` marker，收口结果为
-聚焦收口为 `1 passed, 13 deselected, 7 xfailed in 0.43s`，整文件为
-`9 passed, 12 xfailed in 2.01s`。因此 500、环境错误及第三种产品行为仍会
+增加 `strict=True, raises=KnownProductDefect` marker。复审加固后的 RED 为
+`4 failed, 1 passed, 16 deselected in 0.56s`：identity 精确观察 add/update 双调用，
+CRV-F05 经真实 merge 捕获 `_id` 图写载荷，同时 caller 时间戳覆盖正向断言通过。
+最终聚焦为 `1 passed, 13 deselected, 7 xfailed in 1.04s`，整文件为
+`9 passed, 12 xfailed in 3.36s`。因此 500、环境错误及第三种产品行为仍会
 普通失败；产品修复后则因 strict XPASS 使门禁转红。
