@@ -197,4 +197,6 @@ URL/请求环境初始化阶段失败，`apps/cmdb/views/custom_reporting.py` �
 状态和副作用证据保存在 namespaced
 `.superpowers/sdd/cmdb-custom-reporting-real-validation/task-4-report.md` 的“真实 RED”
 章节。确认缺陷后只给对应测试增加 `xfail(strict=True, reason="CRV-Fxx")`，最终聚焦
-结果为 `6 passed, 5 xfailed in 1.76s`，没有把环境失败标成 xfail。
+结果经复审加固后为 `8 passed, 5 xfailed in 1.62s`。五个缺陷 marker 均限制
+`raises=KnownProductDefect`，且只在观察值精确等于已记录坏行为时抛该异常；其他响应、
+断言和 setup/DB/环境异常保持普通失败，不会被缺陷 marker 吞掉。

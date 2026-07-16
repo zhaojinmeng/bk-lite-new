@@ -73,3 +73,35 @@ Token 合法、轮换与吊销三类能力在同一次首轮中均通过。
 - `flake8`：通过，输出 `0`。
 - `git diff --check`：通过，无输出。
 - 最终提交 SHA 在提交完成后随任务回报提供。
+
+## 复审修正：xfail 精确分类与空 team 语义
+
+复审 RED 只选择 marker 合同与显式空 team 用例，退出码 1：
+
+```text
+7 failed, 11 deselected in 0.47s
+```
+
+- 五个缺陷 marker 都缺少 `raises`，任何测试体异常都可能被归类为预期缺陷。
+- `create_token_task(team=[])` 与 `_payload(team=[])` 都错误产生 `[1]`。
+
+修正后定义测试专用 `KnownProductDefect(AssertionError)`。每个缺陷测试先比较完整观察值：
+仅精确命中已记录坏行为才抛 `KnownProductDefect`；命中合同则正常返回，从而触发 strict
+XPASS；任何第三种响应仍是普通 `AssertionError`。五个 marker 统一增加
+`raises=KnownProductDefect`，并在分类器聚焦测试中检查配置。该测试同时证明精确
+坏行为、合同值和意外值三个分支。
+
+为验证环境失败不被吞掉，临时增加一个带相同 marker 的 probe fixture，在 setup 主动
+抛 `RuntimeError("crval intentional environment failure")`。真实结果为：
+
+```text
+1 error in 0.17s（exit 1），不是 xfail
+```
+
+证据保存后已移除故障探针，不留失败门禁。工厂与 payload 则改为只在 `team is None`
+时默认 `[1]`，显式 `[]` 原样复制。完整
+运行时合同 fresh 结果为：
+
+```text
+8 passed, 5 xfailed in 1.62s
+```

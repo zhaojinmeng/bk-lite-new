@@ -16,7 +16,7 @@ def unique_crval_name(kind: str) -> str:
 def create_token_task(*, team=None, username="crval_factory") -> TokenTask:
     task = CustomReportingTask.objects.create(
         name=unique_crval_name("task"),
-        team=list(team or [1]),
+        team=[1] if team is None else list(team),
         config={
             "mode": "standard",
             "model_id": unique_crval_name("model"),

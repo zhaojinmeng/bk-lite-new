@@ -11,10 +11,20 @@ from validation.custom_reporting.tests.factories import create_token_task, uniqu
 TASKS_URL = "/api/v1/cmdb/api/custom_reporting/tasks/"
 
 
+class KnownProductDefect(AssertionError):
+    pass
+
+
+def _assert_contract_or_known_defect(*, actual, expected, known_bad, finding):
+    if actual == known_bad:
+        raise KnownProductDefect(f"{finding}: observed {known_bad!r}")
+    assert actual == expected
+
+
 def _payload(*, team=None):
     return {
         "name": unique_crval_name("task"),
-        "team": list(team or [1]),
+        "team": [1] if team is None else list(team),
         "config": {
             "mode": "standard",
             "model_id": unique_crval_name("model"),
@@ -40,7 +50,7 @@ def allowed_org_one(monkeypatch):
 
 
 @pytest.mark.django_db
-@pytest.mark.xfail(strict=True, reason="CRV-F01")
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F01")
 def test_create_rejects_team_outside_requester_scope(
     api_client,
     authenticated_user,
@@ -51,11 +61,16 @@ def test_create_rejects_team_outside_requester_scope(
 
     response = api_client.post(TASKS_URL, _payload(team=[2]), format="json")
 
-    assert (response.status_code, CustomReportingTask.objects.count()) == (403, before)
+    _assert_contract_or_known_defect(
+        actual=(response.status_code, CustomReportingTask.objects.count()),
+        expected=(403, before),
+        known_bad=(200, before + 1),
+        finding="CRV-F01",
+    )
 
 
 @pytest.mark.django_db
-@pytest.mark.xfail(strict=True, reason="CRV-F01")
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F01")
 def test_update_rejects_moving_task_outside_requester_scope(
     api_client,
     authenticated_user,
@@ -71,7 +86,12 @@ def test_update_rejects_moving_task_outside_requester_scope(
     )
 
     token_task.task.refresh_from_db()
-    assert (response.status_code, token_task.task.team) == (403, [1])
+    _assert_contract_or_known_defect(
+        actual=(response.status_code, token_task.task.team),
+        expected=(403, [1]),
+        known_bad=(200, [2]),
+        finding="CRV-F01",
+    )
 
 
 @pytest.mark.django_db
@@ -89,7 +109,7 @@ def test_list_allows_model_management_view_permission(
 
 
 @pytest.mark.django_db
-@pytest.mark.xfail(strict=True, reason="CRV-F02")
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F02")
 def test_list_rejects_user_without_model_management_view_permission(
     api_client,
     authenticated_user,
@@ -100,7 +120,12 @@ def test_list_rejects_user_without_model_management_view_permission(
 
     response = api_client.get(TASKS_URL)
 
-    assert response.status_code == 403
+    _assert_contract_or_known_defect(
+        actual=response.status_code,
+        expected=403,
+        known_bad=200,
+        finding="CRV-F02",
+    )
 
 
 @pytest.mark.django_db
@@ -119,7 +144,7 @@ def test_create_allows_model_management_add_permission(
 
 
 @pytest.mark.django_db
-@pytest.mark.xfail(strict=True, reason="CRV-F02")
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F02")
 def test_create_rejects_user_without_model_management_add_permission(
     api_client,
     authenticated_user,
@@ -130,10 +155,15 @@ def test_create_rejects_user_without_model_management_add_permission(
 
     response = api_client.post(TASKS_URL, payload, format="json")
 
-    assert (
-        response.status_code,
-        CustomReportingTask.objects.filter(name=payload["name"]).exists(),
-    ) == (403, False)
+    _assert_contract_or_known_defect(
+        actual=(
+            response.status_code,
+            CustomReportingTask.objects.filter(name=payload["name"]).exists(),
+        ),
+        expected=(403, False),
+        known_bad=(200, True),
+        finding="CRV-F02",
+    )
 
 
 @pytest.mark.django_db
@@ -158,7 +188,7 @@ def test_update_allows_model_management_edit_permission(
 
 
 @pytest.mark.django_db
-@pytest.mark.xfail(strict=True, reason="CRV-F02")
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F02")
 def test_update_rejects_user_without_model_management_edit_permission(
     api_client,
     authenticated_user,
@@ -167,15 +197,21 @@ def test_update_rejects_user_without_model_management_edit_permission(
     token_task = create_token_task(team=[1])
     _authorize(api_client, authenticated_user, "model_management-View")
     original_name = token_task.task.name
+    attempted_name = unique_crval_name("updated_task")
 
     response = api_client.put(
         f"{TASKS_URL}{token_task.task.id}/",
-        {"name": unique_crval_name("updated_task")},
+        {"name": attempted_name},
         format="json",
     )
 
     token_task.task.refresh_from_db()
-    assert (response.status_code, token_task.task.name) == (403, original_name)
+    _assert_contract_or_known_defect(
+        actual=(response.status_code, token_task.task.name),
+        expected=(403, original_name),
+        known_bad=(200, attempted_name),
+        finding="CRV-F02",
+    )
 
 
 def _successful_merge(*args, **kwargs):
@@ -229,3 +265,48 @@ def test_revoking_factory_token_blocks_ingest_capability():
 
     with pytest.raises(BaseAppException, match="无效|作废"):
         ingest_service.ingest(token_task.raw_token, {"instances": []})
+
+
+@pytest.mark.django_db
+def test_factories_preserve_explicit_empty_team():
+    token_task = create_token_task(team=[])
+
+    assert token_task.task.team == []
+    assert _payload(team=[])["team"] == []
+
+
+def test_known_product_defect_classifier_and_markers_are_precise():
+    with pytest.raises(KnownProductDefect, match="CRV-F99"):
+        _assert_contract_or_known_defect(
+            actual=(200, True),
+            expected=(403, False),
+            known_bad=(200, True),
+            finding="CRV-F99",
+        )
+
+    _assert_contract_or_known_defect(
+        actual=(403, False),
+        expected=(403, False),
+        known_bad=(200, True),
+        finding="CRV-F99",
+    )
+
+    with pytest.raises(AssertionError) as unexpected:
+        _assert_contract_or_known_defect(
+            actual=(500, False),
+            expected=(403, False),
+            known_bad=(200, True),
+            finding="CRV-F99",
+        )
+    assert type(unexpected.value) is AssertionError
+
+    defect_tests = (
+        test_create_rejects_team_outside_requester_scope,
+        test_update_rejects_moving_task_outside_requester_scope,
+        test_list_rejects_user_without_model_management_view_permission,
+        test_create_rejects_user_without_model_management_add_permission,
+        test_update_rejects_user_without_model_management_edit_permission,
+    )
+    for test_case in defect_tests:
+        marker = next(mark for mark in test_case.pytestmark if mark.name == "xfail")
+        assert marker.kwargs.get("raises") is KnownProductDefect
