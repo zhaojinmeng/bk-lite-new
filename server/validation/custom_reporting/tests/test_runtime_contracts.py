@@ -1,10 +1,18 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-from apps.cmdb_enterprise.custom_reporting.models import CustomReportingTask
+from apps.cmdb.services.model import ModelManage
+from apps.cmdb_enterprise.custom_reporting.models import CustomReportingPendingRelation, CustomReportingTask
 from apps.cmdb_enterprise.custom_reporting.provider import CustomReportingProvider
-from apps.cmdb_enterprise.custom_reporting.services import credential_service, ingest_service
+from apps.cmdb_enterprise.custom_reporting.services import (
+    credential_service,
+    field_service,
+    ingest_service,
+    merge_service,
+    model_service,
+    relation_service,
+)
 from apps.core.exceptions.base_app_exception import BaseAppException
 from validation.custom_reporting.tests.factories import create_token_task, unique_crval_name
 
@@ -226,6 +234,198 @@ def _successful_merge(*args, **kwargs):
     }
 
 
+def _successful_relations(*args, **kwargs):
+    return {"pending": 0}
+
+
+@pytest.mark.django_db
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F03")
+@pytest.mark.parametrize(
+    "identity_keys",
+    [[], [""], ["_id"]],
+    ids=["empty", "blank-key", "reserved-key"],
+)
+def test_empty_or_invalid_identity_keys_rejected_before_graph_write(monkeypatch, identity_keys):
+    token_task = create_token_task(identity_keys=identity_keys)
+    graph_write = Mock(return_value={"success": [], "failed": []})
+
+    monkeypatch.setattr(ModelManage, "search_model_attr", lambda model_id: [])
+    monkeypatch.setattr(merge_service.Management, "add_inst", graph_write)
+    monkeypatch.setattr(
+        merge_service.Management,
+        "update_inst",
+        Mock(return_value={"success": [], "failed": []}),
+    )
+
+    class EmptyGraph:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def query_entity(self, *args, **kwargs):
+            return [], 0
+
+    monkeypatch.setattr(merge_service, "GraphClient", EmptyGraph)
+
+    rejected = False
+    try:
+        merge_service.merge_instances(
+            token_task.task,
+            token_task.task.config["model_id"],
+            [{"inst_name": "a"}, {"inst_name": "b"}],
+            "crval_validator",
+        )
+    except BaseAppException as exc:
+        assert "身份键" in str(exc)
+        rejected = True
+
+    _assert_contract_or_known_defect(
+        actual=(rejected, graph_write.call_count),
+        expected=(True, 0),
+        known_bad=(False, 1),
+        finding="CRV-F03",
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F04")
+@pytest.mark.parametrize("invalid_field", ["crval_unknown", "_id"])
+def test_standard_schema_rejects_unknown_and_reserved_fields_before_merge(
+    monkeypatch,
+    invalid_field,
+):
+    token_task = create_token_task(mode="standard")
+    merge = Mock(side_effect=_successful_merge)
+    monkeypatch.setattr(ingest_service.merge_service, "merge_instances", merge)
+    monkeypatch.setattr(ingest_service.relation_service, "process", _successful_relations)
+    payload = {"instances": [{"inst_name": "a", invalid_field: "unsafe"}]}
+
+    rejected = False
+    try:
+        ingest_service.ingest(token_task.raw_token, payload, operator="crval_validator")
+    except BaseAppException:
+        rejected = True
+
+    _assert_contract_or_known_defect(
+        actual=(rejected, merge.call_args.args[2] if merge.called else None),
+        expected=(True, None),
+        known_bad=(False, payload["instances"]),
+        finding="CRV-F04",
+    )
+
+
+@pytest.mark.django_db
+def test_quick_mode_registers_new_business_field_before_merge(monkeypatch):
+    token_task = create_token_task(mode="quick")
+    created_attrs = []
+    merge = Mock(side_effect=_successful_merge)
+    monkeypatch.setattr(model_service, "get_declared_attr_ids", lambda model_id: {"inst_name"})
+    monkeypatch.setattr(
+        ModelManage,
+        "create_model_attr",
+        lambda model_id, attr, username="admin": created_attrs.append((model_id, attr, username)),
+    )
+    monkeypatch.setattr(field_service, "record_registrations", Mock())
+    monkeypatch.setattr(ingest_service.merge_service, "merge_instances", merge)
+    monkeypatch.setattr(ingest_service.relation_service, "process", _successful_relations)
+    instances = [{"inst_name": "a", "crval_owner": "ops"}]
+
+    ingest_service.ingest(
+        token_task.raw_token,
+        {"instances": instances},
+        operator="crval_validator",
+    )
+
+    assert [(model_id, attr["attr_id"], username) for model_id, attr, username in created_attrs] == [
+        (token_task.task.config["model_id"], "crval_owner", "crval_validator")
+    ]
+    assert merge.call_args.args[2] == instances
+
+
+@pytest.mark.django_db
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F05")
+def test_quick_mode_reserved_fields_are_neither_registered_nor_merged(monkeypatch):
+    token_task = create_token_task(mode="quick")
+    created_attrs = []
+    merge = Mock(side_effect=_successful_merge)
+    monkeypatch.setattr(model_service, "get_declared_attr_ids", lambda model_id: {"inst_name"})
+    monkeypatch.setattr(
+        ModelManage,
+        "create_model_attr",
+        lambda model_id, attr, username="admin": created_attrs.append(attr["attr_id"]),
+    )
+    monkeypatch.setattr(field_service, "record_registrations", Mock())
+    monkeypatch.setattr(ingest_service.merge_service, "merge_instances", merge)
+    monkeypatch.setattr(ingest_service.relation_service, "process", _successful_relations)
+    payload_instances = [
+        {
+            "inst_name": "a",
+            "crval_owner": "ops",
+            "_id": 9001,
+            "cr_last_reported_at": "caller-controlled",
+        }
+    ]
+
+    ingest_service.ingest(
+        token_task.raw_token,
+        {"instances": payload_instances},
+        operator="crval_validator",
+    )
+
+    merged = merge.call_args.args[2]
+    _assert_contract_or_known_defect(
+        actual=(created_attrs, merged),
+        expected=(["crval_owner"], [{"inst_name": "a", "crval_owner": "ops"}]),
+        known_bad=(["crval_owner"], payload_instances),
+        finding="CRV-F05",
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F06")
+def test_relation_endpoint_rejects_source_model_mismatch_without_side_effects(monkeypatch):
+    token_task = create_token_task(mode="standard")
+    target_model = unique_crval_name("target_model")
+    wrong_source_model = unique_crval_name("wrong_source_model")
+    graph_write = Mock()
+    monkeypatch.setattr(ingest_service.merge_service, "merge_instances", _successful_merge)
+    monkeypatch.setattr(relation_service, "_resolve_instance", lambda *args: {"_id": 2})
+    monkeypatch.setattr(relation_service, "_create_edge", graph_write)
+    relation = {
+        "source": {
+            "model_id": wrong_source_model,
+            "identity": {"inst_name": "a"},
+        },
+        "target": {
+            "model_id": target_model,
+            "identity": {"inst_name": "b"},
+        },
+        "asst_id": unique_crval_name("association"),
+    }
+
+    rejected = False
+    try:
+        result = ingest_service.ingest(
+            token_task.raw_token,
+            {"instances": [], "relations": [relation]},
+            operator="crval_validator",
+        )
+    except BaseAppException:
+        rejected = True
+        result = None
+
+    pending = CustomReportingPendingRelation.objects.filter(task=token_task.task).count()
+    observed = (rejected, result["summary"]["pending_relations"] if result else None, pending, graph_write.call_count)
+    _assert_contract_or_known_defect(
+        actual=observed,
+        expected=(True, None, 0, 0),
+        known_bad=(False, 1, 0, 1),
+        finding="CRV-F06",
+    )
+
+
 @pytest.mark.django_db
 def test_factory_token_is_accepted_by_ingest_capability():
     token_task = create_token_task()
@@ -306,6 +506,10 @@ def test_known_product_defect_classifier_and_markers_are_precise():
         test_list_rejects_user_without_model_management_view_permission,
         test_create_rejects_user_without_model_management_add_permission,
         test_update_rejects_user_without_model_management_edit_permission,
+        test_empty_or_invalid_identity_keys_rejected_before_graph_write,
+        test_standard_schema_rejects_unknown_and_reserved_fields_before_merge,
+        test_quick_mode_reserved_fields_are_neither_registered_nor_merged,
+        test_relation_endpoint_rejects_source_model_mismatch_without_side_effects,
     )
     for test_case in defect_tests:
         marker = next(mark for mark in test_case.pytestmark if mark.name == "xfail")

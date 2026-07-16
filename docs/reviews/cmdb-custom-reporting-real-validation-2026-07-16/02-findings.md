@@ -47,3 +47,84 @@
 测试工厂为每个用例新建唯一 `crval_...` 任务、模型、凭据和 Token。合法 Token 可进入
 上报能力；轮换后旧 Token 失效且新 Token 有效；吊销后原 Token 失效。三项均普通通过，
 未复用或修改任何既有任务/Token。
+
+## CRV-F03：空 identity_keys 未在图写前拒绝
+
+- Severity：P0
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/merge_service.py:59-66,90-99`
+- Trigger：创建 `identity_keys=[]`、`[""]` 或 `["_id"]` 的 standard 任务，并一次上报
+  两个不同 `inst_name` 的实例。
+- Evidence：真实 `merge_instances()` 没有抛出身份键异常，且 `Management.add_inst` 被调用
+  1 次；合同要求明确拒绝且图写调用为 0。
+- Impact：任务失去稳定实例身份，多个实例可能被错误归类为同一无唯一键批次，产生重复、
+  覆盖或不可预测的 merge 结果。
+- Root Cause：`task.config.get("identity_keys") or []` 将显式空列表作为合法配置继续处理，
+  `Management` 仍以 `unique_keys=[]` 构造并执行 add/update，没有 fail-closed 前置校验。
+- Why Existing Tests Missed It：既有 merge 测试只覆盖非空 identity 强转和正常 upsert，
+  没有同时断言异常与 `add_inst` 无副作用。
+- Required Tests：`test_empty_or_invalid_identity_keys_rejected_before_graph_write`；当前以
+  `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F03")` 固化。
+- Projectmem：#0312（open；本验证任务不修改生产逻辑）。
+
+## CRV-F04：standard 模式未校验未知字段与保留字段
+
+- Severity：P0
+- Location：`server/apps/cmdb_enterprise/custom_reporting/provider.py:15-18`；
+  `server/apps/cmdb_enterprise/custom_reporting/services/ingest_service.py:63-83`
+- Trigger：standard 任务分别上报未声明字段 `crval_unknown` 和保留字段 `_id`。
+- Evidence：两种载荷均未被拒绝，且原始实例字典完整进入 `merge_instances`；合同要求在
+  merge/图写之前拒绝。Enterprise provider 没有覆盖 Community 的 no-op
+  `validate_instance_fields`，ingest 也没有调用校验门面。
+- Impact：standard 模式无法保证既有模型 schema，调用方可把未声明或系统保留字段带入
+  图写链路，造成 schema 漂移、系统字段污染或标识伪造。
+- Root Cause：商业 provider 只实现字段登记委托，没有实现实例/关系 schema 校验；
+  ingest 在 standard 分支直接调用 merge。
+- Why Existing Tests Missed It：Community 测试只证明默认扩展 no-op 可调用；Enterprise
+  测试聚焦 quick 登记和 merge 结果，没有通过真实 ingest 对 standard 负向载荷断言
+  拒绝及无 merge 副作用。
+- Required Tests：参数化
+  `test_standard_schema_rejects_unknown_and_reserved_fields_before_merge`；当前以
+  `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F04")` 固化。
+- Projectmem：#0313（open；本验证任务不修改生产逻辑）。
+
+## CRV-F05：quick 保留字段虽不登记但仍进入写入链路
+
+- Severity：P0
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/model_service.py:104-136`；
+  `server/apps/cmdb_enterprise/custom_reporting/services/ingest_service.py:69-83`
+- Trigger：quick 任务同时上报合法新字段 `crval_owner`、`_id` 和调用方控制的
+  `cr_last_reported_at`。
+- Evidence：真实字段登记只创建 `crval_owner`，证明登记过滤生效；但交给
+  `merge_instances` 的实例仍原样包含 `_id=9001` 和
+  `cr_last_reported_at="caller-controlled"`。合同要求保留字段既不登记也不写入。
+- Impact：调用方可把内部图 ID 或系统时间戳带入持久化路径，破坏系统字段所有权、审计
+  可信度及后续清理判断。
+- Root Cause：`register_model_fields()` 仅在属性创建阶段跳过保留字段，ingest 没有生成
+  经过 schema 过滤的实例副本，随后把原始 `instances` 传给 merge。
+- Why Existing Tests Missed It：既有 model_service 测试验证“未创建保留属性”，没有继续
+  追踪同一载荷是否进入 merge；ingest quick 测试把登记函数替换为 no-op。
+- Required Tests：正向 `test_quick_mode_registers_new_business_field_before_merge` 普通通过；
+  负向 `test_quick_mode_reserved_fields_are_neither_registered_nor_merged` 当前以
+  `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F05")` 固化。
+- Projectmem：#0314（open；本验证任务不修改生产逻辑）。
+
+## CRV-F06：关系源模型错配可经 backfill 创建错误边
+
+- Severity：P0
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/relation_service.py:52-68,75-108,111-145`；
+  `server/apps/cmdb_enterprise/custom_reporting/services/ingest_service.py:84-88`
+- Trigger：任务目标模型为 A，关系专用载荷的 `source.model_id` 指向不同模型 B，目标实例
+  可解析。
+- Evidence：真实 ingest 未拒绝并返回 `pending_relations=1`；随后同次 backfill 使用任务
+  模型 A 解析 source，清掉 pending 并调用 `_create_edge` 1 次。合同要求拒绝、pending=0、
+  图写=0。
+- Impact：调用方声明的源模型与实际解析模型不一致，可能把 A 的实例错误连接到目标实例，
+  形成跨模型错误拓扑和不可置信关系审计。
+- Root Cause：`process()` 不校验 `source.model_id == task.config.model_id`；pending 记录把
+  `source_model_id` 固定成任务模型，`backfill()` 随后忽略原载荷的错配模型并用该固定值
+  查询 source。
+- Why Existing Tests Missed It：既有关系测试只覆盖匹配模型的批次索引、pending 与回填，
+  没有构造 source 模型错配，也没有跨 process/backfill 断言零图写副作用。
+- Required Tests：`test_relation_endpoint_rejects_source_model_mismatch_without_side_effects`；
+  当前以 `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F06")` 固化。
+- Projectmem：#0315（open；本验证任务不修改生产逻辑）。

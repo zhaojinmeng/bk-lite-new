@@ -13,14 +13,22 @@ def unique_crval_name(kind: str) -> str:
     return f"crval_{kind}_{uuid4().hex}"
 
 
-def create_token_task(*, team=None, username="crval_factory") -> TokenTask:
+def create_token_task(
+    *,
+    mode="standard",
+    team=None,
+    identity_keys=None,
+    cleanup_strategy="none",
+    username="crval_factory",
+) -> TokenTask:
     task = CustomReportingTask.objects.create(
         name=unique_crval_name("task"),
         team=[1] if team is None else list(team),
         config={
-            "mode": "standard",
+            "mode": mode,
             "model_id": unique_crval_name("model"),
-            "identity_keys": ["inst_name"],
+            "identity_keys": ["inst_name"] if identity_keys is None else list(identity_keys),
+            "cleanup_strategy": cleanup_strategy,
         },
         is_enabled=True,
         created_by=username,

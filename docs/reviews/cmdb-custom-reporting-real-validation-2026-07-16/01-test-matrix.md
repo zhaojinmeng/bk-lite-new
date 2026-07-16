@@ -200,3 +200,37 @@ URL/请求环境初始化阶段失败，`apps/cmdb/views/custom_reporting.py` �
 结果经复审加固后为 `8 passed, 5 xfailed in 1.62s`。五个缺陷 marker 均限制
 `raises=KnownProductDefect`，且只在观察值精确等于已记录坏行为时抛该异常；其他响应、
 断言和 setup/DB/环境异常保持普通失败，不会被缺陷 marker 吞掉。
+
+## Task 5：standard / quick Schema、身份与关系模型合同
+
+执行环境与 Task 4 相同：SQLite 内存库、`--nomigrations`、测试 MinIO，显式
+`ENABLE_CELERY=true`、`SECRET_KEY=test-secret-key`，应用集为
+`system_mgmt,node_mgmt,cmdb,cmdb_enterprise`。`create_token_task` 已扩展 `mode`、
+`identity_keys`、`cleanup_strategy` 参数，且仅在参数为 `None` 时应用默认值；显式
+`identity_keys=[]` 保持为空。所有任务、模型、凭据、字段及关系标识继续使用唯一
+`crval_` 前缀。
+
+聚焦选择器：
+
+```bash
+/Users/windyzhao/Documents/Canway/weops_X/cmdb/bk-lite/server/.venv/bin/pytest \
+  -q -o addopts='' --nomigrations \
+  validation/custom_reporting/tests/test_runtime_contracts.py \
+  -k 'identity or schema or field or relation_endpoint'
+```
+
+| 边界 | 测试 | 首轮 RED / 正向结果 | 最终状态 | Finding |
+| --- | --- | --- | --- | --- |
+| 空/非法 identity | `test_empty_or_invalid_identity_keys_rejected_before_graph_write` | 空、空字符串、`_id` 均未拒绝，`add_inst=1` | 3 strict xfailed | CRV-F03 |
+| standard schema | `test_standard_schema_rejects_unknown_and_reserved_fields_before_merge` | unknown 与 `_id` 均未拒绝并原样进入 merge | 2 strict xfailed | CRV-F04 |
+| quick 新业务字段 | `test_quick_mode_registers_new_business_field_before_merge` | 只登记 `crval_owner`，随后进入 merge | passed | — |
+| quick 保留字段 | `test_quick_mode_reserved_fields_are_neither_registered_nor_merged` | 未登记 `_id`/时间戳，但两者仍进入 merge | strict xfail | CRV-F05 |
+| 关系源模型错配 | `test_relation_endpoint_rejects_source_model_mismatch_without_side_effects` | 未拒绝；同次 backfill 调用图写 1 次 | strict xfail | CRV-F06 |
+
+核心首轮为 `5 failed, 1 passed, 13 deselected in 0.34s`；补充非法 identity RED 为
+`3 failed, 18 deselected in 0.32s`，失败均精确
+抛出对应 `KnownProductDefect`。确认并登记 projectmem #0312—#0315 后，仅给缺陷用例
+增加 `strict=True, raises=KnownProductDefect` marker，收口结果为
+聚焦收口为 `1 passed, 13 deselected, 7 xfailed in 0.43s`，整文件为
+`9 passed, 12 xfailed in 2.01s`。因此 500、环境错误及第三种产品行为仍会
+普通失败；产品修复后则因 strict XPASS 使门禁转红。
