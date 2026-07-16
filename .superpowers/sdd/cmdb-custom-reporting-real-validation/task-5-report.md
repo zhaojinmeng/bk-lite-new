@@ -67,3 +67,9 @@ strict XPASS 并使测试转红。
 - `isort --check-only`：退出码 0。
 - `flake8`：0 条告警，退出码 0。
 - `git diff --check`：退出码 0。
+
+## 第二轮文档复审
+
+对照 `82cb3d11e` 恢复 Task 3 overlay 补充环境完整复跑命令的测试 MinIO、固定
+`SECRET_KEY`、SQLite、Celery 与四应用集；Task 4/5 各自环境块保持原位置且不重复。
+使用恢复后的原命令真实复跑结果为 `81 passed in 1.71s`，覆盖率仍为 83%。

@@ -80,6 +80,15 @@ INSTALL_APPS=system_mgmt,node_mgmt,cmdb,cmdb_enterprise \
 `SECRET_KEY=test-secret-key`，测试选择器、数据库、应用范围和覆盖率参数不变：
 
 ```bash
+MINIO_ENDPOINT=localhost:9000 \
+MINIO_ACCESS_KEY=test \
+MINIO_SECRET_KEY=test \
+MINIO_USE_HTTPS=false \
+SECRET_KEY=test-secret-key \
+DB_ENGINE=sqlite \
+DB_NAME=:memory: \
+ENABLE_CELERY=true \
+INSTALL_APPS=system_mgmt,node_mgmt,cmdb,cmdb_enterprise \
 /Users/windyzhao/Documents/Canway/weops_X/cmdb/bk-lite/server/.venv/bin/pytest \
   -q -o addopts='' --nomigrations \
   apps/cmdb_enterprise/tests/test_custom_reporting_*.py \
