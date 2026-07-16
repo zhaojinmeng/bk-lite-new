@@ -18,6 +18,7 @@
 - 运行态 overlay 只作为固定制品测试，不能冒充 `enterprise@1e9c3d2`。
 - 相关模块行覆盖率目标不低于 80%，核心 ingest/merge/relation/cleanup 目标不低于 90%。
 - 任何未处置 P0/P1 均使最终发布建议为 `Block`。
+- 每个已确认缺陷测试必须先保存真实 RED 命令与输出，再于同一任务提交前标记 `xfail(strict=True, reason="CRV-Fxx")`；禁止提交长期红灯。
 
 ## 文件结构
 
@@ -252,7 +253,7 @@ Expected: 未授权 team 用例在当前实现失败，失败响应与副作用�
 
 - [ ] **Step 4: 记录 Finding 并提交复现测试**
 
-Finding 必须写明 Location、Trigger、Evidence、Impact、Root Cause、Why Existing Tests Missed It、Required Tests；不在此任务写修复。
+Finding 必须写明 Location、Trigger、Evidence、Impact、Root Cause、Why Existing Tests Missed It、Required Tests；不在此任务写修复。已确认 RED 的缺陷测试在保存原始失败证据后增加 `@pytest.mark.xfail(strict=True, reason="CRV-Fxx")`，重跑必须得到预期 xfail 且普通测试全绿。
 
 ```bash
 git add server/validation/custom_reporting/tests/factories.py server/validation/custom_reporting/tests/test_runtime_contracts.py docs/reviews/cmdb-custom-reporting-real-validation-2026-07-16
@@ -306,6 +307,8 @@ Run: `cd server && MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SEC
 Expected: 当前空身份键、standard 未知字段和关系端点模型错配用例失败；quick 合法字段登记正向用例通过。
 
 - [ ] **Step 4: 记录并提交**
+
+已确认 RED 的缺陷测试在记录失败证据后增加 `@pytest.mark.xfail(strict=True, reason="CRV-Fxx")`；重跑确认预期 xfail，不得提交普通失败。
 
 ```bash
 git add server/validation/custom_reporting/tests/test_runtime_contracts.py docs/reviews/cmdb-custom-reporting-real-validation-2026-07-16
@@ -366,6 +369,8 @@ Expected: partial、owner scope、关系双端授权和跨存储恢复断言暴�
 
 - [ ] **Step 4: 记录并提交**
 
+已确认 RED 的缺陷测试在记录失败证据后增加 `@pytest.mark.xfail(strict=True, reason="CRV-Fxx")`；重跑确认预期 xfail，不得提交普通失败。
+
 ```bash
 git add server/validation/custom_reporting/tests/test_failure_boundaries.py docs/reviews/cmdb-custom-reporting-real-validation-2026-07-16
 git commit -m "test(cmdb): 复现自定义上报一致性缺陷"
@@ -404,6 +409,8 @@ Run: `rg -n 'request\.data|query_entity|\.objects\.all\(\)|filter\(is_enabled=Tr
 Expected: 报告逐项记录已有上限及缺失上限；不执行无上限压力攻击。
 
 - [ ] **Step 4: 提交**
+
+若任务注册测试确认现有缺陷，先保存 RED 输出，再增加 `@pytest.mark.xfail(strict=True, reason="CRV-Fxx")` 并重跑；不得提交普通失败。
 
 ```bash
 git add server/validation/custom_reporting/tests/test_task_registration.py docs/reviews/cmdb-custom-reporting-real-validation-2026-07-16/02-findings.md
