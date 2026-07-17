@@ -11,7 +11,7 @@ class ClassificationViewSet(viewsets.ViewSet):
         result = ClassificationManage.create_model_classification(request.data)
         return WebUtils.response_success(result)
 
-    @HasPermission("model_management-View")
+    @HasPermission("model_management-View,asset_info-View,search-View")
     def list(self, request):
         raw_include = request.query_params.get("include_hidden", "").lower()
         include_hidden = (

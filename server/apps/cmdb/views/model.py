@@ -105,7 +105,7 @@ class ModelViewSet(CmdbPermissionMixin, viewsets.ViewSet):
         result = ModelManage.create_model(request.data, username=request.user.username)
         return WebUtils.response_success(result)
 
-    @HasPermission("model_management-View")
+    @HasPermission("model_management-View,asset_info-View,search-View")
     def list(self, request):
         permissions_map = CmdbRulesFormatUtil.format_user_groups_permissions(request, model_id="", permission_type=PERMISSION_MODEL)
         current_team = get_current_team_from_request(request)

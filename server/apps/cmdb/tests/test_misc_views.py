@@ -184,6 +184,34 @@ def test_classification_list(superuser, monkeypatch):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("permission", ["search-View", "asset_info-View"])
+def test_classification_list_allows_home_read_permissions(authenticated_user, monkeypatch, permission):
+    user = authenticated_user
+    user.is_superuser = False
+    user.locale = "zh-Hans"
+    user.permission = {"cmdb": {permission}}
+    monkeypatch.setattr(
+        "apps.cmdb.views.classification.ClassificationManage.search_model_classification",
+        lambda locale, **kwargs: [{"classification_id": "net"}],
+    )
+
+    response = ClassificationViewSet.as_view({"get": "list"})(_req("get", user))
+
+    assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.django_db
+def test_classification_list_denies_user_without_home_or_management_view(authenticated_user):
+    user = authenticated_user
+    user.is_superuser = False
+    user.permission = {"cmdb": set()}
+
+    response = ClassificationViewSet.as_view({"get": "list"})(_req("get", user))
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
 def test_classification_destroy(superuser, monkeypatch):
     monkeypatch.setattr(
         "apps.cmdb.views.classification.ClassificationManage.check_classification_is_used", lambda pk: None

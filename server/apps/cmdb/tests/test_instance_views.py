@@ -69,6 +69,37 @@ def _call(action_map, request, **kwargs):
     return InstanceViewSet.as_view(action_map)(request, **kwargs)
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize("permission", ["search-View", "asset_info-View"])
+def test_model_inst_count_allows_home_read_permissions(authenticated_user, monkeypatch, permission):
+    user = authenticated_user
+    user.is_superuser = False
+    user.permission = {"cmdb": {permission}}
+    seen = {}
+
+    def fake_count(*, permissions_map, creator):
+        seen.update(permissions_map=permissions_map, creator=creator)
+        return {"host": 2}
+
+    monkeypatch.setattr(f"{VIEWS}.InstanceManage.model_inst_count", fake_count)
+    response = _call({"get": "model_inst_count"}, _req("get", user))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert seen["permissions_map"] == {1: {"permission_instances_map": {}, "inst_names": []}}
+    assert seen["creator"] == user.username
+
+
+@pytest.mark.django_db
+def test_model_inst_count_denies_user_without_home_read_permission(authenticated_user):
+    user = authenticated_user
+    user.is_superuser = False
+    user.permission = {"cmdb": set()}
+
+    response = _call({"get": "model_inst_count"}, _req("get", user))
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
 # --------------------------------------------------------------------------
 # _parse_positive_int（纯函数）
 # --------------------------------------------------------------------------

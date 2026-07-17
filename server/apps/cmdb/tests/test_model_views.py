@@ -188,6 +188,49 @@ def test_list_models(superuser, monkeypatch):
     assert _body(response)["data"][0]["model_id"] == "host"
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize("permission", ["search-View", "asset_info-View"])
+def test_list_models_allows_home_read_permissions(authenticated_user, monkeypatch, permission):
+    user = authenticated_user
+    user.is_superuser = False
+    user.locale = "zh-Hans"
+    user.group_list = [{"id": 1}]
+    user.permission = {"cmdb": {permission}}
+    monkeypatch.setattr(
+        f"{VIEWS}.ModelManage.search_model",
+        lambda language=None, permissions_map=None, **kwargs: [{"model_id": "host", "group": [1]}],
+    )
+
+    response = ModelViewSet.as_view({"get": "list"})(_req("get", user))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert _body(response)["data"][0]["model_id"] == "host"
+
+
+@pytest.mark.django_db
+def test_list_models_denies_user_without_home_or_management_view(authenticated_user):
+    user = authenticated_user
+    user.is_superuser = False
+    user.permission = {"cmdb": set()}
+
+    response = ModelViewSet.as_view({"get": "list"})(_req("get", user))
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_create_model_still_requires_model_management_permission(authenticated_user):
+    user = authenticated_user
+    user.is_superuser = False
+    user.permission = {"cmdb": {"search-View", "asset_info-View"}}
+
+    response = ModelViewSet.as_view({"post": "create"})(
+        _req("post", user, data={"model_id": "host", "model_name": "主机"})
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
 # --------------------------------------------------------------------------
 # destroy
 # --------------------------------------------------------------------------

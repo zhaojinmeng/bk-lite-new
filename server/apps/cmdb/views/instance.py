@@ -1439,7 +1439,7 @@ class InstanceViewSet(CmdbPermissionMixin, viewsets.ViewSet):
         return WebUtils.response_success(result)
 
     @action(methods=["get"], detail=False, url_path=r"model_inst_count")
-    @HasPermission("asset_info-View")
+    @HasPermission("asset_info-View,search-View")
     def model_inst_count(self, request):
         permissions_map = CmdbRulesFormatUtil.format_user_groups_permissions(request, model_id="")
         result = InstanceManage.model_inst_count(permissions_map=permissions_map, creator=request.user.username)
