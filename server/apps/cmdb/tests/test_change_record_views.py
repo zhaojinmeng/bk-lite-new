@@ -8,7 +8,13 @@ import json
 import pytest
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from apps.cmdb.models.change_record import CUSTOM_REPORTING_CHANGE, ChangeRecord
+from apps.cmdb.models.change_record import (
+    CUSTOM_REPORTING_CHANGE,
+    DEVICE_LIFECYCLE,
+    MODEL_MANAGEMENT_CHANGE,
+    ORDINARY_ATTRIBUTE_CHANGE,
+    ChangeRecord,
+)
 from apps.cmdb.utils import change_record as change_record_utils
 from apps.cmdb.views.change_record import ChangeRecordViewSet
 
@@ -19,6 +25,14 @@ def superuser(authenticated_user):
     u.is_superuser = True
     u.locale = "zh-Hans"
     return u
+
+
+@pytest.fixture
+def normal_user(authenticated_user):
+    user = authenticated_user
+    user.is_superuser = False
+    user.locale = "zh-Hans"
+    return user
 
 
 @pytest.fixture
@@ -79,6 +93,79 @@ def test_export(superuser, record):
     assert response.status_code == 200
     assert response["Content-Disposition"].startswith("attachment")
     assert b"PK" == response.content[:2]  # xlsx 是 zip 容器
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("permission", ["search-View", "asset_info-View"])
+def test_home_recent_allows_home_read_permissions_without_snapshots(normal_user, record, permission):
+    normal_user.permission = {"cmdb": {permission}}
+
+    response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user))
+
+    body = _body(response)["data"]
+    assert response.status_code == 200
+    assert body["count"] == 1
+    assert "before_data" not in body["items"][0]
+    assert "after_data" not in body["items"][0]
+
+
+@pytest.mark.django_db
+def test_home_recent_filters_non_asset_scenarios_and_query_cannot_expand_scope(normal_user, record):
+    normal_user.permission = {"cmdb": {"search-View"}}
+    ChangeRecord.objects.create(
+        inst_id=2,
+        model_id="host",
+        label="主机",
+        type="update_entity",
+        operator="admin",
+        model_object="主机",
+        message="修改模型",
+        scenario=MODEL_MANAGEMENT_CHANGE,
+    )
+
+    response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user))
+    expanded_response = ChangeRecordViewSet.as_view({"get": "home_recent"})(
+        _req("get", normal_user, query=f"scenarios={MODEL_MANAGEMENT_CHANGE}")
+    )
+    scenarios = {item["scenario"] for item in _body(response)["data"]["items"]}
+
+    assert scenarios == {ORDINARY_ATTRIBUTE_CHANGE}
+    assert _body(expanded_response)["data"]["count"] == 0
+
+
+@pytest.mark.django_db
+def test_home_recent_caps_page_size_and_generic_list_stays_denied(normal_user):
+    normal_user.permission = {"cmdb": {"asset_info-View"}}
+    ChangeRecord.objects.bulk_create([
+        ChangeRecord(
+            inst_id=index,
+            model_id="host",
+            label="主机",
+            type="create_entity",
+            operator="admin",
+            model_object="主机",
+            message=f"创建实例 {index}",
+            scenario=DEVICE_LIFECYCLE,
+        )
+        for index in range(1, 106)
+    ])
+
+    home_response = ChangeRecordViewSet.as_view({"get": "home_recent"})(
+        _req("get", normal_user, query="page=1&page_size=1000")
+    )
+    list_response = ChangeRecordViewSet.as_view({"get": "list"})(_req("get", normal_user))
+
+    assert len(_body(home_response)["data"]["items"]) == 100
+    assert list_response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_home_recent_denies_user_without_home_read_permission(normal_user):
+    normal_user.permission = {"cmdb": set()}
+
+    response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user))
+
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db

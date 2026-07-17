@@ -4,13 +4,19 @@ from urllib.parse import quote
 
 from django.http import HttpResponse
 from openpyxl import Workbook
-from rest_framework import viewsets
+from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
 
 from apps.cmdb.filters.change_record import ChangeRecordFilter
 from apps.cmdb.language.service import SettingLanguage
 from apps.cmdb.models.change_record import (
+    COLLECT_AUTOMATION_CHANGE,
+    DEVICE_LIFECYCLE,
     OPERATE_TYPE_CHOICES,
+    ORDINARY_ATTRIBUTE_CHANGE,
+    RELATION_CHANGE,
     SCENARIO_CHOICES,
     ChangeRecord,
 )
@@ -18,6 +24,42 @@ from apps.cmdb.serializers.change_record import ChangeRecordSerializer
 from apps.core.decorators.api_permission import HasPermission
 from apps.core.utils.web_utils import WebUtils
 from config.drf.pagination import CustomPageNumberPagination
+
+
+HOME_ASSET_CHANGE_SCENARIOS = (
+    DEVICE_LIFECYCLE,
+    RELATION_CHANGE,
+    ORDINARY_ATTRIBUTE_CHANGE,
+    COLLECT_AUTOMATION_CHANGE,
+)
+
+
+class HomeRecentChangePagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response({"count": self.page.paginator.count, "items": data})
+
+
+class HomeRecentChangeSerializer(serializers.ModelSerializer):
+    """首页只需要摘要，禁止向普通查询用户暴露审计前后快照。"""
+
+    class Meta:
+        model = ChangeRecord
+        fields = (
+            "id",
+            "inst_id",
+            "model_id",
+            "label",
+            "type",
+            "operator",
+            "created_at",
+            "model_object",
+            "message",
+            "scenario",
+        )
 
 
 class ChangeRecordViewSet(viewsets.ReadOnlyModelViewSet):
@@ -35,6 +77,16 @@ class ChangeRecordViewSet(viewsets.ReadOnlyModelViewSet):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return WebUtils.response_success(serializer.data)
+
+    @action(methods=["get"], detail=False, url_path="home_recent")
+    @HasPermission("asset_info-View,search-View")
+    def home_recent(self, request, *args, **kwargs):
+        queryset = self.get_queryset().filter(scenario__in=HOME_ASSET_CHANGE_SCENARIOS)
+        queryset = self.filter_queryset(queryset)
+        paginator = HomeRecentChangePagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = HomeRecentChangeSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @action(methods=["get"], detail=False)
     @HasPermission("operation_log-View")
