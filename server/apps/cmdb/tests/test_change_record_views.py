@@ -160,8 +160,10 @@ def test_home_recent_normal_user_only_sees_own_records(normal_user, record):
     normal_user.permission = {"cmdb": {"search-View"}}
 
     response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user))
+    bypass_response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user, query="operator=admin"))
 
     assert _body(response)["data"]["count"] == 0
+    assert _body(bypass_response)["data"]["count"] == 0
 
 
 @pytest.mark.django_db
