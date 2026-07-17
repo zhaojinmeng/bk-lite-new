@@ -218,3 +218,52 @@
   `test_review_graph_failure_keeps_review_pending`；首项以
   `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F10")` 固化，后两项普通通过。
 - Projectmem：#0331（open；本验证任务不修改生产逻辑）。
+
+## CRV-F11：Beat 配置的过期清理任务未进入 Worker 注册表
+
+- Severity：P1
+- Location：`server/apps/cmdb_enterprise/config.py:10-12`；
+  `server/apps/cmdb_enterprise/custom_reporting/tasks.py:8-11`；
+  `server/apps/cmdb_enterprise/tasks/__init__.py:2`
+- Trigger：启用 Celery 与 Enterprise app，加载 Celery 默认模块后，对
+  `CELERY_BEAT_SCHEDULE` 的每个 task path 检查 `app.tasks`。
+- Evidence：`test_every_enterprise_beat_task_is_registered` 真实 RED 唯一列出完整任务名
+  `apps.cmdb_enterprise.custom_reporting.tasks.custom_reporting_expire_cleanup`；app 级
+  `apps.cmdb_enterprise.tasks` 只显式导入 attachment cleanup。确认 RED 后以
+  `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F11")` 精确固化，只有
+  `missing` 集合精确等于该完整任务名时才抛 `KnownProductDefect`；其他缺失仍普通失败。
+- Impact：Beat 可按日生成一个 Worker 不认识的任务名，过期自定义上报实例清理不会按
+  计划执行，陈旧资产持续保留并造成数据准确性与存储增长风险。
+- Root Cause：Celery autodiscovery 只发现 app 级 `tasks` 模块；过期任务定义在嵌套包
+  `custom_reporting/tasks.py`，却没有从 app 级 tasks 包导入注册。
+- Why Existing Tests Missed It：既有测试直接调用 `expire_cleanup()` 或任务函数，没有把
+  Enterprise Beat task path 与 Worker 的实际注册表做集合一致性检查。
+- Required Tests：保留 `test_every_enterprise_beat_task_is_registered`；修复后必须从
+  strict xfail 变为普通通过，并确保任意新增或额外缺失 task path 均普通失败。
+- Projectmem：#0383（open；本验证任务不修改生产逻辑）。
+
+## CRV-F12：上报与清理链路缺少统一请求及扫描资源预算
+
+- Severity：P1
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/ingest_service.py:30-32,60-86`；
+  `merge_service.py:63-81`；`relation_service.py:86-100,120-135`；
+  `cleanup_service.py:208-240`；`activity_service.py:92-148`
+- Trigger：合法 Token 提交高基数 `instances`/`relations`，任务积累大量
+  pending/batch/review，或多个 expire 任务对应大模型。本轮只做指定源码范围的有界静态
+  审计，未发送大请求、未构造高基数数据、未执行压力测试或破坏性测试。
+- Evidence：已有上限为控制面任务列表 `page_size` 被裁剪至 1..200，以及 task detail 的
+  `recent_batches` 输出切片；但后者切片前仍全量物化全部 batch/review。缺失上限包括：
+  ingest 未限制 `instances`/`relations` 基数；每次请求遍历全部启用凭据逐 token 匹配；
+  merge 按模型全量 `query_entity`；关系处理逐项查询并全量 backfill 当前任务 pending；
+  expire cleanup 遍历全部启用任务且逐模型全量图扫描；batch activity/detail 全量物化历史
+  batch/review。“缺失”仅指本模块源码未发现显式预算，不推断部署层限制。
+- Impact：单请求或单次日清理可使 CPU、内存、数据库/图查询与副作用次数随租户历史规模
+  无界增长，阻塞同步请求或 Celery worker，并放大超时、重复执行及部分完成风险。
+- Root Cause：模块没有统一 `ResourceBudget` 契约；API、同步 service、图扫描和周期任务
+  各自直接消费完整集合，缺少入口拒绝、游标分页、chunk、每轮截止时间与可续跑状态。
+- Why Existing Tests Missed It：现有用例使用少量内存夹具并 mock 图查询，主要断言业务
+  结果；未断言最大列表基数、查询 limit/cursor、chunk 大小、每轮处理上限或续跑游标。
+- Required Tests：增加入口 `instances`/`relations` 上限与超限零副作用测试；凭据查找
+  索引化合同；merge/expire 图查询游标与最大页大小测试；pending、batch/review 分页测试；
+  周期清理每轮 deadline/最大处理量及幂等续跑测试。
+- Projectmem：#0384（open；本验证任务不修改生产逻辑）。
