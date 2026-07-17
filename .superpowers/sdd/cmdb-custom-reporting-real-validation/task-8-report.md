@@ -2,7 +2,7 @@
 
 ## 修正范围
 
-- 重写 `server/validation/custom_reporting/http_runner.py`，只调用生产已注册的 `tasks/`、`tasks/{id}/`、`rotate_credential/`、`revoke_credential/` 与 `ingest/`。
+- 重写 `server/validation/custom_reporting/http_runner.py`，只调用生产已注册的 `tasks/`、`tasks/{id}/`、`rotate_credential/`、`revoke_credential/`、`ingest/`，以及模型管理的 `POST model/association/`、`DELETE model/association/{model_asst_id}/`。
 - 扩展 `server/validation/custom_reporting/ledger.py`，保留既有 `run_id_...` 名称合同，同时支持并严格校验 `run_id:<真实正整数 id>`。
 - 重写 FakeTransport 合同测试，使用真实 WebUtils envelope、真实 task/config/quick_model 载荷、会话 Cookie、组织 Cookie 与凭据轮换数据流。
 - 未修改生产业务逻辑，未发起真实网络请求或写入。
@@ -92,7 +92,8 @@ POST 落账、真实模型关联必须先于任何 relation ingest 创建、泛�
 ```bash
 PYTHONPATH=. .venv/bin/pytest -p no:django \
   --confcutdir=validation/custom_reporting -c pytest.ini -q -o addopts='' \
-  --cov=validation.custom_reporting.http_runner --cov-report=term \
+  --cov=validation.custom_reporting.http_runner \
+  --cov=validation.custom_reporting.ledger --cov-report=term \
   --cov-fail-under=90 \
   validation/custom_reporting/tests/test_http_runner.py \
   validation/custom_reporting/tests/test_ledger.py
