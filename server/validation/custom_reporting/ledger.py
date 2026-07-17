@@ -19,6 +19,7 @@ CLEANUP_PRIORITY = (
     "model",
 )
 NAMED_RESOURCE_KINDS = frozenset({"task", "association", "model"})
+INTEGER_OWNED_RESOURCE_KINDS = frozenset({"task", "credential", "batch"})
 RUN_ID_PATTERN = re.compile(r"\Acrval_(?P<timestamp>[0-9]{8}T[0-9]{6}Z)_(?P<nonce>[A-Za-z0-9]{6,})\Z")
 
 
@@ -66,7 +67,13 @@ class ValidationLedger:
             raise ValueError("名称型资源 identifier 必须是 str")
         if type(identifier) not in (int, str):
             raise ValueError("identifier 必须是 int 或 str")
-        if kind in NAMED_RESOURCE_KINDS and identifier != self.run_id and not identifier.startswith(f"{self.run_id}_"):
+        if kind in INTEGER_OWNED_RESOURCE_KINDS and isinstance(identifier, str):
+            prefix = f"{self.run_id}:"
+            raw_identifier = identifier[len(prefix) :] if identifier.startswith(prefix) else ""
+            legacy_named_identifier = kind == "task" and (identifier == self.run_id or identifier.startswith(f"{self.run_id}_"))
+            if not legacy_named_identifier and (not raw_identifier.isascii() or not raw_identifier.isdecimal() or raw_identifier.startswith("0")):
+                raise ValueError(f"资源不属于当前 run_id: {self.run_id}")
+        elif kind in NAMED_RESOURCE_KINDS and identifier != self.run_id and not identifier.startswith(f"{self.run_id}_"):
             raise ValueError(f"资源不属于当前 run_id: {self.run_id}")
 
         resource = ResourceRef(kind, identifier)
@@ -76,7 +83,10 @@ class ValidationLedger:
     def cleanup_plan(self) -> list[ResourceRef]:
         priority = {kind: index for index, kind in enumerate(CLEANUP_PRIORITY)}
         indexed_resources = enumerate(self._resources)
-        ordered_resources = sorted(indexed_resources, key=lambda item: (priority[item[1].kind], -item[0]),)
+        ordered_resources = sorted(
+            indexed_resources,
+            key=lambda item: (priority[item[1].kind], -item[0]),
+        )
         return [resource for _, resource in ordered_resources]
 
     def to_json(self) -> str:
@@ -84,7 +94,11 @@ class ValidationLedger:
             "run_id": self.run_id,
             "resources": [{"kind": resource.kind, "identifier": resource.identifier} for resource in self._resources],
         }
-        return json.dumps(payload, ensure_ascii=False, sort_keys=True,)
+        return json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+        )
 
     @classmethod
     def from_json(cls, serialized: str) -> "ValidationLedger":

@@ -1,54 +1,57 @@
-# Task 8 实施报告：默认 dry-run 的安全 HTTP E2E 驱动器
+# Task 8 安全复审修正报告：真实自定义上报 HTTP 合同
 
-## 交付范围
+## 修正范围
 
-- 新增 `server/validation/custom_reporting/http_runner.py`，提供 quick/standard 可执行计划、安全 HTTP 客户端、可注入 transport、账本持久化与精准 cleanup。
-- 新增 `server/validation/custom_reporting/tests/test_http_runner.py`，所有 HTTP 与 DNS 行为均由 fake transport/fake resolver 验证，未真实联网。
-- 未修改生产业务逻辑。
+- 重写 `server/validation/custom_reporting/http_runner.py`，只调用生产已注册的 `tasks/`、`tasks/{id}/`、`rotate_credential/`、`revoke_credential/` 与 `ingest/`。
+- 扩展 `server/validation/custom_reporting/ledger.py`，保留既有 `run_id_...` 名称合同，同时支持并严格校验 `run_id:<真实正整数 id>`。
+- 重写 FakeTransport 合同测试，使用真实 WebUtils envelope、真实 task/config/quick_model 载荷、会话 Cookie、组织 Cookie 与凭据轮换数据流。
+- 未修改生产业务逻辑，未发起真实网络请求或写入。
 
-## TDD 证据
+## 根因与真实 RED
 
-首次有效 RED（排除 Django/uv 环境阻断后）：
+首版驱动器使用了生产不存在的 `models/`、`tasks/{id}/fields/`、`tasks/{id}/ingest/`、`relations/`、`token/rotate/`、`token/revoke/` 与 `residuals/`，并把 CLI 与 programmatic 执行门绑定到同一 flag。
 
-```text
-ModuleNotFoundError: No module named 'validation.custom_reporting.http_runner'
-```
-
-自审阶段另以单测复现已有 ledger 被覆盖风险：执行在拒绝前进入首个 POST，失败于 `HttpProtocolError: HTTP transport failed`。随后增加执行前 ledger 路径存在性栅栏，确认网络请求数为 0 且原文件不变。
-
-## 安全合同实现
-
-- 写请求必须同时满足 `execute=True`、`cli_execute=True`（CLI `--execute`）和 `CRV_ALLOW_WRITE=1`；默认输出 dry-run 计划且 `requests_sent=0`。
-- 初始化和每次请求/重定向均验证 http/https、无 userinfo、精确 host allowlist；DNS 必须解析到非空公网 IP，自动重定向关闭并显式限制为最多 3 次。
-- Authorization/Cookie/Token 等秘密不进入计划、返回结果、异常或账本；transport 异常统一收敛，不回显底层敏感上下文。
-- connect/read timeout 固定为 3/10 秒，响应体上限 1 MiB；非 2xx、超限、非 JSON、非 JSON object 均立即失败并停止后续写。
-- 所有名称绑定唯一 `ledger.run_id`；创建成功立即原子写 ledger，已有 ledger 路径拒绝覆盖。
-- standard 只复用本 run quick seed model，先删除 seed task，再创建 standard task。
-- cleanup 仅迭代 `ledger.cleanup_plan()`，删除路径由固定 kind 映射生成；残留扫描只携带本 run_id 和账本 identifier。失败保留 ledger 并抛 `CleanupIncompleteError`。
-- CLI 支持默认 `--dry-run`、`--execute`、`--ledger`；预留 `--verify-ledger`、`--cleanup-ledger` 会明确报“尚未实现”并拒绝执行。
-
-## 验证结果
-
-聚焦测试与覆盖率：
+审查回归首次运行：
 
 ```text
-92 passed in 0.46s
-validation/custom_reporting/http_runner.py  277 statements  17 missed  94%
-Total coverage: 93.86%
+17 failed, 34 deselected
 ```
 
-验证命令：
+失败覆盖真实接口、严格 envelope、loopback SSRF、重定向、会话/组织认证、真实 ID 账本、standard seed 模型归属、原子账本占位、独立三门与真实残留扫描。
+
+## 最终安全合同
+
+- 默认 dry-run，零 transport 调用；执行必须同时满足 CLI `--execute`、独立 `CRV_EXECUTE_CONFIRMED=1`、`CRV_ALLOW_WRITE=1`。
+- 执行 URL 必须为 allowlist 精确匹配的 IP literal，且只能是 `127.0.0.0/8` 或 `::1`；禁止 DNS hostname，从源头消除 rebinding。所有 HTTP 重定向直接拒绝，不携带凭据重放。
+- 管理 API 使用 `CRV_SESSION_COOKIE` 并追加 `current_team=<CRV_ORG_ID>`；ingest 仅使用任务签发/轮换后的 Bearer token。
+- quick 创建发送真实 `team/config/quick_model/is_enabled`；standard 从 quick seed 返回的 `config.model_id` 取模型 ID，按 seed 真实 task ID 删除后再创建 standard。
+- 严格解码 `{result,data,message}`；缺字段、类型错误、`result=false`、非 JSON、非 2xx、超限响应均 fail-closed。
+- 内部保留 raw token 以完成 rotate 后 ingest 与 revoke；plan/result/error/ledger 统一按敏感键子串和已知 secret 值递归脱敏。
+- 首个 POST 前以 `open("x")` 原子创建有效 JSON 空账本；后续用唯一临时文件、fsync、replace 更新；已有路径和并发占位直接拒绝。
+- task/credential/batch 用 `run_id:<真实 int id>` 记账；清理只严格解析账本 task ID 并调用真实 `DELETE tasks/{id}/`。
+- 删除虚构 residual endpoint；清理后用真实 task list 按 run_id 扫描，严格校验分页结构并限制最多 20 页。
+- quick 隐式创建的模型无真实自定义上报删除/残留 API；cleanup 不假成功，保留 ledger 并抛 `CleanupIncompleteError`，交 Task 9 verifier 核验模型图资源。
+- `--verify-ledger`、`--cleanup-ledger` 继续明确拒绝，未伪装实现。
+
+## TDD 与门禁证据
+
+最终聚焦命令：
 
 ```bash
-PYTHONPATH=. .venv/bin/pytest -p no:django --confcutdir=validation/custom_reporting \
-  -c pytest.ini -q -o addopts='' \
-  --cov=validation.custom_reporting.http_runner --cov-report=term --cov-fail-under=90 \
+PYTHONPATH=. .venv/bin/pytest -p no:django \
+  --confcutdir=validation/custom_reporting -c pytest.ini -q -o addopts='' \
+  --cov=validation.custom_reporting.http_runner --cov-report=term \
+  --cov-fail-under=90 \
   validation/custom_reporting/tests/test_http_runner.py \
   validation/custom_reporting/tests/test_ledger.py
 ```
 
-静态门禁：两个新增 Python 文件均通过 `black --check`、`isort --check-only`、`flake8`；`git diff --check` 通过。危险全表删除、按非 run_id 名称扫描删除和直接 `requests.get/post/...` 调用均为零命中。
+结果：
 
-## 自审结论
+```text
+103 passed in 0.52s
+validation/custom_reporting/http_runner.py  337 statements  30 missed  91%
+Total coverage: 91.10%
+```
 
-逐项复核任务简报 10 条强制安全合同，未发现未处置的 Critical/Important 问题。真实联网与真实写入均未发生；Task 9 预留命令保持 fail-closed。
+四个触及 Python 文件通过 `black --check`、`isort --check-only`、`flake8`。测试使用 FakeTransport，未真实联网。

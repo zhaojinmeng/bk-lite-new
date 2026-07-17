@@ -9,10 +9,11 @@ from validation.custom_reporting.http_runner import (
     HttpRunner,
     RequestsTransport,
     SafetyError,
+    _redact,
     build_execution_plan,
     main,
 )
-from validation.custom_reporting.ledger import ResourceRef, ValidationLedger
+from validation.custom_reporting.ledger import ValidationLedger
 
 
 class FakeTransport:
@@ -62,28 +63,6 @@ def runner(tmp_path, transport, **kwargs):
     )
 
 
-def test_default_run_is_dry_run_and_renders_secret_free_namespaced_plan(tmp_path):
-    transport = FakeTransport()
-    result = runner(tmp_path, transport).run(mode="quick", token="super-secret")
-
-    assert result["dry_run"] is True
-    assert result["requests_sent"] == 0
-    assert result["run_id"] == "crval_20260717T080000Z_a1b2c3"
-    assert [step["name"] for step in result["steps"]] == [
-        "create_seed_model",
-        "create_seed_task",
-        "register_fields",
-        "ingest",
-        "create_relation",
-        "rotate_token",
-        "revoke_token",
-    ]
-    assert result["cleanup_order"] == ["edge", "instance", "credential", "task", "model"]
-    assert all(result["run_id"] in name for name in result["resource_names"])
-    assert "super-secret" not in json.dumps(result)
-    assert transport.requests == []
-
-
 @pytest.mark.parametrize(
     ("execute", "cli_execute", "allow_write"),
     [
@@ -130,113 +109,6 @@ def test_initialization_rejects_unsafe_base_url(base_url, allowed_hosts, tmp_pat
         )
 
 
-def test_redirect_target_is_revalidated_before_following(tmp_path, monkeypatch):
-    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
-    transport = FakeTransport(
-        [
-            HttpResponse(302, {"Location": "https://metadata.internal/latest"}, b""),
-        ]
-    )
-
-    with pytest.raises(SafetyError, match="host"):
-        runner(tmp_path, transport, execute=True, cli_execute=True).client.create_model("owned-model")
-
-    assert len(transport.requests) == 1
-
-
-def test_redirect_on_same_allowed_host_is_explicit_and_bounded(tmp_path, monkeypatch):
-    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
-    transport = FakeTransport(
-        [
-            HttpResponse(307, {"Location": "/safe-target"}, b""),
-            response(payload={"id": "created"}),
-        ]
-    )
-
-    result = runner(tmp_path, transport, execute=True, cli_execute=True).client.create_model("owned-model")
-
-    assert result == {"id": "created"}
-    assert [request["url"] for request in transport.requests] == [
-        "https://cmdb.example.test/api/v1/cmdb-enterprise/custom-reporting/models/",
-        "https://cmdb.example.test/safe-target",
-    ]
-
-
-def test_transport_receives_bounded_timeouts_and_response_limit(tmp_path, monkeypatch):
-    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
-    transport = FakeTransport([response(payload={"id": "created"})])
-
-    runner(tmp_path, transport, execute=True, cli_execute=True).client.create_model("owned-model")
-
-    request = transport.requests[0]
-    assert request["connect_timeout"] == 3.0
-    assert request["read_timeout"] == 10.0
-    assert request["max_response_bytes"] == 1024 * 1024
-
-
-@pytest.mark.parametrize(
-    ("bad_response", "message"),
-    [
-        (response(status=503, payload={"token": "leaked-secret"}), "HTTP 503"),
-        (HttpResponse(200, {}, b"not-json"), "JSON"),
-        (HttpResponse(200, {}, b"x" * (1024 * 1024 + 1)), "响应体"),
-        (response(payload=[]), "JSON object"),
-    ],
-)
-def test_protocol_failure_is_redacted_and_stops_followup_writes(tmp_path, monkeypatch, bad_response, message):
-    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
-    transport = FakeTransport([bad_response, response(payload={"id": 2})])
-
-    with pytest.raises(HttpProtocolError, match=message) as exc_info:
-        runner(tmp_path, transport, execute=True, cli_execute=True).client.create_model("owned-model", token="request-secret")
-
-    rendered = str(exc_info.value)
-    assert "request-secret" not in rendered
-    assert "leaked-secret" not in rendered
-    assert len(transport.requests) == 1
-
-
-def test_authorization_and_tokens_are_redacted_from_results_plan_and_ledger(tmp_path, monkeypatch):
-    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
-    transport = FakeTransport([response(payload={"id": "model-id", "token": "response-secret"})])
-    http_runner = runner(tmp_path, transport, execute=True, cli_execute=True)
-
-    result = http_runner.client.create_model("owned-model", token="request-secret")
-
-    assert result == {"id": "model-id", "token": "***"}
-    rendered_request = json.dumps(transport.requests[0])
-    assert "request-secret" in rendered_request
-    persisted = (tmp_path / "ledger.json").read_text() if (tmp_path / "ledger.json").exists() else ""
-    assert "request-secret" not in persisted
-    assert "response-secret" not in json.dumps(result)
-    assert "response-secret" not in persisted
-
-
-def test_successful_creations_are_immediately_persisted_and_recoverable(tmp_path, monkeypatch):
-    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
-    transport = FakeTransport([response(payload={"id": "crval_20260717T080000Z_a1b2c3_model"})])
-    http_runner = runner(tmp_path, transport, execute=True, cli_execute=True)
-
-    http_runner.create_seed_model()
-
-    restored = ValidationLedger.from_json((tmp_path / "ledger.json").read_text())
-    assert restored.cleanup_plan() == [ResourceRef("model", "crval_20260717T080000Z_a1b2c3_model")]
-
-
-def test_execute_refuses_to_overwrite_an_existing_ledger_before_network(tmp_path, monkeypatch):
-    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
-    ledger_path = tmp_path / "ledger.json"
-    ledger_path.write_text("do-not-overwrite")
-    transport = FakeTransport()
-    http_runner = runner(tmp_path, transport, execute=True, cli_execute=True)
-
-    with pytest.raises(SafetyError, match="账本路径已存在"):
-        http_runner.run(mode="quick", token="secret")
-
-    assert ledger_path.read_text() == "do-not-overwrite"
-    assert transport.requests == []
-
-
 def test_resource_names_are_unique_between_runs():
     first = ValidationLedger.create(now="20260717T080000Z", nonce="a1b2c3")
     second = ValidationLedger.create(now="20260717T080000Z", nonce="d4e5f6")
@@ -245,55 +117,6 @@ def test_resource_names_are_unique_between_runs():
     second_names = set(build_execution_plan("quick", second.run_id).resource_names)
 
     assert first_names.isdisjoint(second_names)
-
-
-def test_standard_plan_uses_only_own_quick_seed_and_deletes_seed_task_first():
-    run_id = "crval_20260717T080000Z_a1b2c3"
-    plan = build_execution_plan("standard", run_id)
-
-    assert plan.steps[0].name == "create_seed_model"
-    assert plan.steps[1].name == "create_seed_task"
-    assert plan.steps[2].name == "delete_seed_task"
-    standard = next(step for step in plan.steps if step.name == "create_standard_task")
-    assert standard.payload["model_id"] == f"{run_id}_model"
-    assert "existing" not in json.dumps(plan.to_safe_dict())
-
-
-def test_standard_execute_runs_full_client_workflow_and_records_each_created_resource(tmp_path, monkeypatch):
-    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
-    run_id = "crval_20260717T080000Z_a1b2c3"
-    transport = FakeTransport(
-        [
-            response(payload={"id": f"{run_id}_model"}),
-            response(payload={"id": f"{run_id}_seed_task"}),
-            response(payload={}),
-            response(payload={"id": f"{run_id}_standard_task"}),
-            response(payload={}),
-            response(payload={"id": 101}),
-            response(payload={"id": 202}),
-            response(payload={"id": 303, "token": "rotated-secret"}),
-            response(payload={}),
-        ]
-    )
-    http_runner = runner(tmp_path, transport, execute=True, cli_execute=True)
-
-    result = http_runner.run(mode="standard", token="request-secret")
-
-    assert result["dry_run"] is False
-    assert result["requests_sent"] == 9
-    assert [resource.kind for resource in http_runner.ledger.resources] == [
-        "model",
-        "task",
-        "task",
-        "instance",
-        "edge",
-        "credential",
-    ]
-    assert transport.requests[2]["method"] == "DELETE"
-    assert f"{run_id}_seed_task" in transport.requests[2]["url"]
-    assert transport.requests[3]["json_body"]["model_id"] == f"{run_id}_model"
-    assert "rotated-secret" not in json.dumps(result)
-    assert "request-secret" not in (tmp_path / "ledger.json").read_text()
 
 
 def test_requests_transport_disables_redirects_and_bounds_stream(monkeypatch):
@@ -342,85 +165,6 @@ def test_requests_transport_disables_redirects_and_bounds_stream(monkeypatch):
     assert calls[0][2]["timeout"] == (3.0, 10.0)
 
 
-@pytest.mark.parametrize(
-    "resolver",
-    [lambda _hostname: ["127.0.0.1"], lambda _hostname: [], lambda _hostname: ["not-an-ip"]],
-)
-def test_dns_validation_rejects_private_empty_and_invalid_answers(tmp_path, resolver):
-    with pytest.raises(SafetyError, match="DNS"):
-        HttpRunner(
-            base_url="https://cmdb.example.test/api/",
-            allowed_hosts={"cmdb.example.test"},
-            transport=FakeTransport(),
-            ledger=ValidationLedger.create(now="20260717T080000Z", nonce="a1b2c3"),
-            ledger_path=tmp_path / "ledger.json",
-            resolver=resolver,
-        )
-
-
-def test_cleanup_uses_only_ledger_plan_and_scans_only_run_owned_identifiers(tmp_path, monkeypatch):
-    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
-    ledger = ValidationLedger.create(now="20260717T080000Z", nonce="a1b2c3")
-    ledger.record("model", f"{ledger.run_id}_model")
-    ledger.record("task", f"{ledger.run_id}_task")
-    ledger.record("instance", 101)
-    transport = FakeTransport(
-        [
-            response(payload={}),
-            response(payload={}),
-            response(payload={}),
-            response(payload={"items": []}),
-        ]
-    )
-    http_runner = HttpRunner(
-        base_url="https://cmdb.example.test/api/",
-        allowed_hosts={"cmdb.example.test"},
-        transport=transport,
-        ledger=ledger,
-        ledger_path=tmp_path / "ledger.json",
-        execute=True,
-        cli_execute=True,
-        resolver=public_resolver,
-    )
-
-    http_runner.cleanup()
-
-    urls = [request["url"] for request in transport.requests]
-    assert urls[:3] == [
-        "https://cmdb.example.test/api/instances/101/",
-        f"https://cmdb.example.test/api/tasks/{ledger.run_id}_task/",
-        f"https://cmdb.example.test/api/models/{ledger.run_id}_model/",
-    ]
-    assert ledger.run_id in urls[3]
-    assert "existing" not in json.dumps(transport.requests)
-    assert not (tmp_path / "ledger.json").exists()
-
-
-def test_cleanup_failure_retains_ledger_and_raises_incomplete(tmp_path, monkeypatch):
-    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
-    ledger = ValidationLedger.create(now="20260717T080000Z", nonce="a1b2c3")
-    ledger.record("model", f"{ledger.run_id}_model")
-    ledger_path = tmp_path / "ledger.json"
-    ledger_path.write_text(ledger.to_json())
-    transport = FakeTransport([response(status=500)])
-    http_runner = HttpRunner(
-        base_url="https://cmdb.example.test/api/",
-        allowed_hosts={"cmdb.example.test"},
-        transport=transport,
-        ledger=ledger,
-        ledger_path=ledger_path,
-        execute=True,
-        cli_execute=True,
-        resolver=public_resolver,
-    )
-
-    with pytest.raises(CleanupIncompleteError):
-        http_runner.cleanup()
-
-    assert ledger_path.exists()
-    assert ValidationLedger.from_json(ledger_path.read_text()).resources == ledger.resources
-
-
 @pytest.mark.parametrize("flag", ["--verify-ledger", "--cleanup-ledger"])
 def test_reserved_cli_commands_fail_explicitly(flag, tmp_path):
     with pytest.raises(SystemExit, match="尚未实现"):
@@ -444,3 +188,281 @@ def test_cli_defaults_to_dry_run_without_network(monkeypatch, tmp_path, capsys):
     assert exit_code == 0
     output = capsys.readouterr().out
     assert '"dry_run": true' in output
+
+
+# Security review regressions: these tests intentionally assert the real overlay
+# contract instead of the provisional endpoints used by the first Task 8 draft.
+
+
+def web_response(data=None, *, result=True, message=""):
+    return response(payload={"result": result, "data": {} if data is None else data, "message": message})
+
+
+def real_runner(tmp_path, transport, **kwargs):
+    return HttpRunner(
+        base_url="http://127.0.0.1:8011/api/v1/cmdb/api/custom_reporting/",
+        allowed_hosts={"127.0.0.1"},
+        transport=transport,
+        ledger=ValidationLedger.create(now="20260717T080000Z", nonce="review01"),
+        ledger_path=tmp_path / "ledger.json",
+        session_cookie="sessionid=session-secret",
+        org_id=7,
+        **kwargs,
+    )
+
+
+def test_review_contract_dry_run_loopback_literal_does_not_resolve_or_send(tmp_path):
+    transport = FakeTransport()
+    result = real_runner(tmp_path, transport).run(mode="quick")
+    assert result["dry_run"] is True
+    assert result["requests_sent"] == 0
+    assert transport.requests == []
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "http://localhost:8011/api/v1/cmdb/api/custom_reporting/",
+        "http://127.0.0.1.evil:8011/api/v1/cmdb/api/custom_reporting/",
+        "http://93.184.216.34/api/v1/cmdb/api/custom_reporting/",
+        "http://10.0.0.1/api/v1/cmdb/api/custom_reporting/",
+    ],
+)
+def test_review_contract_execute_rejects_non_loopback_ip_literal(base_url, tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    with pytest.raises(SafetyError):
+        HttpRunner(
+            base_url=base_url,
+            allowed_hosts={base_url.split("//", 1)[1].split(":", 1)[0].split("/", 1)[0]},
+            transport=FakeTransport(),
+            ledger=ValidationLedger.create(now="20260717T080000Z", nonce="review01"),
+            ledger_path=tmp_path / "ledger.json",
+            session_cookie="sessionid=x",
+            org_id=7,
+            execute=True,
+            cli_execute=True,
+        )
+
+
+def test_review_contract_any_redirect_is_rejected_without_replay(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    transport = FakeTransport([HttpResponse(307, {"Location": "/other"}, b"")])
+    client = real_runner(tmp_path, transport, execute=True, cli_execute=True).client
+    with pytest.raises(HttpProtocolError, match="重定向"):
+        client.list_tasks("owned")
+    assert len(transport.requests) == 1
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"id": 1},
+        {"result": False, "data": {}, "message": "denied"},
+        {"result": True, "message": "missing data"},
+        {"result": "true", "data": {}, "message": ""},
+        {"result": True, "data": [], "message": ""},
+    ],
+)
+def test_review_contract_strict_webutils_envelope(payload, tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    transport = FakeTransport([response(payload=payload)])
+    client = real_runner(tmp_path, transport, execute=True, cli_execute=True).client
+    with pytest.raises(HttpProtocolError):
+        client.list_tasks("owned")
+
+
+def test_review_contract_real_task_payload_cookie_org_and_paths(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    run_id = "crval_20260717T080000Z_review01"
+    transport = FakeTransport(
+        [
+            web_response(
+                {
+                    "id": 41,
+                    "config": {"model_id": "owned_model"},
+                    "credential": {"id": 51},
+                    "token": "issued-token",
+                }
+            ),
+            web_response({"batch_id": 61, "summary": {}}),
+            web_response({"credential": {"id": 51}, "token": "rotated-token"}),
+            web_response({"batch_id": 62, "summary": {}}),
+            web_response({"credential_id": 51, "is_enabled": False}),
+        ]
+    )
+    result = real_runner(tmp_path, transport, execute=True, cli_execute=True).run(mode="quick")
+
+    assert result["requests_sent"] == 5
+    assert [request["url"].split("custom_reporting/", 1)[1] for request in transport.requests] == [
+        "tasks/",
+        "ingest/",
+        "tasks/41/rotate_credential/",
+        "ingest/",
+        "tasks/41/revoke_credential/",
+    ]
+    create = transport.requests[0]
+    assert create["json_body"] == {
+        "name": f"{run_id}_quick_task",
+        "team": [7],
+        "config": {
+            "mode": "quick",
+            "cleanup_strategy": "none",
+            "identity_keys": ["inst_name"],
+        },
+        "quick_model": {
+            "model_id": f"{run_id}_model".lower(),
+            "model_name": f"{run_id}_model",
+            "classification_id": "other",
+            "identity_keys": ["inst_name"],
+        },
+        "is_enabled": True,
+    }
+    assert "sessionid=session-secret" in create["headers"]["Cookie"]
+    assert "current_team=7" in create["headers"]["Cookie"]
+    assert transport.requests[1]["headers"]["Authorization"] == "Bearer issued-token"
+    assert transport.requests[3]["headers"]["Authorization"] == "Bearer rotated-token"
+    assert transport.requests[4]["json_body"] == {"credential_id": 51}
+    serialized = (tmp_path / "ledger.json").read_text()
+    assert f"{run_id}:41" in serialized
+    assert f"{run_id}:51" in serialized
+    assert "issued-token" not in serialized
+    assert "rotated-token" not in serialized
+    assert "session-secret" not in json.dumps(result)
+
+
+def test_review_contract_standard_uses_seed_response_model_and_real_task_ids(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    transport = FakeTransport(
+        [
+            web_response(
+                {
+                    "id": 71,
+                    "config": {"model_id": "server-returned-model"},
+                    "credential": {"id": 81},
+                    "token": "seed-token",
+                }
+            ),
+            web_response({}),
+            web_response(
+                {
+                    "id": 72,
+                    "config": {"model_id": "server-returned-model"},
+                    "credential": {"id": 82},
+                    "token": "standard-token",
+                }
+            ),
+            web_response({"batch_id": 91, "summary": {}}),
+            web_response({"credential": {"id": 82}, "token": "rotated-standard-token"}),
+            web_response({"batch_id": 92, "summary": {}}),
+            web_response({"credential_id": 82, "is_enabled": False}),
+        ]
+    )
+    real_runner(tmp_path, transport, execute=True, cli_execute=True).run(mode="standard")
+    assert transport.requests[1]["method"] == "DELETE"
+    assert transport.requests[1]["url"].endswith("tasks/71/")
+    standard = transport.requests[2]["json_body"]
+    assert standard["config"] == {
+        "mode": "standard",
+        "model_id": "server-returned-model",
+        "cleanup_strategy": "none",
+        "identity_keys": ["inst_name"],
+    }
+
+
+def test_review_contract_execute_reserves_valid_ledger_before_first_post(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+
+    class InspectingTransport(FakeTransport):
+        def request(self, **kwargs):
+            restored = ValidationLedger.from_json((tmp_path / "ledger.json").read_text())
+            assert restored.run_id.endswith("review01")
+            return super().request(**kwargs)
+
+    transport = InspectingTransport([web_response({"id": 1})])
+    with pytest.raises(HttpProtocolError):
+        real_runner(tmp_path, transport, execute=True, cli_execute=True).run(mode="quick")
+
+
+def test_review_contract_concurrent_ledger_reservation_allows_only_one_writer(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    path = tmp_path / "ledger.json"
+    first = real_runner(tmp_path, FakeTransport(), execute=True, cli_execute=True)
+    second = real_runner(tmp_path, FakeTransport(), execute=True, cli_execute=True)
+    first.reserve_ledger()
+    with pytest.raises(SafetyError, match="账本路径已存在"):
+        second.reserve_ledger()
+    assert ValidationLedger.from_json(path.read_text()).run_id.endswith("review01")
+
+
+def test_review_contract_cli_requires_independent_confirmation(monkeypatch, tmp_path):
+    monkeypatch.setenv("CRV_ALLOWED_HOSTS", "127.0.0.1")
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    monkeypatch.setenv("CRV_SESSION_COOKIE", "sessionid=x")
+    monkeypatch.setenv("CRV_ORG_ID", "7")
+    monkeypatch.delenv("CRV_EXECUTE_CONFIRMED", raising=False)
+    result = main(
+        [
+            "--execute",
+            "--base-url",
+            "http://127.0.0.1:8011/api/v1/cmdb/api/custom_reporting/",
+            "--ledger",
+            str(tmp_path / "ledger.json"),
+        ],
+        transport=FakeTransport(),
+    )
+    assert result == 0
+
+
+def test_review_contract_cleanup_uses_real_task_delete_and_task_list_only(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    http_runner = real_runner(tmp_path, FakeTransport(), execute=True, cli_execute=True)
+    run_id = http_runner.ledger.run_id
+    http_runner.ledger.record("task", f"{run_id}:41")
+    http_runner.ledger.record("model", f"{run_id}_model")
+    http_runner._persist_ledger()
+    http_runner.client.transport.responses = [
+        web_response({}),
+        web_response({"count": 0, "next": None, "previous": None, "results": []}),
+    ]
+    with pytest.raises(CleanupIncompleteError, match="模型"):
+        http_runner.cleanup()
+    requests = http_runner.client.transport.requests
+    assert requests[0]["url"].endswith("tasks/41/")
+    assert "tasks/?" in requests[1]["url"]
+    assert all("residuals" not in request["url"] for request in requests)
+    assert (tmp_path / "ledger.json").exists()
+
+
+def test_review_contract_secret_substrings_and_known_values_are_recursively_redacted():
+    secret = "plain-value"
+    rendered = _redact(
+        {
+            "nested": [
+                {"refresh_token": secret},
+                {"client_secret": secret},
+                {"api_token": secret},
+                {"cookie_header": secret},
+                {"authentication": secret},
+                {"safe": f"prefix-{secret}-suffix"},
+            ]
+        },
+        (secret,),
+    )
+    assert secret not in json.dumps(rendered)
+
+
+@pytest.mark.parametrize(
+    "bad_response",
+    [
+        HttpResponse(500, {}, b"{}"),
+        HttpResponse(200, {}, b"not-json"),
+        HttpResponse(200, {}, b"x" * (1024 * 1024 + 1)),
+        RuntimeError("contains secret"),
+    ],
+)
+def test_review_contract_protocol_failures_are_generic_and_bounded(bad_response, tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    client = real_runner(tmp_path, FakeTransport([bad_response]), execute=True, cli_execute=True).client
+    with pytest.raises(HttpProtocolError) as exc_info:
+        client.list_tasks("owned")
+    assert "secret" not in str(exc_info.value)

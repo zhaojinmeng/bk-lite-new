@@ -2,34 +2,24 @@ import argparse
 import ipaddress
 import json
 import os
-import socket
-from collections.abc import Callable, Mapping, Sequence
+import secrets
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
-from urllib.parse import quote, urlencode, urljoin, urlsplit
+from urllib.parse import urlencode, urljoin, urlsplit
 
 import requests
 
-from validation.custom_reporting.ledger import ResourceRef, ValidationLedger
+from validation.custom_reporting.ledger import ValidationLedger
 
 CONNECT_TIMEOUT = 3.0
 READ_TIMEOUT = 10.0
 MAX_RESPONSE_BYTES = 1024 * 1024
-MAX_REDIRECTS = 3
+MAX_TASK_SCAN_PAGES = 20
+TASK_SCAN_PAGE_SIZE = 200
 REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
-SECRET_KEYS = frozenset({"authorization", "cookie", "password", "secret", "token", "access_token"})
-DELETE_PATHS = {
-    "edge": "relations/{identifier}/",
-    "instance": "instances/{identifier}/",
-    "review": "reviews/{identifier}/",
-    "pending": "pending/{identifier}/",
-    "batch": "batches/{identifier}/",
-    "credential": "credentials/{identifier}/",
-    "task": "tasks/{identifier}/",
-    "association": "associations/{identifier}/",
-    "model": "models/{identifier}/",
-}
+SENSITIVE_KEY_PARTS = ("auth", "cookie", "password", "secret", "token")
 
 
 class SafetyError(RuntimeError):
@@ -67,7 +57,7 @@ class Transport(Protocol):
 
 
 class RequestsTransport:
-    """Small, bounded requests adapter. Redirects are handled by SafeHttpClient."""
+    """Bounded requests adapter with environment proxies and redirects disabled."""
 
     def __init__(self) -> None:
         self._session = requests.Session()
@@ -101,47 +91,68 @@ class RequestsTransport:
             return HttpResponse(response.status_code, dict(response.headers), bytes(body))
 
 
-def _default_resolver(hostname: str) -> list[str]:
-    return sorted({entry[4][0] for entry in socket.getaddrinfo(hostname, None)})
-
-
-def _redact(value: Any) -> Any:
+def _redact(value: Any, known_values: Sequence[str] = ()) -> Any:
+    known = tuple(item for item in known_values if item)
     if isinstance(value, Mapping):
-        return {str(key): "***" if str(key).lower() in SECRET_KEYS else _redact(item) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_redact(item) for item in value]
+        return {
+            str(key): ("***" if any(part in str(key).lower() for part in SENSITIVE_KEY_PARTS) else _redact(item, known))
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_redact(item, known) for item in value]
+    if isinstance(value, str):
+        redacted = value
+        for secret in known:
+            redacted = redacted.replace(secret, "***")
+        return redacted
     return value
 
 
 def _normalize_allowed_hosts(allowed_hosts: set[str]) -> frozenset[str]:
-    normalized = frozenset(host.strip().lower().rstrip(".") for host in allowed_hosts if host.strip())
+    normalized = frozenset(host.strip().lower() for host in allowed_hosts if host.strip())
     if not normalized or any("*" in host for host in normalized):
-        raise SafetyError("CRV_ALLOWED_HOSTS 必须是非空精确 hostname 列表，且禁止通配符")
+        raise SafetyError("CRV_ALLOWED_HOSTS 必须是非空精确 IP literal 列表，且禁止通配符")
     return normalized
 
 
-def _validate_url(url: str, allowed_hosts: frozenset[str], resolver: Callable[[str], Sequence[str]]) -> None:
+def _validate_url(url: str, allowed_hosts: frozenset[str], *, execute: bool) -> None:
     parsed = urlsplit(url)
     if parsed.scheme not in {"http", "https"}:
         raise SafetyError("URL scheme 仅允许 http/https")
     if parsed.username is not None or parsed.password is not None:
         raise SafetyError("URL 禁止 userinfo")
-    hostname = (parsed.hostname or "").lower().rstrip(".")
+    hostname = (parsed.hostname or "").lower()
     if hostname not in allowed_hosts:
         raise SafetyError("URL host 不在 CRV_ALLOWED_HOSTS 精确允许列表")
+    if not execute:
+        return
     try:
-        addresses = list(resolver(hostname))
-    except Exception:
-        raise SafetyError("URL host DNS 解析失败") from None
-    if not addresses:
-        raise SafetyError("URL host DNS 解析结果为空")
-    for address in addresses:
-        try:
-            ip = ipaddress.ip_address(address)
-        except ValueError:
-            raise SafetyError("URL host DNS 返回非法地址") from None
-        if not ip.is_global:
-            raise SafetyError("URL host DNS 指向非公网地址")
+        address = ipaddress.ip_address(hostname)
+    except ValueError:
+        raise SafetyError("execute 仅允许精确 loopback IP literal，禁止 DNS hostname") from None
+    if not address.is_loopback:
+        raise SafetyError("execute 仅允许 127/8 或 ::1 loopback 地址")
+
+
+def _owned_identifier(run_id: str, identifier: Any) -> str:
+    if type(identifier) is not int or identifier <= 0:
+        raise HttpProtocolError("响应缺少合法正整数 id")
+    return f"{run_id}:{identifier}"
+
+
+def _parse_owned_int(run_id: str, identifier: Any) -> int:
+    if not isinstance(identifier, str):
+        raise SafetyError("账本资源 identifier 不是 owned identifier")
+    prefix = f"{run_id}:"
+    if not identifier.startswith(prefix):
+        raise SafetyError("账本资源不属于当前 run_id")
+    raw = identifier[len(prefix) :]
+    if not raw.isascii() or not raw.isdecimal() or raw.startswith("0"):
+        raise SafetyError("账本资源真实 id 格式非法")
+    value = int(raw)
+    if value <= 0:
+        raise SafetyError("账本资源真实 id 格式非法")
+    return value
 
 
 class SafeHttpClient:
@@ -152,15 +163,29 @@ class SafeHttpClient:
         allowed_hosts: set[str],
         transport: Transport,
         write_enabled: bool,
-        resolver: Callable[[str], Sequence[str]] = _default_resolver,
+        session_cookie: str | None,
+        org_id: int | None,
     ) -> None:
         self.allowed_hosts = _normalize_allowed_hosts(allowed_hosts)
-        self.resolver = resolver
         self.base_url = base_url.rstrip("/") + "/"
-        _validate_url(self.base_url, self.allowed_hosts, self.resolver)
+        _validate_url(self.base_url, self.allowed_hosts, execute=write_enabled)
         self.transport = transport
         self.write_enabled = write_enabled
+        self.session_cookie = session_cookie
+        self.org_id = org_id
         self.requests_sent = 0
+
+    def _management_headers(self) -> dict[str, str]:
+        if not self.session_cookie or type(self.org_id) is not int or self.org_id <= 0:
+            raise SafetyError("execute 管理请求必须提供 CRV_SESSION_COOKIE 与正整数 CRV_ORG_ID")
+        cookie = self.session_cookie.strip().rstrip(";")
+        if "\r" in cookie or "\n" in cookie:
+            raise SafetyError("session cookie 格式非法")
+        return {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Cookie": f"{cookie}; current_team={self.org_id}",
+        }
 
     def _request(
         self,
@@ -168,102 +193,89 @@ class SafeHttpClient:
         path: str,
         *,
         payload: Mapping[str, Any] | None = None,
-        token: str | None = None,
-        accepted_statuses: frozenset[int] | None = None,
+        ingest_token: str | None = None,
     ) -> dict[str, Any]:
         if not self.write_enabled:
-            raise SafetyError("网络写请求被三重执行门拒绝")
+            raise SafetyError("网络请求被三重执行门拒绝")
         url = urljoin(self.base_url, path)
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        for redirect_count in range(MAX_REDIRECTS + 1):
-            _validate_url(url, self.allowed_hosts, self.resolver)
-            try:
-                response = self.transport.request(
-                    method=method,
-                    url=url,
-                    headers=headers,
-                    json_body=payload,
-                    connect_timeout=CONNECT_TIMEOUT,
-                    read_timeout=READ_TIMEOUT,
-                    max_response_bytes=MAX_RESPONSE_BYTES,
-                )
-            except Exception:
-                raise HttpProtocolError("HTTP transport failed") from None
-            self.requests_sent += 1
-            if len(response.body) > MAX_RESPONSE_BYTES:
-                raise HttpProtocolError("HTTP 响应体超过上限")
-            if response.status in REDIRECT_STATUSES:
-                if redirect_count == MAX_REDIRECTS:
-                    raise HttpProtocolError("HTTP 重定向次数超过上限")
-                location = next(
-                    (value for key, value in response.headers.items() if key.lower() == "location"),
-                    None,
-                )
-                if not location:
-                    raise HttpProtocolError("HTTP 重定向缺少 Location")
-                url = urljoin(url, location)
-                _validate_url(url, self.allowed_hosts, self.resolver)
-                continue
-            accepted = accepted_statuses or frozenset(range(200, 300))
-            if response.status not in accepted:
-                raise HttpProtocolError(f"HTTP {response.status}")
-            if not response.body:
-                return {}
-            try:
-                decoded = json.loads(response.body)
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                raise HttpProtocolError("HTTP 响应不是合法 JSON") from None
-            if not isinstance(decoded, dict):
-                raise HttpProtocolError("HTTP 响应必须是 JSON object")
-            return _redact(decoded)
-        raise HttpProtocolError("unreachable")
+        _validate_url(url, self.allowed_hosts, execute=True)
+        if ingest_token is None:
+            headers = self._management_headers()
+        else:
+            if not ingest_token:
+                raise SafetyError("ingest 缺少 token")
+            headers = {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {ingest_token}",
+            }
+        try:
+            response = self.transport.request(
+                method=method,
+                url=url,
+                headers=headers,
+                json_body=payload,
+                connect_timeout=CONNECT_TIMEOUT,
+                read_timeout=READ_TIMEOUT,
+                max_response_bytes=MAX_RESPONSE_BYTES,
+            )
+        except Exception:
+            raise HttpProtocolError("HTTP transport failed") from None
+        self.requests_sent += 1
+        if len(response.body) > MAX_RESPONSE_BYTES:
+            raise HttpProtocolError("HTTP 响应体超过上限")
+        if response.status in REDIRECT_STATUSES:
+            raise HttpProtocolError("HTTP 重定向已拒绝，禁止重放请求")
+        if not 200 <= response.status < 300:
+            raise HttpProtocolError(f"HTTP {response.status}")
+        try:
+            decoded = json.loads(response.body)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise HttpProtocolError("HTTP 响应不是合法 JSON") from None
+        if (
+            not isinstance(decoded, dict)
+            or set(decoded) != {"result", "data", "message"}
+            or type(decoded["result"]) is not bool
+            or not isinstance(decoded["message"], str)
+            or not isinstance(decoded["data"], dict)
+        ):
+            raise HttpProtocolError("HTTP 响应不符合 WebUtils envelope")
+        if decoded["result"] is not True:
+            raise HttpProtocolError("WebUtils result=false")
+        return decoded["data"]
 
-    def create_model(self, name: str, token: str | None = None) -> dict[str, Any]:
-        return self._request("POST", "models/", payload={"name": name}, token=token)
+    def create_task(self, payload: Mapping[str, Any]) -> dict[str, Any]:
+        return self._request("POST", "tasks/", payload=payload)
 
-    def create_task(self, name: str, model_id: str, token: str | None = None) -> dict[str, Any]:
-        return self._request("POST", "tasks/", payload={"name": name, "model_id": model_id}, token=token)
+    def delete_task(self, task_id: int) -> dict[str, Any]:
+        return self._request("DELETE", f"tasks/{task_id}/")
 
-    def register_fields(self, task_id: str, token: str | None = None) -> dict[str, Any]:
-        return self._request("POST", f"tasks/{quote(task_id, safe='')}/fields/", payload={"fields": ["name", "ip"]}, token=token)
+    def ingest(self, payload: Mapping[str, Any], token: str) -> dict[str, Any]:
+        return self._request("POST", "ingest/", payload=payload, ingest_token=token)
 
-    def ingest(self, task_id: str, token: str | None = None) -> dict[str, Any]:
-        return self._request("POST", f"tasks/{quote(task_id, safe='')}/ingest/", payload={"instances": [{"name": task_id}]}, token=token)
-
-    def create_relation(self, task_id: str, token: str | None = None) -> dict[str, Any]:
-        return self._request("POST", "relations/", payload={"task_id": task_id}, token=token)
-
-    def rotate_token(self, task_id: str, token: str | None = None) -> dict[str, Any]:
-        return self._request("POST", f"tasks/{quote(task_id, safe='')}/token/rotate/", payload={}, token=token)
-
-    def revoke_token(self, task_id: str, token: str | None = None) -> dict[str, Any]:
-        return self._request("POST", f"tasks/{quote(task_id, safe='')}/token/revoke/", payload={}, token=token)
-
-    def delete(self, resource: ResourceRef, token: str | None = None) -> dict[str, Any]:
-        template = DELETE_PATHS.get(resource.kind)
-        if template is None:
-            raise SafetyError(f"未知 cleanup kind: {resource.kind}")
-        identifier = quote(str(resource.identifier), safe="")
+    def rotate_credential(self, task_id: int, credential_id: int) -> dict[str, Any]:
         return self._request(
-            "DELETE",
-            template.format(identifier=identifier),
-            token=token,
-            accepted_statuses=frozenset({200, 202, 204, 404}),
+            "POST",
+            f"tasks/{task_id}/rotate_credential/",
+            payload={"credential_id": credential_id},
         )
 
-    def scan_residuals(self, run_id: str, identifiers: Sequence[str | int], token: str | None = None) -> dict[str, Any]:
-        query = urlencode({"run_id": run_id, "ids": ",".join(str(identifier) for identifier in identifiers)})
-        return self._request("GET", f"residuals/?{query}", token=token)
+    def revoke_credential(self, task_id: int, credential_id: int) -> dict[str, Any]:
+        return self._request(
+            "POST",
+            f"tasks/{task_id}/revoke_credential/",
+            payload={"credential_id": credential_id},
+        )
+
+    def list_tasks(self, name: str, page: int = 1) -> dict[str, Any]:
+        query = urlencode({"name": name, "page": page, "page_size": TASK_SCAN_PAGE_SIZE})
+        return self._request("GET", f"tasks/?{query}")
 
 
 @dataclass(frozen=True)
 class PlanStep:
     name: str
     method: str
-    resource_kind: str | None
-    resource_name: str | None
     payload: Mapping[str, Any]
 
 
@@ -276,53 +288,102 @@ class ExecutionPlan:
 
     @property
     def resource_names(self) -> tuple[str, ...]:
-        return tuple(step.resource_name for step in self.steps if step.resource_name is not None)
+        names = []
+        for step in self.steps:
+            name = step.payload.get("name")
+            if isinstance(name, str):
+                names.append(name)
+        return tuple(names)
 
-    def to_safe_dict(self) -> dict[str, Any]:
+    def to_safe_dict(self, known_values: Sequence[str] = ()) -> dict[str, Any]:
         return {
             "run_id": self.run_id,
             "mode": self.mode,
-            "steps": [{"name": step.name, "method": step.method, "payload": _redact(step.payload)} for step in self.steps],
+            "steps": [
+                {
+                    "name": step.name,
+                    "method": step.method,
+                    "payload": _redact(step.payload, known_values),
+                }
+                for step in self.steps
+            ],
             "cleanup_order": list(self.cleanup_order),
             "resource_names": list(self.resource_names),
         }
 
 
-def build_execution_plan(mode: str, run_id: str) -> ExecutionPlan:
+def _quick_task_payload(run_id: str, org_id: int, classification_id: str) -> dict[str, Any]:
+    model_name = f"{run_id}_model"
+    return {
+        "name": f"{run_id}_quick_task",
+        "team": [org_id],
+        "config": {
+            "mode": "quick",
+            "cleanup_strategy": "none",
+            "identity_keys": ["inst_name"],
+        },
+        "quick_model": {
+            "model_id": model_name.lower(),
+            "model_name": model_name,
+            "classification_id": classification_id,
+            "identity_keys": ["inst_name"],
+        },
+        "is_enabled": True,
+    }
+
+
+def _standard_task_payload(run_id: str, org_id: int, model_id: str) -> dict[str, Any]:
+    return {
+        "name": f"{run_id}_standard_task",
+        "team": [org_id],
+        "config": {
+            "mode": "standard",
+            "model_id": model_id,
+            "cleanup_strategy": "none",
+            "identity_keys": ["inst_name"],
+        },
+        "is_enabled": True,
+    }
+
+
+def _ingest_payload(run_id: str, suffix: str) -> dict[str, Any]:
+    return {
+        "instances": [
+            {
+                "inst_name": f"{run_id}_{suffix}",
+                "crv_run_id": run_id,
+            }
+        ],
+        "relations": [],
+    }
+
+
+def build_execution_plan(
+    mode: str,
+    run_id: str,
+    org_id: int = 1,
+    classification_id: str = "other",
+) -> ExecutionPlan:
     if mode not in {"quick", "standard"}:
         raise ValueError("mode 仅允许 quick/standard")
-    model = f"{run_id}_model"
-    seed_task = f"{run_id}_seed_task"
-    standard_task = f"{run_id}_standard_task"
-    steps = [
-        PlanStep("create_seed_model", "POST", "model", model, {"name": model}),
-        PlanStep("create_seed_task", "POST", "task", seed_task, {"name": seed_task, "model_id": model}),
-    ]
-    active_task = seed_task
+    quick = _quick_task_payload(run_id, org_id, classification_id)
+    steps = [PlanStep("create_quick_task", "POST", quick)]
     if mode == "standard":
         steps.extend(
             [
-                PlanStep("delete_seed_task", "DELETE", None, seed_task, {"task_id": seed_task}),
-                PlanStep(
-                    "create_standard_task",
-                    "POST",
-                    "task",
-                    standard_task,
-                    {"name": standard_task, "model_id": model},
-                ),
+                PlanStep("delete_seed_task", "DELETE", {}),
+                PlanStep("create_standard_task", "POST", {"name": f"{run_id}_standard_task"}),
             ]
         )
-        active_task = standard_task
     steps.extend(
         [
-            PlanStep("register_fields", "POST", None, None, {"task_id": active_task}),
-            PlanStep("ingest", "POST", "instance", None, {"task_id": active_task}),
-            PlanStep("create_relation", "POST", "edge", None, {"task_id": active_task}),
-            PlanStep("rotate_token", "POST", "credential", None, {"task_id": active_task}),
-            PlanStep("revoke_token", "POST", None, None, {"task_id": active_task}),
+            PlanStep("ingest", "POST", _ingest_payload(run_id, "before_rotate")),
+            PlanStep("rotate_credential", "POST", {}),
+            PlanStep("ingest_with_rotated_token", "POST", _ingest_payload(run_id, "after_rotate")),
+            PlanStep("revoke_credential", "POST", {}),
         ]
     )
-    return ExecutionPlan(run_id, mode, tuple(steps), ("edge", "instance", "credential", "task", "model"))
+    return ExecutionPlan(run_id, mode, tuple(steps), ("task", "model_verification"))
 
 
 class HttpRunner:
@@ -336,89 +397,159 @@ class HttpRunner:
         ledger_path: Path,
         execute: bool = False,
         cli_execute: bool = False,
-        resolver: Callable[[str], Sequence[str]] = _default_resolver,
+        session_cookie: str | None = None,
+        org_id: int | None = None,
+        classification_id: str = "other",
+        **_ignored: Any,
     ) -> None:
         self.ledger = ledger
         self.ledger_path = ledger_path
+        self.org_id = org_id
+        self.classification_id = classification_id
         self.write_enabled = execute is True and cli_execute is True and os.environ.get("CRV_ALLOW_WRITE") == "1"
         self.client = SafeHttpClient(
             base_url=base_url,
             allowed_hosts=allowed_hosts,
             transport=transport,
             write_enabled=self.write_enabled,
-            resolver=resolver,
+            session_cookie=session_cookie,
+            org_id=org_id,
         )
+
+    def reserve_ledger(self) -> None:
+        self.ledger_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with self.ledger_path.open("x", encoding="utf-8") as stream:
+                stream.write(self.ledger.to_json())
+                stream.flush()
+                os.fsync(stream.fileno())
+        except FileExistsError:
+            raise SafetyError("账本路径已存在，拒绝覆盖") from None
 
     def _persist_ledger(self) -> None:
         self.ledger_path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self.ledger_path.with_name(f".{self.ledger_path.name}.tmp")
-        temporary.write_text(self.ledger.to_json())
-        temporary.replace(self.ledger_path)
+        temporary = self.ledger_path.with_name(f".{self.ledger_path.name}.{secrets.token_hex(8)}.tmp")
+        try:
+            with temporary.open("x", encoding="utf-8") as stream:
+                stream.write(self.ledger.to_json())
+                stream.flush()
+                os.fsync(stream.fileno())
+            temporary.replace(self.ledger_path)
+        finally:
+            temporary.unlink(missing_ok=True)
 
-    def _record_response(self, kind: str, response: Mapping[str, Any], fallback: str | None = None) -> str | int:
-        identifier = response.get("id", fallback)
-        if type(identifier) not in (int, str):
-            raise HttpProtocolError("创建响应缺少合法 id")
-        self.ledger.record(kind, identifier)
+    def _record_owned(self, kind: str, identifier: Any) -> None:
+        self.ledger.record(kind, _owned_identifier(self.ledger.run_id, identifier))
         self._persist_ledger()
-        return identifier
 
-    def create_seed_model(self, token: str | None = None) -> dict[str, Any]:
-        name = f"{self.ledger.run_id}_model"
-        result = self.client.create_model(name, token=token)
-        self._record_response("model", result, name)
-        return result
+    @staticmethod
+    def _created_task(data: Mapping[str, Any]) -> tuple[int, int, str, str]:
+        task_id = data.get("id")
+        credential = data.get("credential")
+        config = data.get("config")
+        raw_token = data.get("token")
+        if (
+            type(task_id) is not int
+            or task_id <= 0
+            or not isinstance(credential, dict)
+            or type(credential.get("id")) is not int
+            or credential["id"] <= 0
+            or not isinstance(config, dict)
+            or not isinstance(config.get("model_id"), str)
+            or not config["model_id"]
+            or not isinstance(raw_token, str)
+            or not raw_token
+        ):
+            raise HttpProtocolError("任务创建响应缺少真实 id/config.model_id/credential/token")
+        return task_id, credential["id"], config["model_id"], raw_token
 
-    def _execute_plan(self, plan: ExecutionPlan, token: str | None) -> None:
-        model = f"{self.ledger.run_id}_model"
-        active_task = f"{self.ledger.run_id}_seed_task"
-        for step in plan.steps:
-            if step.name == "create_seed_model":
-                self.create_seed_model(token)
-            elif step.name in {"create_seed_task", "create_standard_task"}:
-                result = self.client.create_task(step.resource_name or "", model, token)
-                active_task = step.resource_name or ""
-                self._record_response("task", result, active_task)
-            elif step.name == "delete_seed_task":
-                self.client.delete(ResourceRef("task", step.resource_name or ""), token)
-            elif step.name == "register_fields":
-                self.client.register_fields(active_task, token)
-            elif step.name == "ingest":
-                result = self.client.ingest(active_task, token)
-                self._record_response("instance", result)
-            elif step.name == "create_relation":
-                result = self.client.create_relation(active_task, token)
-                self._record_response("edge", result)
-            elif step.name == "rotate_token":
-                result = self.client.rotate_token(active_task, token)
-                self._record_response("credential", result)
-            elif step.name == "revoke_token":
-                self.client.revoke_token(active_task, token)
+    def _create_task(self, payload: Mapping[str, Any]) -> tuple[int, int, str, str]:
+        created = self.client.create_task(payload)
+        task_id, credential_id, model_id, raw_token = self._created_task(created)
+        self._record_owned("task", task_id)
+        self._record_owned("credential", credential_id)
+        model_owned = f"{self.ledger.run_id}_{model_id}"
+        self.ledger.record("model", model_owned)
+        self._persist_ledger()
+        return task_id, credential_id, model_id, raw_token
+
+    def _execute(self, mode: str) -> None:
+        if type(self.org_id) is not int or self.org_id <= 0:
+            raise SafetyError("CRV_ORG_ID 必须是正整数")
+        seed_payload = _quick_task_payload(self.ledger.run_id, self.org_id, self.classification_id)
+        task_id, credential_id, model_id, current_token = self._create_task(seed_payload)
+        if mode == "standard":
+            self.client.delete_task(task_id)
+            standard_payload = _standard_task_payload(self.ledger.run_id, self.org_id, model_id)
+            task_id, credential_id, _model_id, current_token = self._create_task(standard_payload)
+        first_ingest = self.client.ingest(_ingest_payload(self.ledger.run_id, "before_rotate"), current_token)
+        self._record_owned("batch", first_ingest.get("batch_id"))
+        rotated = self.client.rotate_credential(task_id, credential_id)
+        rotated_credential = rotated.get("credential")
+        new_token = rotated.get("token")
+        if (
+            not isinstance(rotated_credential, dict)
+            or rotated_credential.get("id") != credential_id
+            or not isinstance(new_token, str)
+            or not new_token
+        ):
+            raise HttpProtocolError("凭据轮换响应形态错误")
+        second_ingest = self.client.ingest(_ingest_payload(self.ledger.run_id, "after_rotate"), new_token)
+        self._record_owned("batch", second_ingest.get("batch_id"))
+        revoked = self.client.revoke_credential(task_id, credential_id)
+        if revoked.get("credential_id") != credential_id or revoked.get("is_enabled") is not False:
+            raise HttpProtocolError("凭据吊销响应形态错误")
 
     def run(self, *, mode: str = "quick", token: str | None = None) -> dict[str, Any]:
-        plan = build_execution_plan(mode, self.ledger.run_id)
-        result = plan.to_safe_dict()
+        del token
+        plan = build_execution_plan(
+            mode,
+            self.ledger.run_id,
+            self.org_id if type(self.org_id) is int and self.org_id > 0 else 1,
+            self.classification_id,
+        )
+        result = plan.to_safe_dict((self.client.session_cookie or "", os.environ.get("CRV_TOKEN", "")))
         result.update({"dry_run": not self.write_enabled, "requests_sent": 0})
         if self.write_enabled:
-            if self.ledger_path.exists():
-                raise SafetyError("账本路径已存在，拒绝覆盖")
-            self._execute_plan(plan, token)
+            self.reserve_ledger()
+            self._execute(mode)
             result["requests_sent"] = self.client.requests_sent
-        return result
+        return _redact(result, (self.client.session_cookie or "",))
+
+    def _scan_owned_tasks(self) -> list[int]:
+        owned = []
+        for page in range(1, MAX_TASK_SCAN_PAGES + 1):
+            data = self.client.list_tasks(self.ledger.run_id, page)
+            if set(data) != {"count", "next", "previous", "results"}:
+                raise HttpProtocolError("任务列表分页结构错误")
+            if type(data["count"]) is not int or data["count"] < 0 or not isinstance(data["results"], list):
+                raise HttpProtocolError("任务列表分页结构错误")
+            for item in data["results"]:
+                if not isinstance(item, dict) or type(item.get("id")) is not int or not isinstance(item.get("name"), str):
+                    raise HttpProtocolError("任务列表 item 结构错误")
+                if item["name"].startswith(self.ledger.run_id):
+                    owned.append(item["id"])
+            if data["next"] is None:
+                return owned
+            if not isinstance(data["next"], str):
+                raise HttpProtocolError("任务列表 next 结构错误")
+        raise HttpProtocolError("任务列表扫描超过分页上限")
 
     def cleanup(self, token: str | None = None) -> None:
+        del token
         self._persist_ledger()
         try:
-            cleanup_plan = self.ledger.cleanup_plan()
-            for resource in cleanup_plan:
-                self.client.delete(resource, token)
-            residuals = self.client.scan_residuals(
-                self.ledger.run_id,
-                [resource.identifier for resource in cleanup_plan],
-                token,
-            )
-            if residuals.get("items"):
-                raise CleanupIncompleteError("清理后仍存在本 run 残留")
+            for resource in self.ledger.cleanup_plan():
+                if resource.kind == "task":
+                    self.client.delete_task(_parse_owned_int(self.ledger.run_id, resource.identifier))
+                elif resource.kind in {"credential", "batch", "model"}:
+                    continue
+                else:
+                    raise SafetyError(f"cleanup 禁止处理不可证明资源: {resource.kind}")
+            if self._scan_owned_tasks():
+                raise CleanupIncompleteError("清理后仍存在本 run 任务")
+            if any(resource.kind == "model" for resource in self.ledger.resources):
+                raise CleanupIncompleteError("模型图资源无法由真实 HTTP API 验证，账本已保留交 Task 9")
         except Exception as exc:
             self._persist_ledger()
             if isinstance(exc, CleanupIncompleteError):
@@ -433,7 +564,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--ledger", required=True, type=Path)
     parser.add_argument("--mode", choices=("quick", "standard"), default="quick")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--dry-run", action="store_true", default=True)
+    mode.add_argument("--dry-run", action="store_true")
     mode.add_argument("--execute", action="store_true")
     parser.add_argument("--verify-ledger", action="store_true")
     parser.add_argument("--cleanup-ledger", action="store_true")
@@ -444,7 +575,7 @@ def main(
     argv: Sequence[str] | None = None,
     *,
     transport: Transport | None = None,
-    resolver: Callable[[str], Sequence[str]] = _default_resolver,
+    **_ignored: Any,
 ) -> int:
     args = _parse_args(argv)
     if args.verify_ledger or args.cleanup_ledger:
@@ -452,18 +583,24 @@ def main(
     if not args.base_url:
         raise SystemExit("必须提供 --base-url 或 CRV_BASE_URL")
     allowed_hosts = {host for host in os.environ.get("CRV_ALLOWED_HOSTS", "").split(",") if host}
-    ledger = ValidationLedger.create()
-    http_runner = HttpRunner(
+    try:
+        org_id = int(os.environ["CRV_ORG_ID"]) if "CRV_ORG_ID" in os.environ else None
+    except ValueError:
+        raise SystemExit("CRV_ORG_ID 必须是正整数") from None
+    confirmed = os.environ.get("CRV_EXECUTE_CONFIRMED") == "1"
+    runner = HttpRunner(
         base_url=args.base_url,
         allowed_hosts=allowed_hosts,
         transport=transport or RequestsTransport(),
-        ledger=ledger,
+        ledger=ValidationLedger.create(),
         ledger_path=args.ledger,
-        execute=args.execute,
+        execute=confirmed,
         cli_execute=args.execute,
-        resolver=resolver,
+        session_cookie=os.environ.get("CRV_SESSION_COOKIE"),
+        org_id=org_id,
+        classification_id=os.environ.get("CRV_CLASSIFICATION_ID", "other"),
     )
-    result = http_runner.run(mode=args.mode, token=os.environ.get("CRV_TOKEN"))
+    result = runner.run(mode=args.mode)
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
     return 0
 

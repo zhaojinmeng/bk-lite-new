@@ -61,7 +61,18 @@ def test_run_id_cannot_be_reassigned_after_construction():
 
 
 @pytest.mark.parametrize(
-    "kind", ["edge", "instance", "review", "pending", "batch", "credential", "task", "association", "model",],
+    "kind",
+    [
+        "edge",
+        "instance",
+        "review",
+        "pending",
+        "batch",
+        "credential",
+        "task",
+        "association",
+        "model",
+    ],
 )
 def test_record_accepts_only_fixed_resource_kinds(kind):
     ledger = ValidationLedger.create(now="20260716T071500Z", nonce="a1b2c3")
@@ -128,7 +139,8 @@ def test_constructor_cannot_inject_resources():
 
     with pytest.raises(TypeError, match="_resources"):
         ValidationLedger(
-            run_id=run_id, _resources=[ResourceRef("task", "existing-production-task")],
+            run_id=run_id,
+            _resources=[ResourceRef("task", "existing-production-task")],
         )
 
 
@@ -189,14 +201,20 @@ def test_json_round_trip_preserves_resources_and_cleanup_plan():
 
 @pytest.mark.parametrize("run_id", ["", None, 101, "invalid-run-id"])
 def test_json_restore_rejects_invalid_run_id(run_id):
-    serialized = _serialized_ledger(run_id, [{"kind": "task", "identifier": "existing-production-task"}],)
+    serialized = _serialized_ledger(
+        run_id,
+        [{"kind": "task", "identifier": "existing-production-task"}],
+    )
 
     with pytest.raises(ValueError, match="run_id 格式无效"):
         ValidationLedger.from_json(serialized)
 
 
 def test_json_restore_rejects_unknown_resource_kind():
-    serialized = _serialized_ledger("crval_20260716T071500Z_a1b2c3", [{"kind": "unknown", "identifier": 101}],)
+    serialized = _serialized_ledger(
+        "crval_20260716T071500Z_a1b2c3",
+        [{"kind": "unknown", "identifier": 101}],
+    )
 
     with pytest.raises(ValueError, match="未知资源类型"):
         ValidationLedger.from_json(serialized)
@@ -219,7 +237,34 @@ def test_json_restore_rejects_malformed_structure(payload):
 
 @pytest.mark.parametrize("identifier", [True, {}, []])
 def test_json_restore_rejects_invalid_identifier(identifier):
-    serialized = _serialized_ledger("crval_20260716T071500Z_a1b2c3", [{"kind": "instance", "identifier": identifier}],)
+    serialized = _serialized_ledger(
+        "crval_20260716T071500Z_a1b2c3",
+        [{"kind": "instance", "identifier": identifier}],
+    )
 
     with pytest.raises(ValueError, match="identifier 必须是 int 或 str"):
         ValidationLedger.from_json(serialized)
+
+
+def test_task_ledger_accepts_legacy_name_and_owned_real_id():
+    ledger = ValidationLedger.create(now="20260716T071500Z", nonce="a1b2c3")
+    ledger.record("task", f"{ledger.run_id}_legacy_task")
+    ledger.record("task", f"{ledger.run_id}:101")
+    assert ledger.resources[-1] == ResourceRef("task", f"{ledger.run_id}:101")
+
+
+@pytest.mark.parametrize(
+    "identifier",
+    [
+        "{run_id}:0",
+        "{run_id}:01",
+        "{run_id}:-1",
+        "{run_id}:1.0",
+        "{run_id}:１２",
+        "other:101",
+    ],
+)
+def test_task_ledger_rejects_malformed_owned_real_id(identifier):
+    ledger = ValidationLedger.create(now="20260716T071500Z", nonce="a1b2c3")
+    with pytest.raises(ValueError):
+        ledger.record("task", identifier.format(run_id=ledger.run_id))
