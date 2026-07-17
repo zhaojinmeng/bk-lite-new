@@ -357,15 +357,17 @@ const AssetSearchLanding: React.FC<AssetSearchLandingProps> = ({
                   onClick={onRefreshRecentChanges}
                 />
               </Tooltip>
-              <Button
-                type="link"
-                size="small"
-                icon={<ArrowRightOutlined />}
-                iconPosition="end"
-                onClick={onViewAllChanges}
-              >
-                {t('AssetSearch.viewAll')}
-              </Button>
+              {onViewAllChanges && (
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<ArrowRightOutlined />}
+                  iconPosition="end"
+                  onClick={onViewAllChanges}
+                >
+                  {t('AssetSearch.viewAll')}
+                </Button>
+              )}
             </Space>
           )}
         >

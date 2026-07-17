@@ -231,6 +231,21 @@ def test_create_model_still_requires_model_management_permission(authenticated_u
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("method", "action"),
+    [("put", "update"), ("delete", "destroy")],
+)
+def test_model_writes_still_require_model_management_permission(authenticated_user, method, action):
+    user = authenticated_user
+    user.is_superuser = False
+    user.permission = {"cmdb": {"search-View", "asset_info-View"}}
+
+    response = ModelViewSet.as_view({method: action})(_req(method, user, data={}), pk="host")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
 # --------------------------------------------------------------------------
 # destroy
 # --------------------------------------------------------------------------

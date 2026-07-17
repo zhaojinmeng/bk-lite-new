@@ -81,6 +81,12 @@ class ChangeRecordViewSet(viewsets.ReadOnlyModelViewSet):
     @HasPermission("asset_info-View,search-View")
     def home_recent(self, request, *args, **kwargs):
         queryset = self.get_queryset().filter(scenario__in=HOME_ASSET_CHANGE_SCENARIOS)
+        raw_permissions = getattr(request.user, "permission", set())
+        cmdb_permissions = raw_permissions.get("cmdb", set()) if isinstance(raw_permissions, dict) else raw_permissions
+        can_view_all = getattr(request.user, "is_superuser", False) or "operation_log-View" in cmdb_permissions
+        if not can_view_all:
+            # ChangeRecord 暂无组织字段；普通查询用户只能读取本人记录，避免跨组织摘要泄露。
+            queryset = queryset.filter(operator=request.user.username)
         queryset = self.filter_queryset(queryset)
         paginator = HomeRecentChangePagination()
         page = paginator.paginate_queryset(queryset, request, view=self)

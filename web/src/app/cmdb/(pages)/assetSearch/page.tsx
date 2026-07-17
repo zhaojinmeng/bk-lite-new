@@ -36,6 +36,7 @@ import TagCapsuleGroup from '@/app/cmdb/components/tag-capsule-group';
 import { normalizeTagValues } from '@/app/cmdb/utils/tag';
 import { useRouter } from 'next/navigation';
 import { useUserInfoContext } from '@/context/userInfo';
+import { usePermissions } from '@/context/permissions';
 import dayjs from 'dayjs';
 import AssetSearchLanding, {
   CategoryEntryItem,
@@ -84,6 +85,8 @@ const AssetSearch = () => {
   const router = useRouter();
   const commonContext = useCommon();
   const { username } = useUserInfoContext();
+  const { hasPermission } = usePermissions();
+  const canViewOperationLog = hasPermission('/cmdb/assetManage/operationLog');
 
   const { getModelAttrList } = useModelApi();
   const {
@@ -828,7 +831,7 @@ const AssetSearch = () => {
             onToggleFollow={(item) => void toggleFollowedAsset(item)}
             onRefreshFollowedAssets={() => void refreshFollowedAssets()}
             onOpenCategory={openCategory}
-            onViewAllChanges={() => router.push('/cmdb/assetManage/operationLog')}
+            onViewAllChanges={canViewOperationLog ? (() => router.push('/cmdb/assetManage/operationLog')) : undefined}
             onRefreshRecentChanges={refreshRecentChanges}
             onLoadMoreRecentChanges={loadMoreRecentChanges}
             onRecentChangeFilterChange={handleRecentChangeFilterChange}

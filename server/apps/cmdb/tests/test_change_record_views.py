@@ -93,6 +93,8 @@ def test_export(superuser, record):
 @pytest.mark.parametrize("permission", ["search-View", "asset_info-View"])
 def test_home_recent_allows_home_read_permissions_without_snapshots(normal_user, record, permission):
     normal_user.permission = {"cmdb": {permission}}
+    record.operator = normal_user.username
+    record.save(update_fields=["operator"])
 
     response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user))
 
@@ -106,6 +108,8 @@ def test_home_recent_allows_home_read_permissions_without_snapshots(normal_user,
 @pytest.mark.django_db
 def test_home_recent_filters_non_asset_scenarios_and_query_cannot_expand_scope(normal_user, record):
     normal_user.permission = {"cmdb": {"search-View"}}
+    record.operator = normal_user.username
+    record.save(update_fields=["operator"])
     ChangeRecord.objects.create(
         inst_id=2,
         model_id="host",
@@ -135,7 +139,7 @@ def test_home_recent_caps_page_size_and_generic_list_stays_denied(normal_user):
                 model_id="host",
                 label="主机",
                 type="create_entity",
-                operator="admin",
+                operator=normal_user.username,
                 model_object="主机",
                 message=f"创建实例 {index}",
                 scenario=DEVICE_LIFECYCLE,
@@ -149,6 +153,35 @@ def test_home_recent_caps_page_size_and_generic_list_stays_denied(normal_user):
 
     assert len(_body(home_response)["data"]["items"]) == 100
     assert list_response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_home_recent_normal_user_only_sees_own_records(normal_user, record):
+    normal_user.permission = {"cmdb": {"search-View"}}
+
+    response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user))
+
+    assert _body(response)["data"]["count"] == 0
+
+
+@pytest.mark.django_db
+def test_home_recent_operation_log_view_can_see_other_operators(normal_user, record):
+    normal_user.permission = {"cmdb": {"search-View", "operation_log-View"}}
+
+    response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user))
+
+    assert _body(response)["data"]["count"] == 1
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("action", ["list", "retrieve", "export"])
+def test_generic_change_record_endpoints_stay_denied_for_home_read_user(normal_user, record, action):
+    normal_user.permission = {"cmdb": {"search-View", "asset_info-View"}}
+    kwargs = {"pk": record.id} if action == "retrieve" else {}
+
+    response = ChangeRecordViewSet.as_view({"get": action})(_req("get", normal_user), **kwargs)
+
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db
