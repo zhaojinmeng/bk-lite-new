@@ -56,6 +56,35 @@
 第二轮 fresh GREEN：`112 passed in 0.44s`；`http_runner.py` 93%、`ledger.py` 100%，
 总覆盖率 `94.12%`。
 
+## 第三轮安全复审修正
+
+第三轮先以 4 组行为回归取得真实 `4 failed`，分别覆盖：模型意图必须先于 quick
+POST 落账、真实模型关联必须先于任何 relation ingest 创建、泛化 `result=false`
+不得冒充 token 作废证据、cleanup 协议失败必须统一为 `CleanupIncompleteError`。
+修正 association 小写归属边界时又补充独立 RED，最终全部转绿。
+
+- 生产路由证据为 `POST /api/v1/cmdb/api/model/association/` 与
+  `DELETE /api/v1/cmdb/api/model/association/{model_asst_id}/`；创建 payload 只使用
+  View 真实读取的 `src_model_id/dst_model_id/asst_id`，复用真实 session cookie 与
+  `current_team`。`quick_model` 的生产 bootstrap 仅创建模型与字段，不支持关联声明，
+  因此未虚构 quick payload 扩展。
+- 每个 run 以 nonce 构造唯一 self association 类型 `crv_rel_<nonce>`；在创建请求前
+  持久化 association intent，响应后严格核对 `_id`、两端 model、`asst_id` 与
+  `model_asst_id`，再记录真实 `model_asst_id`。企业 relation service 实际按
+  `model_asst_id` 查询模型关联，所以三步 ingest 使用创建响应的真实
+  `model_asst_id`，而不是错误地使用关系类型短名 `asst_id`。
+- `expected_model_id` 在 quick POST 前写入并持久化；即使服务器返回替换后的 model，
+  账本仍保留预期模型 marker，standard 仅复用该 marker，不重复制造归属记录。
+- rotate 后新 token 成功 ingest 后，立即用旧 token 验证明确拒绝；随后 revoke，再用
+  新 token 验证。仅 HTTP 401/403，或 WebUtils message 同时稳定命中 token/credential
+  主体与 invalid/revoked/expired/disabled 状态才接受；任意 `result=false` 明确失败。
+- cleanup 仅按账本中的真实 `model_asst_id` 调用精确 DELETE；intent 用于响应丢失时的
+  崩溃恢复，不做名称扫描。分页、DELETE、账本归属与协议错误都会先保留账本，再统一
+  抛不含下游详情的 `CleanupIncompleteError`；原本已是该类型则原样保留。
+
+第三轮 fresh GREEN：`120 passed in 1.93s`；`http_runner.py` 93%、`ledger.py` 100%，
+总覆盖率 `93.70%`。
+
 ## TDD 与门禁证据
 
 最终聚焦命令：
@@ -69,13 +98,13 @@ PYTHONPATH=. .venv/bin/pytest -p no:django \
   validation/custom_reporting/tests/test_ledger.py
 ```
 
-结果：
+第三轮最终结果：
 
 ```text
-112 passed in 0.44s
-validation/custom_reporting/http_runner.py  378 statements  27 missed  93%
+120 passed in 1.93s
+validation/custom_reporting/http_runner.py  427 statements  32 missed  93%
 validation/custom_reporting/ledger.py        81 statements   0 missed 100%
-Total coverage: 94.12%
+Total coverage: 93.70%
 ```
 
-三个触及 Python 文件通过 `black --check`、`isort --check-only`、`flake8`。测试使用 FakeTransport，未真实联网。
+四个触及 Python 文件通过 `black --check`、`isort --check-only`、`flake8`。测试使用 FakeTransport，未真实联网。

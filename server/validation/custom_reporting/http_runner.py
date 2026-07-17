@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
-from urllib.parse import urlencode, urljoin, urlsplit
+from urllib.parse import quote, urlencode, urljoin, urlsplit
 
 import requests
 
@@ -19,6 +19,18 @@ MAX_RESPONSE_BYTES = 1024 * 1024
 TASK_SCAN_PAGE_SIZE = 200
 REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
 SENSITIVE_KEY_PARTS = ("auth", "cookie", "password", "secret", "token")
+TOKEN_REJECTION_SUBJECTS = ("token", "credential", "令牌", "凭据")
+TOKEN_REJECTION_STATES = (
+    "invalid",
+    "revoked",
+    "expired",
+    "disabled",
+    "无效",
+    "作废",
+    "吊销",
+    "过期",
+    "禁用",
+)
 
 
 class SafetyError(RuntimeError):
@@ -193,6 +205,7 @@ class SafeHttpClient:
         *,
         payload: Mapping[str, Any] | None = None,
         ingest_token: str | None = None,
+        expect_token_rejection: bool = False,
     ) -> dict[str, Any]:
         if not self.write_enabled:
             raise SafetyError("网络请求被三重执行门拒绝")
@@ -225,6 +238,8 @@ class SafeHttpClient:
             raise HttpProtocolError("HTTP 响应体超过上限")
         if response.status in REDIRECT_STATUSES:
             raise HttpProtocolError("HTTP 重定向已拒绝，禁止重放请求")
+        if expect_token_rejection and response.status in {401, 403}:
+            return {"token_rejected": True}
         if not 200 <= response.status < 300:
             raise HttpProtocolError(f"HTTP {response.status}")
         try:
@@ -239,6 +254,11 @@ class SafeHttpClient:
             or not isinstance(decoded["data"], dict)
         ):
             raise HttpProtocolError("HTTP 响应不符合 WebUtils envelope")
+        if decoded["result"] is not True and expect_token_rejection:
+            message = decoded["message"].lower()
+            if any(subject in message for subject in TOKEN_REJECTION_SUBJECTS) and any(state in message for state in TOKEN_REJECTION_STATES):
+                return {"token_rejected": True}
+            raise HttpProtocolError("token 作废验证未返回明确拒绝")
         if decoded["result"] is not True:
             raise HttpProtocolError("WebUtils result=false")
         return decoded["data"]
@@ -251,6 +271,24 @@ class SafeHttpClient:
 
     def ingest(self, payload: Mapping[str, Any], token: str) -> dict[str, Any]:
         return self._request("POST", "ingest/", payload=payload, ingest_token=token)
+
+    def expect_ingest_token_rejected(self, token: str) -> None:
+        data = self._request(
+            "POST",
+            "ingest/",
+            payload={"instances": [], "relations": []},
+            ingest_token=token,
+            expect_token_rejection=True,
+        )
+        if data.get("token_rejected") is not True:
+            raise HttpProtocolError("已作废 token 仍被 ingest 接受")
+
+    def create_model_association(self, payload: Mapping[str, Any]) -> dict[str, Any]:
+        return self._request("POST", "../model/association/", payload=payload)
+
+    def delete_model_association(self, model_asst_id: str) -> dict[str, Any]:
+        encoded = quote(model_asst_id, safe="")
+        return self._request("DELETE", f"../model/association/{encoded}/")
 
     def rotate_credential(self, task_id: int, credential_id: int) -> dict[str, Any]:
         return self._request(
@@ -397,6 +435,12 @@ def _relation_ingest_payloads(run_id: str, model_id: str, model_asst_id: str) ->
     )
 
 
+def _association_contract(run_id: str, model_id: str) -> tuple[str, str]:
+    nonce = run_id.rsplit("_", 1)[-1]
+    asst_id = f"crv_rel_{nonce}"
+    return asst_id, f"{model_id}_{asst_id}_{model_id}"
+
+
 def build_execution_plan(
     mode: str,
     run_id: str,
@@ -407,7 +451,7 @@ def build_execution_plan(
         raise ValueError("mode 仅允许 quick/standard")
     quick = _quick_task_payload(run_id, org_id, classification_id)
     model_id = quick["quick_model"]["model_id"]
-    model_asst_id = f"{model_id}_crv_rel_{model_id}"
+    asst_id, model_asst_id = _association_contract(run_id, model_id)
     immediate_payload, pending_payload, backfill_payload = _relation_ingest_payloads(run_id, model_id, model_asst_id)
     steps = [PlanStep("create_quick_task", "POST", quick)]
     if mode == "standard":
@@ -417,6 +461,17 @@ def build_execution_plan(
                 PlanStep("create_standard_task", "POST", {"name": f"{run_id}_standard_task"}),
             ]
         )
+    steps.append(
+        PlanStep(
+            "create_model_association",
+            "POST",
+            {
+                "src_model_id": model_id,
+                "dst_model_id": model_id,
+                "asst_id": asst_id,
+            },
+        )
+    )
     steps.extend(
         [
             PlanStep("ingest_immediate_relation", "POST", immediate_payload),
@@ -429,7 +484,12 @@ def build_execution_plan(
             PlanStep("verify_revoked_token_rejected", "POST", {"instances": [], "relations": []}),
         ]
     )
-    return ExecutionPlan(run_id, mode, tuple(steps), ("task", "model_verification"))
+    return ExecutionPlan(
+        run_id,
+        mode,
+        tuple(steps),
+        ("task", "association", "model_verification"),
+    )
 
 
 class HttpRunner:
@@ -516,9 +576,32 @@ class HttpRunner:
         self._record_owned("credential", credential_id)
         if model_id != expected_model_id:
             raise HttpProtocolError("任务创建响应 config.model_id 与请求不一致")
-        self.ledger.record("model", model_id)
-        self._persist_ledger()
         return task_id, credential_id, model_id, raw_token
+
+    def _create_model_association(self, model_id: str) -> str:
+        asst_id, expected_model_asst_id = _association_contract(self.ledger.run_id, model_id)
+        intent = f"{self.ledger.run_id}_association_intent_{expected_model_asst_id}"
+        self.ledger.record("association", intent)
+        self._persist_ledger()
+        payload = {
+            "src_model_id": model_id,
+            "dst_model_id": model_id,
+            "asst_id": asst_id,
+        }
+        created = self.client.create_model_association(payload)
+        if (
+            type(created.get("_id")) is not int
+            or created["_id"] <= 0
+            or created.get("src_model_id") != model_id
+            or created.get("dst_model_id") != model_id
+            or created.get("asst_id") != asst_id
+            or created.get("model_asst_id") != expected_model_asst_id
+        ):
+            raise HttpProtocolError("模型关联创建响应与请求不一致")
+        model_asst_id = created["model_asst_id"]
+        self.ledger.record("association", model_asst_id)
+        self._persist_ledger()
+        return model_asst_id
 
     def _ingest_and_record(
         self,
@@ -556,25 +639,21 @@ class HttpRunner:
         self._record_owned("batch", batch_id)
 
     def _expect_ingest_rejected(self, token: str) -> None:
-        try:
-            self.client.ingest({"instances": [], "relations": []}, token)
-        except HttpProtocolError as exc:
-            if str(exc) == "WebUtils result=false" or str(exc) in {"HTTP 401", "HTTP 403"}:
-                return
-            raise
-        raise HttpProtocolError("已吊销 token 仍被 ingest 接受")
+        self.client.expect_ingest_token_rejected(token)
 
     def _execute(self, mode: str) -> None:
         if type(self.org_id) is not int or self.org_id <= 0:
             raise SafetyError("CRV_ORG_ID 必须是正整数")
         seed_payload = _quick_task_payload(self.ledger.run_id, self.org_id, self.classification_id)
         expected_model_id = seed_payload["quick_model"]["model_id"]
+        self.ledger.record("model", expected_model_id)
+        self._persist_ledger()
         task_id, credential_id, model_id, current_token = self._create_task(seed_payload, expected_model_id=expected_model_id)
         if mode == "standard":
             self.client.delete_task(task_id)
             standard_payload = _standard_task_payload(self.ledger.run_id, self.org_id, model_id)
             task_id, credential_id, _model_id, current_token = self._create_task(standard_payload, expected_model_id=model_id)
-        model_asst_id = f"{model_id}_crv_rel_{model_id}"
+        model_asst_id = self._create_model_association(model_id)
         immediate_payload, pending_payload, backfill_payload = _relation_ingest_payloads(self.ledger.run_id, model_id, model_asst_id)
         self._ingest_and_record(
             immediate_payload,
@@ -614,10 +693,10 @@ class HttpRunner:
             expected_relations=0,
             expected_pending=0,
         )
+        self._expect_ingest_rejected(current_token)
         revoked = self.client.revoke_credential(task_id, credential_id)
         if revoked.get("credential_id") != credential_id or revoked.get("is_enabled") is not False:
             raise HttpProtocolError("凭据吊销响应形态错误")
-        self._expect_ingest_rejected(current_token)
         self._expect_ingest_rejected(new_token)
 
     def run(self, *, mode: str = "quick", token: str | None = None) -> dict[str, Any]:
@@ -672,18 +751,30 @@ class HttpRunner:
 
     def cleanup(self, token: str | None = None) -> None:
         del token
-        self._persist_ledger()
         try:
+            self._persist_ledger()
             ledger_tasks = self._ledger_task_names()
             existing_tasks = self._scan_owned_tasks()
             for task_id, name in existing_tasks.items():
                 if ledger_tasks.get(task_id) != name:
                     raise CleanupIncompleteError("任务列表存在不在账本或名称不匹配的本 run 任务")
+            deleted_associations: set[str] = set()
+            intent_prefix = f"{self.ledger.run_id}_association_intent_"
             for resource in self.ledger.cleanup_plan():
                 if resource.kind == "task":
                     task_id = _parse_owned_int(self.ledger.run_id, resource.identifier)
                     if task_id in existing_tasks:
                         self.client.delete_task(task_id)
+                elif resource.kind == "association":
+                    if not isinstance(resource.identifier, str):
+                        raise SafetyError("association identifier 非法")
+                    association_id = (
+                        resource.identifier[len(intent_prefix) :] if resource.identifier.startswith(intent_prefix) else resource.identifier
+                    )
+                    if not association_id or association_id in deleted_associations:
+                        continue
+                    self.client.delete_model_association(association_id)
+                    deleted_associations.add(association_id)
                 elif resource.kind in {"credential", "batch", "model"}:
                     continue
                 else:
@@ -692,9 +783,18 @@ class HttpRunner:
                 raise CleanupIncompleteError("清理后仍存在本 run 任务")
             if any(resource.kind == "model" for resource in self.ledger.resources):
                 raise CleanupIncompleteError("模型图资源无法由真实 HTTP API 验证，账本已保留交 Task 9")
-        except Exception:
-            self._persist_ledger()
+        except CleanupIncompleteError:
+            try:
+                self._persist_ledger()
+            except Exception:
+                raise CleanupIncompleteError("清理未完整完成，账本持久化状态无法确认") from None
             raise
+        except Exception:
+            try:
+                self._persist_ledger()
+            except Exception:
+                raise CleanupIncompleteError("清理未完整完成，账本持久化状态无法确认") from None
+            raise CleanupIncompleteError("清理未完整完成，账本已保留") from None
         self.ledger_path.unlink(missing_ok=True)
 
 

@@ -253,6 +253,15 @@ def test_task_ledger_accepts_legacy_name_and_owned_real_id():
     assert ledger.resources[-1] == ResourceRef("task", f"{ledger.run_id}:101")
 
 
+def test_association_ledger_accepts_quick_model_lowercase_owned_identifier():
+    ledger = ValidationLedger.create(now="20260716T071500Z", nonce="a1b2c3")
+    identifier = f"{ledger.run_id.lower()}_model_crv_rel_a1b2c3_{ledger.run_id.lower()}_model"
+
+    ledger.record("association", identifier)
+
+    assert ledger.resources[-1] == ResourceRef("association", identifier)
+
+
 @pytest.mark.parametrize(
     "identifier",
     [

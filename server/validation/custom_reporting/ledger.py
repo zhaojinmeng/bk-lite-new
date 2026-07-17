@@ -75,7 +75,7 @@ class ValidationLedger:
                 raise ValueError(f"资源不属于当前 run_id: {self.run_id}")
         elif kind in NAMED_RESOURCE_KINDS:
             owned = identifier == self.run_id or identifier.startswith(f"{self.run_id}_")
-            if kind == "model":
+            if kind in {"association", "model"}:
                 owned = owned or identifier.startswith(f"{self.run_id.lower()}_")
             if not owned:
                 raise ValueError(f"资源不属于当前 run_id: {self.run_id}")

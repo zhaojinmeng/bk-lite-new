@@ -215,6 +215,18 @@ def ingest_response(batch_id, *, instances_received, relations_received, pending
     )
 
 
+def association_response(model_id, asst_id, edge_id=251):
+    return web_response(
+        {
+            "_id": edge_id,
+            "src_model_id": model_id,
+            "dst_model_id": model_id,
+            "asst_id": asst_id,
+            "model_asst_id": f"{model_id}_{asst_id}_{model_id}",
+        }
+    )
+
+
 def real_runner(tmp_path, transport, **kwargs):
     return HttpRunner(
         base_url="http://127.0.0.1:8011/api/v1/cmdb/api/custom_reporting/",
@@ -292,6 +304,7 @@ def test_review_contract_real_task_payload_cookie_org_and_paths(tmp_path, monkey
     monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
     run_id = "crval_20260717T080000Z_review01"
     model_id = f"{run_id}_model".lower()
+    asst_id = "crv_rel_review01"
     transport = FakeTransport(
         [
             web_response(
@@ -302,29 +315,31 @@ def test_review_contract_real_task_payload_cookie_org_and_paths(tmp_path, monkey
                     "token": "issued-token",
                 }
             ),
+            association_response(model_id, asst_id),
             ingest_response(61, instances_received=2, relations_received=1, pending_relations=0),
             ingest_response(62, instances_received=1, relations_received=1, pending_relations=1),
             ingest_response(63, instances_received=1, relations_received=0, pending_relations=0),
             web_response({"credential": {"id": 51}, "token": "rotated-token"}),
             ingest_response(64, instances_received=1, relations_received=0, pending_relations=0),
+            web_response(result=False, message="token revoked"),
             web_response({"credential_id": 51, "is_enabled": False}),
-            web_response(result=False, message="revoked"),
-            web_response(result=False, message="revoked"),
+            web_response(result=False, message="token revoked"),
         ]
     )
     result = real_runner(tmp_path, transport, execute=True, cli_execute=True).run(mode="quick")
 
-    assert result["requests_sent"] == 9
-    assert [request["url"].split("custom_reporting/", 1)[1] for request in transport.requests] == [
-        "tasks/",
-        "ingest/",
-        "ingest/",
-        "ingest/",
-        "tasks/41/rotate_credential/",
-        "ingest/",
-        "tasks/41/revoke_credential/",
-        "ingest/",
-        "ingest/",
+    assert result["requests_sent"] == 10
+    assert [request["url"].split("/api/v1/cmdb/api/", 1)[1] for request in transport.requests] == [
+        "custom_reporting/tasks/",
+        "model/association/",
+        "custom_reporting/ingest/",
+        "custom_reporting/ingest/",
+        "custom_reporting/ingest/",
+        "custom_reporting/tasks/41/rotate_credential/",
+        "custom_reporting/ingest/",
+        "custom_reporting/ingest/",
+        "custom_reporting/tasks/41/revoke_credential/",
+        "custom_reporting/ingest/",
     ]
     create = transport.requests[0]
     assert create["json_body"] == {
@@ -345,9 +360,9 @@ def test_review_contract_real_task_payload_cookie_org_and_paths(tmp_path, monkey
     }
     assert "sessionid=session-secret" in create["headers"]["Cookie"]
     assert "current_team=7" in create["headers"]["Cookie"]
-    assert transport.requests[1]["headers"]["Authorization"] == "Bearer issued-token"
-    assert transport.requests[5]["headers"]["Authorization"] == "Bearer rotated-token"
-    assert transport.requests[6]["json_body"] == {"credential_id": 51}
+    assert transport.requests[2]["headers"]["Authorization"] == "Bearer issued-token"
+    assert transport.requests[6]["headers"]["Authorization"] == "Bearer rotated-token"
+    assert transport.requests[8]["json_body"] == {"credential_id": 51}
     serialized = (tmp_path / "ledger.json").read_text()
     assert f"{run_id}:41" in serialized
     assert f"{run_id}:51" in serialized
@@ -360,6 +375,7 @@ def test_review_contract_standard_uses_seed_response_model_and_real_task_ids(tmp
     monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
     run_id = "crval_20260717T080000Z_review01"
     model_id = f"{run_id}_model".lower()
+    asst_id = "crv_rel_review01"
     transport = FakeTransport(
         [
             web_response(
@@ -379,14 +395,15 @@ def test_review_contract_standard_uses_seed_response_model_and_real_task_ids(tmp
                     "token": "standard-token",
                 }
             ),
+            association_response(model_id, asst_id),
             ingest_response(91, instances_received=2, relations_received=1, pending_relations=0),
             ingest_response(92, instances_received=1, relations_received=1, pending_relations=1),
             ingest_response(93, instances_received=1, relations_received=0, pending_relations=0),
             web_response({"credential": {"id": 82}, "token": "rotated-standard-token"}),
             ingest_response(94, instances_received=1, relations_received=0, pending_relations=0),
+            web_response(result=False, message="token revoked"),
             web_response({"credential_id": 82, "is_enabled": False}),
-            web_response(result=False, message="revoked"),
-            web_response(result=False, message="revoked"),
+            web_response(result=False, message="token revoked"),
         ]
     )
     real_runner(tmp_path, transport, execute=True, cli_execute=True).run(mode="standard")
@@ -399,6 +416,7 @@ def test_review_contract_standard_uses_seed_response_model_and_real_task_ids(tmp
         "cleanup_strategy": "none",
         "identity_keys": ["inst_name"],
     }
+    assert transport.requests[3]["url"].endswith("/api/v1/cmdb/api/model/association/")
 
 
 def test_review_contract_execute_reserves_valid_ledger_before_first_post(tmp_path, monkeypatch):
@@ -633,9 +651,18 @@ def test_second_review_task_list_pagination_is_fail_closed(page, tmp_path, monke
 def test_second_review_plan_contains_real_ingest_relation_sequence():
     run_id = "crval_20260717T080000Z_review01"
     model_id = f"{run_id}_model".lower()
+    model_asst_id = f"{model_id}_crv_rel_review01_{model_id}"
     plan = build_execution_plan("quick", run_id)
+    association_step = next(step for step in plan.steps if step.name == "create_model_association")
     relation_steps = [step for step in plan.steps if "relation" in step.name or "backfill" in step.name]
 
+    assert plan.steps.index(association_step) < plan.steps.index(relation_steps[0])
+    assert association_step.payload == {
+        "src_model_id": model_id,
+        "dst_model_id": model_id,
+        "asst_id": "crv_rel_review01",
+    }
+    assert plan.cleanup_order == ("task", "association", "model_verification")
     assert [step.name for step in relation_steps] == [
         "ingest_immediate_relation",
         "ingest_pending_relation",
@@ -646,7 +673,7 @@ def test_second_review_plan_contains_real_ingest_relation_sequence():
         {
             "source": {"model_id": model_id, "identity": {"inst_name": f"{run_id}_immediate_source"}},
             "target": {"model_id": model_id, "identity": {"inst_name": f"{run_id}_immediate_target"}},
-            "asst_id": f"{model_id}_crv_rel_{model_id}",
+            "asst_id": model_asst_id,
         }
     ]
     assert relation_steps[1].payload["relations"][0]["target"]["identity"] == {"inst_name": f"{run_id}_backfill_target"}
@@ -660,6 +687,7 @@ def test_second_review_runner_executes_relation_ingests_and_records_each_batch(t
     monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
     run_id = "crval_20260717T080000Z_review01"
     model_id = f"{run_id}_model".lower()
+    asst_id = "crv_rel_review01"
     transport = FakeTransport(
         [
             web_response(
@@ -670,13 +698,14 @@ def test_second_review_runner_executes_relation_ingests_and_records_each_batch(t
                     "token": "issued-token",
                 }
             ),
+            association_response(model_id, asst_id),
             ingest_response(301, instances_received=2, relations_received=1, pending_relations=0),
             ingest_response(302, instances_received=1, relations_received=1, pending_relations=1),
             ingest_response(303, instances_received=1, relations_received=0, pending_relations=0),
             web_response({"credential": {"id": 201}, "token": "rotated-token"}),
             ingest_response(304, instances_received=1, relations_received=0, pending_relations=0),
-            web_response({"credential_id": 201, "is_enabled": False}),
             web_response(result=False, message="上报令牌无效或已作废"),
+            web_response({"credential_id": 201, "is_enabled": False}),
             web_response(result=False, message="上报令牌无效或已作废"),
         ]
     )
@@ -684,24 +713,220 @@ def test_second_review_runner_executes_relation_ingests_and_records_each_batch(t
 
     http_runner.run(mode="quick")
 
-    paths = [request["url"].split("custom_reporting/", 1)[1] for request in transport.requests]
+    paths = [request["url"].split("/api/v1/cmdb/api/", 1)[1] for request in transport.requests]
     assert paths == [
-        "tasks/",
-        "ingest/",
-        "ingest/",
-        "ingest/",
-        "tasks/101/rotate_credential/",
-        "ingest/",
-        "tasks/101/revoke_credential/",
-        "ingest/",
-        "ingest/",
+        "custom_reporting/tasks/",
+        "model/association/",
+        "custom_reporting/ingest/",
+        "custom_reporting/ingest/",
+        "custom_reporting/ingest/",
+        "custom_reporting/tasks/101/rotate_credential/",
+        "custom_reporting/ingest/",
+        "custom_reporting/ingest/",
+        "custom_reporting/tasks/101/revoke_credential/",
+        "custom_reporting/ingest/",
     ]
     planned_relations = [step.payload for step in build_execution_plan("quick", run_id).steps if "relation" in step.name or "backfill" in step.name]
-    assert [request["json_body"] for request in transport.requests[1:4]] == planned_relations
+    assert [request["json_body"] for request in transport.requests[2:5]] == planned_relations
     assert [resource.identifier for resource in http_runner.ledger.resources if resource.kind == "batch"] == [
         f"{run_id}:{batch_id}" for batch_id in (301, 302, 303, 304)
     ]
-    assert transport.requests[-2]["headers"]["Authorization"] == "Bearer issued-token"
+    assert transport.requests[-3]["headers"]["Authorization"] == "Bearer issued-token"
     assert transport.requests[-1]["headers"]["Authorization"] == "Bearer rotated-token"
-    assert transport.requests[-2]["json_body"] == {"instances": [], "relations": []}
+    assert transport.requests[-3]["json_body"] == {"instances": [], "relations": []}
     assert transport.requests[-1]["json_body"] == {"instances": [], "relations": []}
+
+
+def test_third_review_records_model_intent_before_quick_task_post_and_keeps_it_on_mismatch(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    expected_model_id = "crval_20260717t080000z_review01_model"
+
+    class InspectingTransport(FakeTransport):
+        def request(self, **kwargs):
+            restored = ValidationLedger.from_json((tmp_path / "ledger.json").read_text())
+            assert [(item.kind, item.identifier) for item in restored.resources] == [("model", expected_model_id)]
+            return super().request(**kwargs)
+
+    transport = InspectingTransport(
+        [
+            web_response(
+                {
+                    "id": 101,
+                    "config": {"model_id": "server-substituted-model"},
+                    "credential": {"id": 201},
+                    "token": "issued-token",
+                }
+            )
+        ]
+    )
+
+    with pytest.raises(HttpProtocolError, match="model_id"):
+        real_runner(tmp_path, transport, execute=True, cli_execute=True).run(mode="quick")
+
+    restored = ValidationLedger.from_json((tmp_path / "ledger.json").read_text())
+    assert ("model", expected_model_id) in [(item.kind, item.identifier) for item in restored.resources]
+
+
+def test_third_review_creates_real_self_association_before_relation_ingest(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    run_id = "crval_20260717T080000Z_review01"
+    model_id = f"{run_id}_model".lower()
+    asst_id = f"crv_rel_{run_id.rsplit('_', 1)[-1]}"
+    model_asst_id = f"{model_id}_{asst_id}_{model_id}"
+    transport = FakeTransport(
+        [
+            web_response(
+                {
+                    "id": 101,
+                    "config": {"model_id": model_id},
+                    "credential": {"id": 201},
+                    "token": "issued-token",
+                }
+            ),
+            association_response(model_id, asst_id),
+            ingest_response(301, instances_received=2, relations_received=1, pending_relations=0),
+            ingest_response(302, instances_received=1, relations_received=1, pending_relations=1),
+            ingest_response(303, instances_received=1, relations_received=0, pending_relations=0),
+            web_response({"credential": {"id": 201}, "token": "rotated-token"}),
+            ingest_response(304, instances_received=1, relations_received=0, pending_relations=0),
+            web_response(result=False, message="上报令牌无效或已作废"),
+            web_response({"credential_id": 201, "is_enabled": False}),
+            web_response(result=False, message="上报令牌无效或已作废"),
+        ]
+    )
+    http_runner = real_runner(tmp_path, transport, execute=True, cli_execute=True)
+
+    http_runner.run(mode="quick")
+
+    association_request = transport.requests[1]
+    assert association_request["method"] == "POST"
+    assert association_request["url"].endswith("/api/v1/cmdb/api/model/association/")
+    assert association_request["json_body"] == {
+        "src_model_id": model_id,
+        "dst_model_id": model_id,
+        "asst_id": asst_id,
+    }
+    relation_requests = transport.requests[2:5]
+    assert all(relation["asst_id"] == model_asst_id for request in relation_requests[:2] for relation in request["json_body"]["relations"])
+    associations = [item.identifier for item in http_runner.ledger.resources if item.kind == "association"]
+    assert associations == [
+        f"{run_id}_association_intent_{model_asst_id}",
+        model_asst_id,
+    ]
+
+
+def test_third_review_rejects_generic_result_false_for_token_invalidation(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    http_runner = real_runner(
+        tmp_path,
+        FakeTransport([web_response(result=False, message="payload validation failed")]),
+        execute=True,
+        cli_execute=True,
+    )
+
+    with pytest.raises(HttpProtocolError, match="token"):
+        http_runner._expect_ingest_rejected("old-token")
+
+
+def test_third_review_cleanup_wraps_protocol_failures_and_preserves_ledger(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    http_runner = real_runner(
+        tmp_path,
+        FakeTransport(
+            [
+                web_response(
+                    {
+                        "count": 1,
+                        "next": "/page/2",
+                        "previous": None,
+                        "results": [
+                            {
+                                "id": 41,
+                                "name": "crval_20260717T080000Z_review01_quick_task",
+                            }
+                        ],
+                    }
+                )
+            ]
+        ),
+        execute=True,
+        cli_execute=True,
+    )
+    http_runner.ledger.record("task", f"{http_runner.ledger.run_id}:41")
+
+    with pytest.raises(CleanupIncompleteError, match="清理未完整完成") as exc_info:
+        http_runner.cleanup()
+
+    assert "分页" not in str(exc_info.value)
+    assert (tmp_path / "ledger.json").exists()
+
+
+def test_third_review_cleanup_deletes_only_real_ledger_association_id(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    http_runner = real_runner(tmp_path, FakeTransport(), execute=True, cli_execute=True)
+    run_id = http_runner.ledger.run_id
+    model_id = f"{run_id}_model".lower()
+    model_asst_id = f"{model_id}_crv_rel_review01_{model_id}"
+    http_runner.ledger.record("task", f"{run_id}:41")
+    http_runner.ledger.record("model", model_id)
+    http_runner.ledger.record("association", f"{run_id}_association_intent_{model_asst_id}")
+    http_runner.ledger.record("association", model_asst_id)
+    http_runner.client.transport.responses = [
+        web_response(
+            {
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{"id": 41, "name": f"{run_id}_quick_task"}],
+            }
+        ),
+        web_response({}),
+        web_response({}),
+        web_response({"count": 0, "next": None, "previous": None, "results": []}),
+    ]
+
+    with pytest.raises(CleanupIncompleteError, match="模型"):
+        http_runner.cleanup()
+
+    deletes = [request for request in http_runner.client.transport.requests if request["method"] == "DELETE"]
+    assert [request["url"] for request in deletes] == [
+        "http://127.0.0.1:8011/api/v1/cmdb/api/custom_reporting/tasks/41/",
+        f"http://127.0.0.1:8011/api/v1/cmdb/api/model/association/{model_asst_id}/",
+    ]
+    assert (tmp_path / "ledger.json").exists()
+
+
+def test_third_review_cleanup_wraps_delete_failure_and_preserves_ledger(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    http_runner = real_runner(tmp_path, FakeTransport(), execute=True, cli_execute=True)
+    run_id = http_runner.ledger.run_id
+    http_runner.ledger.record("task", f"{run_id}:41")
+    http_runner.client.transport.responses = [
+        web_response(
+            {
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{"id": 41, "name": f"{run_id}_quick_task"}],
+            }
+        ),
+        HttpResponse(500, {}, b"secret-delete-failure"),
+    ]
+
+    with pytest.raises(CleanupIncompleteError, match="清理未完整完成") as exc_info:
+        http_runner.cleanup()
+
+    assert "secret" not in str(exc_info.value)
+    assert (tmp_path / "ledger.json").exists()
+
+
+def test_third_review_cleanup_wraps_ledger_ownership_failure(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    http_runner = real_runner(tmp_path, FakeTransport(), execute=True, cli_execute=True)
+    http_runner.ledger.record("task", f"{http_runner.ledger.run_id}_legacy_task")
+
+    with pytest.raises(CleanupIncompleteError, match="清理未完整完成"):
+        http_runner.cleanup()
+
+    assert http_runner.client.transport.requests == []
+    assert (tmp_path / "ledger.json").exists()
