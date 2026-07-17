@@ -29,9 +29,32 @@
 - 内部保留 raw token 以完成 rotate 后 ingest 与 revoke；plan/result/error/ledger 统一按敏感键子串和已知 secret 值递归脱敏。
 - 首个 POST 前以 `open("x")` 原子创建有效 JSON 空账本；后续用唯一临时文件、fsync、replace 更新；已有路径和并发占位直接拒绝。
 - task/credential/batch 用 `run_id:<真实 int id>` 记账；清理只严格解析账本 task ID 并调用真实 `DELETE tasks/{id}/`。
-- 删除虚构 residual endpoint；清理后用真实 task list 按 run_id 扫描，严格校验分页结构并限制最多 20 页。
+- 删除虚构 residual endpoint；清理前后都用真实 task list 按 run_id 扫描，严格要求当前 API 的单页 `next=None`、`count==len(results)` 且不超过 page_size。
 - quick 隐式创建的模型无真实自定义上报删除/残留 API；cleanup 不假成功，保留 ledger 并抛 `CleanupIncompleteError`，交 Task 9 verifier 核验模型图资源。
 - `--verify-ledger`、`--cleanup-ledger` 继续明确拒绝，未伪装实现。
+
+## 第二轮安全复审修正
+
+第二轮审查先新增 8 项模型归属、cleanup 与关系计划回归，首次结果为
+`8 failed, 38 deselected`；随后另以单项 RED 证明 runner 尚未执行关系多步调用。
+
+- quick 创建响应的 `config.model_id` 必须精确等于请求的
+  `quick_model.model_id`；standard 响应也必须精确等于 seed 模型 ID。错配会在首个
+  ingest 前失败，但 task/credential 已立即记账以便精准清理。model ledger 直接记录
+  验证后的真实 `model_id`，不再重复拼接 run_id。
+- cleanup 在任何 DELETE 前调用真实 task list，只接受严格 WebUtils envelope 和单页合同：
+  `next is None`、`count == len(results)`、`count <= page_size`。列表任务名只能精确为本
+  run 的 quick/standard 名称，ID/名称必须与 ledger 创建顺序一致；seed 已不存在可安全
+  跳过。任一未记账任务、名称异常、DELETE 错误或删除后残留均保留 ledger 并失败。
+- 关系不使用虚构 endpoint。计划和 runner 均通过 `/ingest/` 执行三步真实载荷：同批
+  source+target 的立即关系、未来 target 的 pending relation、后续仅上报 target 以触发
+  服务端 backfill；每步严格校验真实 summary 并记录 batch。FakeTransport 只模拟真实
+  WebUtils envelope。Task 8 不声称图边已验证，图事实仍由 Task 9 核验。
+- revoke 后分别以轮换前 token 与已吊销新 token 发送空 instances/relations 的最小 ingest；
+  只有明确 `result=false` 或 HTTP 401/403 才判为通过，不增加资产实例副作用。
+
+第二轮 fresh GREEN：`112 passed in 0.44s`；`http_runner.py` 93%、`ledger.py` 100%，
+总覆盖率 `94.12%`。
 
 ## TDD 与门禁证据
 
@@ -49,9 +72,10 @@ PYTHONPATH=. .venv/bin/pytest -p no:django \
 结果：
 
 ```text
-103 passed in 0.52s
-validation/custom_reporting/http_runner.py  337 statements  30 missed  91%
-Total coverage: 91.10%
+112 passed in 0.44s
+validation/custom_reporting/http_runner.py  378 statements  27 missed  93%
+validation/custom_reporting/ledger.py        81 statements   0 missed 100%
+Total coverage: 94.12%
 ```
 
-四个触及 Python 文件通过 `black --check`、`isort --check-only`、`flake8`。测试使用 FakeTransport，未真实联网。
+三个触及 Python 文件通过 `black --check`、`isort --check-only`、`flake8`。测试使用 FakeTransport，未真实联网。

@@ -73,8 +73,12 @@ class ValidationLedger:
             legacy_named_identifier = kind == "task" and (identifier == self.run_id or identifier.startswith(f"{self.run_id}_"))
             if not legacy_named_identifier and (not raw_identifier.isascii() or not raw_identifier.isdecimal() or raw_identifier.startswith("0")):
                 raise ValueError(f"资源不属于当前 run_id: {self.run_id}")
-        elif kind in NAMED_RESOURCE_KINDS and identifier != self.run_id and not identifier.startswith(f"{self.run_id}_"):
-            raise ValueError(f"资源不属于当前 run_id: {self.run_id}")
+        elif kind in NAMED_RESOURCE_KINDS:
+            owned = identifier == self.run_id or identifier.startswith(f"{self.run_id}_")
+            if kind == "model":
+                owned = owned or identifier.startswith(f"{self.run_id.lower()}_")
+            if not owned:
+                raise ValueError(f"资源不属于当前 run_id: {self.run_id}")
 
         resource = ResourceRef(kind, identifier)
         if resource not in self._resources:
