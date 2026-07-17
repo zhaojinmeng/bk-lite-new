@@ -800,6 +800,7 @@ def association_response(model_id, asst_id, edge_id=251):
 
 
 def real_runner(tmp_path, transport, **kwargs):
+    management_api_secret = kwargs.pop("management_api_secret", "management-secret")
     return HttpRunner(
         base_url="http://127.0.0.1:8011/api/v1/cmdb/api/custom_reporting/",
         allowed_hosts={"127.0.0.1"},
@@ -807,6 +808,7 @@ def real_runner(tmp_path, transport, **kwargs):
         ledger=ValidationLedger.create(now="20260717T080000Z", nonce="review01"),
         ledger_path=tmp_path / "ledger.json",
         session_cookie="sessionid=session-secret",
+        management_api_secret=management_api_secret,
         org_id=7,
         **kwargs,
     )
@@ -852,6 +854,41 @@ def test_review_contract_any_redirect_is_rejected_without_replay(tmp_path, monke
     with pytest.raises(HttpProtocolError, match="重定向"):
         client.list_tasks("owned")
     assert len(transport.requests) == 1
+
+
+def test_execute_management_request_requires_api_secret_before_network(tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    transport = FakeTransport([web_response({})])
+    client = real_runner(
+        tmp_path,
+        transport,
+        execute=True,
+        cli_execute=True,
+        management_api_secret=None,
+    ).client
+
+    with pytest.raises(SafetyError, match="CRV_MANAGEMENT_API_SECRET"):
+        client.list_tasks("owned")
+
+    assert transport.requests == []
+
+
+@pytest.mark.parametrize("bad_secret", [123, "secret\r\nInjected: value"])
+def test_execute_management_request_rejects_invalid_api_secret_before_network(tmp_path, monkeypatch, bad_secret):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    transport = FakeTransport([web_response({})])
+    client = real_runner(
+        tmp_path,
+        transport,
+        execute=True,
+        cli_execute=True,
+        management_api_secret=bad_secret,
+    ).client
+
+    with pytest.raises(SafetyError, match="CRV_MANAGEMENT_API_SECRET"):
+        client.list_tasks("owned")
+
+    assert transport.requests == []
 
 
 @pytest.mark.parametrize(
@@ -932,6 +969,11 @@ def test_review_contract_real_task_payload_cookie_org_and_paths(tmp_path, monkey
     }
     assert "sessionid=session-secret" in create["headers"]["Cookie"]
     assert "current_team=7" in create["headers"]["Cookie"]
+    management_requests = [request for request in transport.requests if "ingest/" not in request["url"]]
+    assert all(request["headers"]["Api-Authorization"] == "management-secret" for request in management_requests)
+    assert all("Authorization" not in request["headers"] for request in management_requests)
+    ingest_requests = [request for request in transport.requests if "ingest/" in request["url"]]
+    assert all("Api-Authorization" not in request["headers"] for request in ingest_requests)
     assert transport.requests[2]["headers"]["Authorization"] == "Bearer issued-token"
     assert transport.requests[6]["headers"]["Authorization"] == "Bearer rotated-token"
     assert transport.requests[8]["json_body"] == {"credential_id": 51}
@@ -940,7 +982,41 @@ def test_review_contract_real_task_payload_cookie_org_and_paths(tmp_path, monkey
     assert f"{run_id}:51" in serialized
     assert "issued-token" not in serialized
     assert "rotated-token" not in serialized
+    assert "management-secret" not in serialized
     assert "session-secret" not in json.dumps(result)
+    assert "management-secret" not in json.dumps(result)
+
+
+def test_cli_injects_management_api_secret_and_redacts_it_recursively(monkeypatch, tmp_path, capsys):
+    secret = "management-api-secret-value"
+    captured = {}
+
+    class CapturingRunner:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        def run(self, *, mode):
+            return {"nested": [{"safe": f"prefix-{captured['management_api_secret']}-suffix"}]}
+
+    monkeypatch.setenv("CRV_ALLOWED_HOSTS", "127.0.0.1")
+    monkeypatch.setenv("CRV_MANAGEMENT_API_SECRET", secret)
+    monkeypatch.setattr("validation.custom_reporting.http_runner.HttpRunner", CapturingRunner)
+
+    assert (
+        main(
+            [
+                "--dry-run",
+                "--base-url",
+                "http://127.0.0.1:8011/api/v1/cmdb/api/custom_reporting/",
+                "--ledger",
+                str(tmp_path / "ledger.json"),
+            ]
+        )
+        == 0
+    )
+
+    assert captured["management_api_secret"] == secret
+    assert secret not in capsys.readouterr().out
 
 
 def test_review_contract_standard_uses_seed_response_model_and_real_task_ids(tmp_path, monkeypatch):

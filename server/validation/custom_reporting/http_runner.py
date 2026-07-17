@@ -725,6 +725,7 @@ class SafeHttpClient:
         transport: Transport,
         write_enabled: bool,
         session_cookie: str | None,
+        management_api_secret: str | None,
         org_id: int | None,
     ) -> None:
         self.allowed_hosts = _normalize_allowed_hosts(allowed_hosts)
@@ -733,17 +734,26 @@ class SafeHttpClient:
         self.transport = transport
         self.write_enabled = write_enabled
         self.session_cookie = session_cookie
+        self.management_api_secret = management_api_secret
         self.org_id = org_id
         self.requests_sent = 0
 
     def _management_headers(self) -> dict[str, str]:
         if not self.session_cookie or type(self.org_id) is not int or self.org_id <= 0:
             raise SafetyError("execute 管理请求必须提供 CRV_SESSION_COOKIE 与正整数 CRV_ORG_ID")
+        if (
+            not isinstance(self.management_api_secret, str)
+            or not self.management_api_secret.strip()
+            or "\r" in self.management_api_secret
+            or "\n" in self.management_api_secret
+        ):
+            raise SafetyError("execute 管理请求必须提供 CRV_MANAGEMENT_API_SECRET")
         cookie = self.session_cookie.strip().rstrip(";")
         if "\r" in cookie or "\n" in cookie:
             raise SafetyError("session cookie 格式非法")
         return {
             "Accept": "application/json",
+            "Api-Authorization": self.management_api_secret,
             "Content-Type": "application/json",
             "Cookie": f"{cookie}; current_team={self.org_id}",
         }
@@ -1054,6 +1064,7 @@ class HttpRunner:
         execute: bool = False,
         cli_execute: bool = False,
         session_cookie: str | None = None,
+        management_api_secret: str | None = None,
         org_id: int | None = None,
         classification_id: str = "other",
         state_backend: LedgerStateBackend | None = None,
@@ -1071,6 +1082,7 @@ class HttpRunner:
             transport=transport,
             write_enabled=self.write_enabled,
             session_cookie=session_cookie,
+            management_api_secret=management_api_secret,
             org_id=org_id,
         )
 
@@ -1259,13 +1271,18 @@ class HttpRunner:
             self.org_id if type(self.org_id) is int and self.org_id > 0 else 1,
             self.classification_id,
         )
-        result = plan.to_safe_dict((self.client.session_cookie or "", os.environ.get("CRV_TOKEN", "")))
+        known_secrets = (
+            self.client.session_cookie or "",
+            self.client.management_api_secret or "",
+            os.environ.get("CRV_TOKEN", ""),
+        )
+        result = plan.to_safe_dict(known_secrets)
         result.update({"dry_run": not self.write_enabled, "requests_sent": 0})
         if self.write_enabled:
             self.reserve_ledger()
             self._execute(mode)
             result["requests_sent"] = self.client.requests_sent
-        return _redact(result, (self.client.session_cookie or "",))
+        return _redact(result, known_secrets)
 
     def _scan_owned_tasks(self) -> dict[int, str]:
         data = self.client.list_tasks(self.ledger.run_id, 1)
@@ -1464,12 +1481,25 @@ def main(
         execute=confirmed,
         cli_execute=args.execute,
         session_cookie=os.environ.get("CRV_SESSION_COOKIE"),
+        management_api_secret=os.environ.get("CRV_MANAGEMENT_API_SECRET"),
         org_id=org_id,
         classification_id=os.environ.get("CRV_CLASSIFICATION_ID", "other"),
         state_backend=state_backend,
     )
     result = runner.cleanup() if args.cleanup_ledger else runner.run(mode=args.mode)
-    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+    print(
+        json.dumps(
+            _redact(
+                result,
+                (
+                    os.environ.get("CRV_SESSION_COOKIE", ""),
+                    os.environ.get("CRV_MANAGEMENT_API_SECRET", ""),
+                ),
+            ),
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+    )
     return 0
 
 
