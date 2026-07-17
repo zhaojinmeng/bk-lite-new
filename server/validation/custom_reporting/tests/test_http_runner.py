@@ -654,6 +654,21 @@ def test_cleanup_entity_delete_is_parameterized_non_detach_and_concurrency_fail_
     assert graph.calls == [("MATCH (n:instance) WHERE ID(n) IN $node_ids DELETE n", {"node_ids": [90, 91]})]
 
 
+def test_cleanup_entity_delete_accepts_zero_based_falkordb_node_id():
+    class RecordingGraph:
+        def __init__(self):
+            self.calls = []
+
+        def _execute_query(self, query, params):
+            self.calls.append((query, params))
+
+    graph = RecordingGraph()
+
+    DjangoFalkorLedgerStateBackend._delete_entities_without_detach(graph, "model", {1, 0})
+
+    assert graph.calls == [("MATCH (n:model) WHERE ID(n) IN $node_ids DELETE n", {"node_ids": [0, 1]})]
+
+
 def test_incident_edges_uses_edge_direction_when_undirected_path_nodes_are_reversed():
     class Node:
         def __init__(self, node_id):
@@ -690,6 +705,56 @@ def test_incident_edges_uses_edge_direction_when_undirected_path_nodes_are_rever
             "classification_model_asst_id": None,
         }
     ]
+
+
+def test_incident_edges_accepts_zero_based_falkordb_edge_and_node_ids():
+    class Node:
+        def __init__(self, node_id):
+            self.id = node_id
+
+    class Edge:
+        id = 0
+        relation = "subordinate_model"
+        properties = {"classification_model_asst_id": "other_subordinate_model_crv_model"}
+        src_node = Node(0)
+        dest_node = Node(1)
+
+    class Path:
+        _edges = [Edge()]
+        _nodes = [Node(1), Node(0)]
+
+    class Graph:
+        def _execute_query(self, query, params):
+            assert query == "MATCH p=(a)-[n]-(b) WHERE ID(a) IN $node_ids RETURN p"
+            assert params == {"node_ids": [0, 1]}
+            return [[Path()]]
+
+    assert DjangoFalkorLedgerStateBackend._incident_edges(Graph(), {0, 1}) == [
+        {
+            "_id": 0,
+            "_label": "subordinate_model",
+            "src_id": 0,
+            "dst_id": 1,
+            "model_asst_id": None,
+            "src_model_id": None,
+            "dst_model_id": None,
+            "src_inst_id": None,
+            "dst_inst_id": None,
+            "classification_model_asst_id": "other_subordinate_model_crv_model",
+        }
+    ]
+
+
+@pytest.mark.parametrize("invalid_id", [-1, True, "0"])
+def test_graph_internal_ids_still_reject_negative_bool_and_non_integer(invalid_id):
+    class Graph:
+        def _execute_query(self, *_args, **_kwargs):
+            raise AssertionError("非法 graph id 不得到达查询")
+
+    with pytest.raises(SafetyError, match="incident edge node id 非法"):
+        DjangoFalkorLedgerStateBackend._incident_edges(Graph(), {invalid_id})
+    with pytest.raises(SafetyError, match="cleanup entity node id 非法"):
+        DjangoFalkorLedgerStateBackend._delete_entities_without_detach(Graph(), "instance", {invalid_id})
 
 
 def test_cleanup_preflight_accepts_task_absent_graph_present_without_association_ledger():

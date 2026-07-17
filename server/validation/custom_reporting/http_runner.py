@@ -130,7 +130,7 @@ class DjangoFalkorLedgerStateBackend:
     def _incident_edges(graph: Any, node_ids: set[int]) -> list[dict[str, Any]]:
         if not node_ids:
             return []
-        if any(type(node_id) is not int or node_id <= 0 for node_id in node_ids):
+        if any(type(node_id) is not int or node_id < 0 for node_id in node_ids):
             raise SafetyError("incident edge node id 非法")
         result = graph._execute_query(
             "MATCH p=(a)-[n]-(b) WHERE ID(a) IN $node_ids RETURN p",
@@ -148,7 +148,7 @@ class DjangoFalkorLedgerStateBackend:
                 edge_id = getattr(edge, "id", None)
                 src_id = getattr(getattr(edge, "src_node", None), "id", None)
                 dst_id = getattr(getattr(edge, "dest_node", None), "id", None)
-                if any(type(value) is not int or value <= 0 for value in (edge_id, src_id, dst_id)):
+                if any(type(value) is not int or value < 0 for value in (edge_id, src_id, dst_id)):
                     raise SafetyError("incident edge id 非法")
                 properties = dict(getattr(edge, "properties", {}) or {})
                 found[edge_id] = {
@@ -176,7 +176,7 @@ class DjangoFalkorLedgerStateBackend:
             raise SafetyError("cleanup entity label 非法")
         if not node_ids:
             return
-        if any(type(node_id) is not int or node_id <= 0 for node_id in node_ids):
+        if any(type(node_id) is not int or node_id < 0 for node_id in node_ids):
             raise SafetyError("cleanup entity node id 非法")
         graph._execute_query(
             f"MATCH (n:{label}) WHERE ID(n) IN $node_ids DELETE n",
