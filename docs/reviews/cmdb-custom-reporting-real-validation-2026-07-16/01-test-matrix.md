@@ -282,16 +282,17 @@ INSTALL_APPS=system_mgmt,node_mgmt,cmdb,cmdb_enterprise \
 | 边界 | 测试 | 首轮 RED / 正向结果 | 最终状态 | Finding |
 | --- | --- | --- | --- | --- |
 | partial merge | `test_partial_merge_marks_batch_failed_and_skips_snapshot` | `errors=1` 未拒绝，Batch=`success`，snapshot 调用 1 次 | strict xfail | CRV-F07 |
-| owner/team old_data | `test_merge_query_is_scoped_by_owner_and_team` | GraphClient filters 仅含 `model_id`，缺 `collect_task` 与 `organization` | strict xfail | CRV-F08 |
-| 直接关系双端组织 | `test_direct_relation_rejects_endpoint_outside_task_team_before_side_effects` | source/target 任一声明组织越界均未拒绝，resolve=1、edge=1 | 2 strict xfailed | CRV-F09；source model 错配另见 CRV-F06 |
-| pending/backfill 组织 | `test_pending_backfill_rejects_endpoint_outside_task_team` | 未拒绝，resolve=1、edge=1，pending 被删除 | strict xfail | CRV-F09 |
-| 审核图成功/DB 失败 | `test_review_approval_does_not_delete_without_durable_approved_state` | 已删除 `[10,11]`，审核仍为 `pending` | strict xfail | CRV-F10 |
+| owner/team old_data | `test_merge_query_is_scoped_by_owner_and_team` | GraphClient filters 仅含 `model_id`，缺 `collect_task` 与 `organization`；合同使用仓库已注册的 `list[]` 并验证 formatter 生成 `ALL(... IN n.organization)` | strict xfail | CRV-F08 |
+| 直接关系目标归属与 direct source ID | `test_direct_relation_does_not_link_foreign_target_or_trust_source_id` | 真实 `_resolve_instance` 只查询 target 的 model+identity；RecordingGraph 返回 organization `[2]`、其他 task owner 的节点后仍建边；source `_id=1` 未查询即传入 edge | strict xfail | CRV-F09；source 仅证明缺查询/归属验证，不声明其真实组织；source model 错配另见 CRV-F06 |
+| pending/backfill 目标归属 | `test_pending_backfill_does_not_link_foreign_target` | 真实 `_resolve_instance` 缺 owner/org filters，其他 task/team target 仍进入 edge，pending 被删除 | strict xfail | CRV-F09 |
+| 审核图成功/DB 失败 | `test_review_approval_does_not_delete_without_durable_approved_state` | 一次性 DB 故障后已删除 `[10,11]`，审核暂时仍为 `pending`，没有自动补偿证据 | strict xfail | CRV-F10 |
+| 审核普通重试 | `test_review_approval_retry_advances_after_transient_db_failure` | 故障解除后第二次 approve 推进 `approved`；删除调用累计 `[10,11,10,11]` | passed | CRV-F10 正向边界 |
 | 审核图失败 | `test_review_graph_failure_keeps_review_pending` | 图删除异常后审核仍 `pending` 且无 reviewed_at | passed | — |
 | 阈值与 none | `test_snapshot_threshold_and_none_strategy_keep_safe_positive_branches` | ratio==threshold 直删；大于阈值建审核；none 不调用 snapshot | passed | — |
 
-未标记 xfail 的首轮结果为 `6 failed, 2 passed in 0.35s`。六个失败都仅在观察值
+复审修正后的 `--runxfail` 结果为 `5 failed, 3 passed in 0.31s`。五个失败都仅在观察值
 精确匹配当前坏行为时抛 `KnownProductDefect`；登记 projectmem #0328—#0331 后增加
-`xfail(strict=True, raises=KnownProductDefect, reason="CRV-F07..F10")`，首轮收口为
-`2 passed, 6 xfailed in 0.40s`。因此第三种产品行为、普通断言、DB/setup 或环境异常仍会
+`xfail(strict=True, raises=KnownProductDefect, reason="CRV-F07..F10")`；复审证据修正登记为
+projectmem #0382。最终 strict-xfail 为 `3 passed, 5 xfailed in 0.38s`。因此第三种产品行为、普通断言、DB/setup 或环境异常仍会
 正常失败；生产修复会触发 strict XPASS。`covered_ids` 的安全前提依赖 F08 所要求的
 owner/team old_data 查询边界，当前不得把同模型全量 old_data 视为 snapshot 安全集合。

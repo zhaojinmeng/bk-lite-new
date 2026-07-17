@@ -159,8 +159,9 @@
   snapshot。
 - Evidence：记录真实 `GraphClient.query_entity` 入参，只出现
   `{field: model_id, type: str=, value: <model>}`；合同要求同时出现
-  `collect_task=cr_<task.id>` 与任务 organization 范围。查询结果随后整体成为 old_data，
-  old IDs 会原样进入 snapshot。
+  `collect_task=cr_<task.id>` 与任务 organization 范围；organization 合同使用仓库注册的
+  `list[]`，并由参数化 formatter 验证为 `ALL(x IN $list1 WHERE x IN n.organization)`。
+  查询结果随后整体成为 old_data，old IDs 会原样进入 snapshot。
 - Impact：一个任务可把同模型下其他任务、其他组织、人工或其他采集来源的实例纳入覆盖、
   更新或删除候选，破坏 owner 边界并产生跨组织数据损坏风险。
 - Root Cause：虽然 `Management` 写入配置带 `task_id` 与 `organization`，读取 old_data 的
@@ -171,45 +172,49 @@
   `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F08")` 固化。
 - Projectmem：#0329（open；本验证任务不修改生产逻辑）。
 
-## CRV-F09：直接关系与 pending 回填未校验两端组织范围
+## CRV-F09：直接关系与 pending 回填的 target 查询缺 owner/组织范围
 
 - Severity：P0
 - Location：`server/apps/cmdb_enterprise/custom_reporting/services/relation_service.py:82-100,120-136`
-- Trigger：任务 team 为 `[1]`，直接关系的 source 或 target 声明 organization `[2]`；
-  或 pending 关系的 source organization 为 `[2]`。
-- Evidence：直接路径 source/target 两个参数均观察到
-  `(rejected=False, resolve=1, edge=1)`；backfill 观察到
-  `(False, resolve=1, edge=1, pending_remaining=0)`。合同要求越界端点在图写前拒绝且
-  pending 保留。source model 错配是独立 CRV-F06，本 Finding 不重复该模型错配行为。
-- Impact：持有任务 Token 的调用方可把任务组织之外的实例作为关系端点，并在直接路径或
-  后续回填中创建跨组织边；回填还会删除唯一 pending 证据。
+- Trigger：任务 team 为 `[1]`；payload 不声明 organization。真实 target 查询只带
+  model+identity，RecordingGraph 因此返回 organization `[2]` 且
+  `collect_task=cr_<另一任务 id>` 的现有节点。
+- Evidence：直接路径和 pending/backfill 都调用真实 `_resolve_instance`，记录到的 filters
+  仅为 target model+identity，缺 `collect_task` 与 `organization`；该外部节点随后进入
+  `_create_edge(1, 2, ...)`，backfill 还删除 pending。direct source `_id=1` 全程没有图查询，
+  只能精确证明调用方 ID 未经归属验证即传给 edge，不能据此虚构 source 的实际组织。
+- Impact：持有任务 Token 的调用方可把目标身份解析到其他任务、其他组织的实例，并在
+  直接路径或后续回填中创建跨 owner/team 边；回填还会删除唯一 pending 证据。source
+  direct ID 同时缺少归属验证，但本证据不声称该 source 必然跨组织。
 - Root Cause：`process()` 对 source direct `_id` 直接信任，对 target 仅以
-  model+identity 解析；`backfill()` 复用同样逻辑。两条路径都未以 task.team 校验载荷或
-  已解析实例，也未在 `_create_edge` 前执行 owner/org 栅栏。
+  model+identity 解析；`backfill()` 复用同样逻辑。两条路径都未给真实 target 查询增加
+  task owner/org filters，也未在 `_create_edge` 前校验已解析实例的归属。
 - Why Existing Tests Missed It：既有关系测试只覆盖目标存在、目标缺失和正常 backfill，
   端点均未携带跨组织状态；Task 5 的 CRV-F06 只覆盖 source.model_id 错配。
 - Required Tests：
-  `test_direct_relation_rejects_endpoint_outside_task_team_before_side_effects`、
-  `test_pending_backfill_rejects_endpoint_outside_task_team`；当前均以
+  `test_direct_relation_does_not_link_foreign_target_or_trust_source_id`、
+  `test_pending_backfill_does_not_link_foreign_target`；当前均以
   `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F09")` 固化。
 - Projectmem：#0330（open；本验证任务不修改生产逻辑）。
 
-## CRV-F10：审核图删除成功后 DB 保存失败会永久分叉
+## CRV-F10：审核图删除成功后 DB 保存失败会暂态不一致且缺自动补偿
 
-- Severity：P0
+- Severity：P1
 - Location：`server/apps/cmdb_enterprise/custom_reporting/services/cleanup_service.py:127-153`
-- Trigger：pending cleanup review 的图删除成功，随后保存 APPROVED 审核状态时注入 DB
-  异常。
-- Evidence：单次有界故障注入后，删除副作用为 `[10,11]`，数据库审核状态仍为
-  `pending`。反向注入图删除失败时，审核保持 pending 且 reviewed_at 为空，正向测试通过。
-- Impact：调用方重试 pending 审核可能再次删除或误报不存在；活动页持续展示待审核，
-  关系库与图存储没有 durable operation 可判定真实完成状态。
+- Trigger：pending cleanup review 的图删除成功，随后第一次保存 APPROVED 审核状态时
+  注入一次性 DB 异常。
+- Evidence：故障返回后，删除副作用为 `[10,11]`，数据库审核状态暂时仍为 `pending`；
+  故障解除后的普通第二次 approve 能推进 `approved`，同时删除调用累计为
+  `[10,11,10,11]`。反向注入图删除失败时，审核保持 pending 且 reviewed_at 为空。
+- Impact：故障到人工/调用方重试之间，活动页与图状态不一致；普通重试会重复发起删除，
+  是否安全依赖底层删除幂等性。当前没有自动补偿使其自行收敛，但普通重试可以恢复。
 - Root Cause：`approve()` 先执行不可回滚的图删除，再保存关系库 APPROVED；两者之间无
   outbox/operation 状态、幂等代次或补偿 reconciler，数据库事务也无法回滚图副作用。
 - Why Existing Tests Missed It：既有 approve 测试把删除替换为必成功列表追加，并让 DB
-  保存始终成功；未对两个跨存储边界分别注入故障并重读数据库状态。
+  保存始终成功；未对两个跨存储边界分别注入故障、重读数据库状态及验证普通重试。
 - Required Tests：
   `test_review_approval_does_not_delete_without_durable_approved_state`、
-  `test_review_graph_failure_keeps_review_pending`；前者以
-  `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F10")` 固化，后者普通通过。
+  `test_review_approval_retry_advances_after_transient_db_failure`、
+  `test_review_graph_failure_keeps_review_pending`；首项以
+  `xfail(strict=True, raises=KnownProductDefect, reason="CRV-F10")` 固化，后两项普通通过。
 - Projectmem：#0331（open；本验证任务不修改生产逻辑）。

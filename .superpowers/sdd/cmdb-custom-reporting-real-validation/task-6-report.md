@@ -12,43 +12,48 @@
   无条件保存 SUCCESS。
 - owner：merge 查询 old_data 只按 `model_id`，写侧虽携带 `task_id=cr_<id>` 与 team，
   读侧没有 `collect_task` / `organization` 过滤；old_data 又直接成为 snapshot 候选。
-- relation：process/backfill 信任 source direct `_id`，target 只按 model+identity 解析，
-  两端均无 task.team 栅栏。Task 5 的 CRV-F06 是 source model 错配，本任务只记录组织
-  越界，不重复 Finding。
+- relation：process/backfill 信任 source direct `_id`，target 真实解析只查询
+  model+identity。RecordingGraph 在缺 owner/org filters 时返回 organization `[2]`、其他
+  task owner 节点，两条路径仍进入 edge；source direct ID 只证明未查询/未验证归属，
+  不虚构其组织。Task 5 的 CRV-F06 是 source model 错配，本任务不重复 Finding。
 - review：approve 先图删除、后保存 APPROVED；后半段失败无法回滚前半段，也没有 durable
-  operation、outbox 或 reconciler。
+  operation、outbox 或自动补偿；但一次性故障解除后普通重试可推进 APPROVED。
 
 ## 真实 RED
 
-未加 xfail 的整文件选择器输出：
+复审修正后使用 `--runxfail` 的整文件选择器输出：
 
 ```text
-6 failed, 2 passed in 0.35s
+5 failed, 3 passed in 0.31s
 ```
 
 - CRV-F07：`(rejected=False, batch="success", snapshot=1)`。
-- CRV-F08：GraphClient filters 只有 model_id，缺 owner/team。
-- CRV-F09：direct source/target 越界均 `(False, resolve=1, edge=1)`；pending/backfill 为
-  `(False, resolve=1, edge=1, pending_remaining=0)`。
-- CRV-F10：approved DB save 失败后 `deleted=[10,11]`、review=`pending`。
-- 两项正向普通通过：图删除失败保持 pending；ratio 等于阈值直删、大于阈值送审、none
-  策略不调用 snapshot。
+- CRV-F08：GraphClient filters 只有 model_id，缺 owner/team；合同改用仓库注册的 `list[]`，
+  并验证 formatter 可生成 organization 的 `ALL(... IN ...)` 条件。
+- CRV-F09：真实 `_resolve_instance` 的 target filters 只有 model+identity；返回其他 owner/team
+  节点后 direct 与 pending/backfill 均进入 edge，pending 被删除。source direct `_id` 只
+  证明无查询即传给 edge。
+- CRV-F10：一次性 approved DB save 失败后 `deleted=[10,11]`、review=`pending`；普通重试
+  可推进 APPROVED，累计观察到两次删除调用。
+- 三项正向普通通过：审核普通重试推进 APPROVED；图删除失败保持 pending；ratio 等于阈值
+  直删、大于阈值送审、none 策略不调用 snapshot。
 
 ## 安全收口
 
-四项缺陷已登记 projectmem #0328—#0331，并在 Findings 中写入完整字段。缺陷测试仅在
+四项缺陷已登记 projectmem #0328—#0331，复审证据修正登记为 #0382，并在 Findings 中
+写入完整字段。缺陷测试仅在
 观察值精确等于上述坏行为时抛 `KnownProductDefect`，marker 全部使用
 `xfail(strict=True, raises=KnownProductDefect, reason="CRV-Fxx")`；其他断言、环境错误或
 第三种行为保持真实失败。首轮收口输出：
 
 ```text
-2 passed, 6 xfailed in 0.40s
+3 passed, 5 xfailed in 0.38s
 ```
 
 ## Fresh 验证
 
-- Task 6 整文件：`2 passed, 6 xfailed in 0.37s`。
-- Task 4—6 运行态合同组合：`11 passed, 18 xfailed in 1.80s`。
+- Task 6 整文件：`3 passed, 5 xfailed in 0.38s`。
+- Task 4—6 运行态合同组合：`12 passed, 17 xfailed in 1.89s`。
 - `black --check`：1 file unchanged，退出码 0。
 - `isort --check-only`：退出码 0。
 - `flake8`：0 条告警，退出码 0。
