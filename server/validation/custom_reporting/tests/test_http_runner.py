@@ -565,6 +565,76 @@ def test_cleanup_preflight_rejects_foreign_orm_ownership(mutation, message):
         DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
 
 
+def _without_ledger_batches(ledger):
+    partial = ValidationLedger(run_id=ledger.run_id)
+    for resource in ledger.resources:
+        if resource.kind != "batch":
+            partial.record(resource.kind, resource.identifier)
+    return partial
+
+
+def test_cleanup_preflight_accepts_single_owned_batch_created_before_failed_ingest_response():
+    ledger, snapshot = _present_state()
+    ledger = _without_ledger_batches(ledger)
+    snapshot["counts"]["batch"] = 1
+    snapshot["evidence"]["batch_ids"] = [61]
+    snapshot["evidence"]["batches"] = [{"id": 61, "task_id": 41}]
+
+    DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_cleanup_preflight_rejects_unledgered_batch_owned_by_foreign_task():
+    ledger, snapshot = _present_state()
+    ledger = _without_ledger_batches(ledger)
+    snapshot["counts"]["batch"] = 1
+    snapshot["evidence"]["batch_ids"] = [61]
+    snapshot["evidence"]["batches"] = [{"id": 61, "task_id": 999}]
+
+    with pytest.raises(SafetyError, match="batch"):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_cleanup_preflight_rejects_when_ledger_batch_is_missing_from_actual_batches():
+    ledger, snapshot = _present_state()
+    snapshot["counts"]["batch"] = 3
+    snapshot["evidence"]["batch_ids"] = [61, 62, 63]
+    snapshot["evidence"]["batches"] = [{"id": batch_id, "task_id": 41} for batch_id in (61, 62, 63)]
+
+    with pytest.raises(SafetyError, match="batch"):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_cleanup_preflight_rejects_more_than_four_owned_batches():
+    ledger, snapshot = _present_state()
+    ledger = _without_ledger_batches(ledger)
+    batch_ids = [61, 62, 63, 64, 65]
+    snapshot["counts"]["batch"] = len(batch_ids)
+    snapshot["evidence"]["batch_ids"] = batch_ids
+    snapshot["evidence"]["batches"] = [{"id": batch_id, "task_id": 41} for batch_id in batch_ids]
+
+    with pytest.raises(SafetyError, match="batch"):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+@pytest.mark.parametrize("batch_ids", [[61, 61], [-1], [True], ["61"]])
+def test_cleanup_preflight_rejects_duplicate_or_invalid_actual_batch_ids(batch_ids):
+    ledger, snapshot = _present_state()
+    ledger = _without_ledger_batches(ledger)
+    snapshot["counts"]["batch"] = len(batch_ids)
+    snapshot["evidence"]["batch_ids"] = batch_ids
+    snapshot["evidence"]["batches"] = [{"id": batch_id, "task_id": 41} for batch_id in batch_ids]
+
+    with pytest.raises(SafetyError, match="batch"):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_verify_present_still_requires_all_four_batches_in_ledger():
+    ledger, snapshot = _present_state()
+
+    with pytest.raises(SafetyError, match="batch"):
+        DjangoFalkorLedgerStateBackend.validate_present(ledger=_without_ledger_batches(ledger), org_id=7, snapshot=snapshot)
+
+
 def test_cleanup_preflight_allows_retry_only_when_task_children_are_zero():
     ledger, snapshot = _present_state()
     snapshot["counts"].update(task=0, task_scope=0, credential=0, batch=0, pending=0, review=0)

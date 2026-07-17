@@ -88,6 +88,7 @@ class LedgerStateBackend(Protocol):
 
 class DjangoFalkorLedgerStateBackend:
     EXPECTED_INSTANCE_SUFFIXES = frozenset({"immediate_source", "immediate_target", "pending_source", "backfill_target", "after_rotate"})
+    MAX_INGEST_BATCHES = 4
 
     @staticmethod
     def _owned_ids(ledger: ValidationLedger, kind: str) -> set[int]:
@@ -125,6 +126,26 @@ class DjangoFalkorLedgerStateBackend:
         if value != expected:
             raise SafetyError("账本 association 不属于当前 run_id/model")
         return value
+
+    @staticmethod
+    def _validate_cleanup_batches(
+        *,
+        ledger: ValidationLedger,
+        task_id: int,
+        batches: Any,
+        batch_count: Any,
+    ) -> None:
+        if not isinstance(batches, list) or type(batch_count) is not int or batch_count != len(batches):
+            raise SafetyError("cleanup batch 计数或结构非法")
+        actual_ids: list[int] = []
+        for batch in batches:
+            if not isinstance(batch, Mapping) or type(batch.get("id")) is not int or batch["id"] <= 0 or batch.get("task_id") != task_id:
+                raise SafetyError("cleanup batch 归属证明失败")
+            actual_ids.append(batch["id"])
+        if len(actual_ids) > DjangoFalkorLedgerStateBackend.MAX_INGEST_BATCHES or len(set(actual_ids)) != len(actual_ids):
+            raise SafetyError("cleanup batch 数量或身份异常")
+        if not DjangoFalkorLedgerStateBackend._owned_ids(ledger, "batch").issubset(set(actual_ids)):
+            raise SafetyError("cleanup batch 与账本不一致")
 
     @staticmethod
     def _incident_edges(graph: Any, node_ids: set[int]) -> list[dict[str, Any]]:
@@ -410,11 +431,12 @@ class DjangoFalkorLedgerStateBackend:
             credential = credentials[0]
             if credential.get("id") not in DjangoFalkorLedgerStateBackend._owned_ids(ledger, "credential") or credential.get("task_id") != task_id:
                 raise SafetyError("cleanup credential 归属证明失败")
-            batches = evidence.get("batches") or []
-            if {item.get("id") for item in batches} != DjangoFalkorLedgerStateBackend._owned_ids(ledger, "batch") or any(
-                item.get("task_id") != task_id for item in batches
-            ):
-                raise SafetyError("cleanup batch 归属证明失败")
+            DjangoFalkorLedgerStateBackend._validate_cleanup_batches(
+                ledger=ledger,
+                task_id=task_id,
+                batches=evidence.get("batches"),
+                batch_count=counts.get("batch"),
+            )
 
         model = evidence.get("model") or {}
         model_incident = evidence.get("incident_model_edges") or []
