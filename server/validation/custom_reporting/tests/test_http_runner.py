@@ -428,6 +428,7 @@ def _present_state(*, mode="quick", collect_task="cr_41"):
                     "model_asst_id": f"{model_id}_crv_rel_verify01_{model_id}",
                     "src_model_id": model_id,
                     "dst_model_id": model_id,
+                    "mapping": "n:n",
                 }
             ],
             "instances": [
@@ -500,6 +501,21 @@ def test_real_state_backend_rejects_association_with_foreign_endpoint_model():
 
     with pytest.raises(SafetyError, match="association"):
         DjangoFalkorLedgerStateBackend.validate_present(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_real_state_backend_verify_rejects_association_without_exact_many_to_many_mapping():
+    ledger, snapshot = _present_state()
+    snapshot["evidence"]["model_associations"][0]["mapping"] = "1:n"
+
+    with pytest.raises(SafetyError, match="association"):
+        DjangoFalkorLedgerStateBackend.validate_present(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_cleanup_preflight_allows_deleting_owned_association_with_malformed_mapping():
+    ledger, snapshot = _present_state()
+    snapshot["evidence"]["model_associations"][0]["mapping"] = None
+
+    DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
 
 
 def test_real_state_backend_rejects_two_different_actual_association_ids():
@@ -773,6 +789,7 @@ def test_incident_edges_uses_explicit_query_direction_when_decoder_omits_edge_no
             "src_inst_id": 90,
             "dst_inst_id": 91,
             "classification_model_asst_id": None,
+            "mapping": None,
         }
     ]
 
@@ -811,6 +828,7 @@ def test_incident_edges_accepts_zero_based_falkordb_edge_and_node_ids():
             "src_inst_id": None,
             "dst_inst_id": None,
             "classification_model_asst_id": "other_subordinate_model_crv_model",
+            "mapping": None,
         }
     ]
 
@@ -982,7 +1000,7 @@ def ingest_response(batch_id, *, instances_received, relations_received, pending
     )
 
 
-def association_response(model_id, asst_id, edge_id=251):
+def association_response(model_id, asst_id, edge_id=251, mapping="n:n"):
     return web_response(
         {
             "_id": edge_id,
@@ -990,6 +1008,7 @@ def association_response(model_id, asst_id, edge_id=251):
             "dst_model_id": model_id,
             "asst_id": asst_id,
             "model_asst_id": f"{model_id}_{asst_id}_{model_id}",
+            "mapping": mapping,
         }
     )
 
@@ -1504,6 +1523,7 @@ def test_second_review_plan_contains_real_ingest_relation_sequence():
         "src_model_id": model_id,
         "dst_model_id": model_id,
         "asst_id": "crv_rel_review01",
+        "mapping": "n:n",
     }
     assert plan.cleanup_order == ("task", "association", "model_verification")
     assert [step.name for step in relation_steps] == [
@@ -1648,6 +1668,7 @@ def test_third_review_creates_real_self_association_before_relation_ingest(tmp_p
         "src_model_id": model_id,
         "dst_model_id": model_id,
         "asst_id": asst_id,
+        "mapping": "n:n",
     }
     relation_requests = transport.requests[2:5]
     assert all(relation["asst_id"] == model_asst_id for request in relation_requests[:2] for relation in request["json_body"]["relations"])
@@ -1656,6 +1677,33 @@ def test_third_review_creates_real_self_association_before_relation_ingest(tmp_p
         f"{run_id}_association_intent_{model_asst_id}",
         model_asst_id,
     ]
+
+
+@pytest.mark.parametrize("mapping", [None, "1:n"])
+def test_association_response_requires_exact_many_to_many_mapping_before_ingest(mapping, tmp_path, monkeypatch):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    run_id = "crval_20260717T080000Z_review01"
+    model_id = f"{run_id}_model".lower()
+    asst_id = "crv_rel_review01"
+    transport = FakeTransport(
+        [
+            web_response(
+                {
+                    "id": 101,
+                    "config": {"model_id": model_id},
+                    "credential": {"id": 201},
+                    "token": "issued-token",
+                }
+            ),
+            association_response(model_id, asst_id, mapping=mapping),
+        ]
+    )
+
+    with pytest.raises(HttpProtocolError, match="模型关联"):
+        real_runner(tmp_path, transport, execute=True, cli_execute=True).run(mode="quick")
+
+    assert len(transport.requests) == 2
+    assert all(not request["url"].endswith("ingest/") for request in transport.requests)
 
 
 def test_third_review_rejects_generic_result_false_for_token_invalidation(tmp_path, monkeypatch):

@@ -186,6 +186,7 @@ class DjangoFalkorLedgerStateBackend:
                         "src_inst_id",
                         "dst_inst_id",
                         "classification_model_asst_id",
+                        "mapping",
                     )
                 },
             }
@@ -321,6 +322,7 @@ class DjangoFalkorLedgerStateBackend:
             or [item.get("model_asst_id") for item in associations] != [association_id]
             or associations[0].get("src_model_id") != model_id
             or associations[0].get("dst_model_id") != model_id
+            or associations[0].get("mapping") != "n:n"
         ):
             raise SafetyError("verify model association 不匹配")
         instances = evidence.get("instances")
@@ -561,7 +563,7 @@ class DjangoFalkorLedgerStateBackend:
                 ),
                 "classification": ({key: classifications[0].get(key) for key in ("_id", "classification_id")} if len(classifications) == 1 else {}),
                 "model_associations": [
-                    {key: item.get(key) for key in ("_id", "model_asst_id", "src_model_id", "dst_model_id")} for item in model_associations
+                    {key: item.get(key) for key in ("_id", "model_asst_id", "src_model_id", "dst_model_id", "mapping")} for item in model_associations
                 ],
                 "instances": [
                     {key: item.get(key) for key in ("_id", "model_id", "inst_name", "crv_run_id", "organization", "collect_task")}
@@ -1051,6 +1053,7 @@ def build_execution_plan(
                 "src_model_id": model_id,
                 "dst_model_id": model_id,
                 "asst_id": asst_id,
+                "mapping": "n:n",
             },
         )
     )
@@ -1173,6 +1176,7 @@ class HttpRunner:
             "src_model_id": model_id,
             "dst_model_id": model_id,
             "asst_id": asst_id,
+            "mapping": "n:n",
         }
         created = self.client.create_model_association(payload)
         if (
@@ -1182,6 +1186,7 @@ class HttpRunner:
             or created.get("dst_model_id") != model_id
             or created.get("asst_id") != asst_id
             or created.get("model_asst_id") != expected_model_asst_id
+            or created.get("mapping") != "n:n"
         ):
             raise HttpProtocolError("模型关联创建响应与请求不一致")
         model_asst_id = created["model_asst_id"]
