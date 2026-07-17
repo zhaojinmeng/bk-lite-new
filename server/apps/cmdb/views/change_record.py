@@ -25,7 +25,6 @@ from apps.core.decorators.api_permission import HasPermission
 from apps.core.utils.web_utils import WebUtils
 from config.drf.pagination import CustomPageNumberPagination
 
-
 HOME_ASSET_CHANGE_SCENARIOS = (
     DEVICE_LIFECYCLE,
     RELATION_CHANGE,

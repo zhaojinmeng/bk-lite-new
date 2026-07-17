@@ -8,13 +8,7 @@ import json
 import pytest
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from apps.cmdb.models.change_record import (
-    CUSTOM_REPORTING_CHANGE,
-    DEVICE_LIFECYCLE,
-    MODEL_MANAGEMENT_CHANGE,
-    ORDINARY_ATTRIBUTE_CHANGE,
-    ChangeRecord,
-)
+from apps.cmdb.models.change_record import CUSTOM_REPORTING_CHANGE, DEVICE_LIFECYCLE, MODEL_MANAGEMENT_CHANGE, ORDINARY_ATTRIBUTE_CHANGE, ChangeRecord
 from apps.cmdb.utils import change_record as change_record_utils
 from apps.cmdb.views.change_record import ChangeRecordViewSet
 
@@ -124,9 +118,7 @@ def test_home_recent_filters_non_asset_scenarios_and_query_cannot_expand_scope(n
     )
 
     response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user))
-    expanded_response = ChangeRecordViewSet.as_view({"get": "home_recent"})(
-        _req("get", normal_user, query=f"scenarios={MODEL_MANAGEMENT_CHANGE}")
-    )
+    expanded_response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user, query=f"scenarios={MODEL_MANAGEMENT_CHANGE}"))
     scenarios = {item["scenario"] for item in _body(response)["data"]["items"]}
 
     assert scenarios == {ORDINARY_ATTRIBUTE_CHANGE}
@@ -136,23 +128,23 @@ def test_home_recent_filters_non_asset_scenarios_and_query_cannot_expand_scope(n
 @pytest.mark.django_db
 def test_home_recent_caps_page_size_and_generic_list_stays_denied(normal_user):
     normal_user.permission = {"cmdb": {"asset_info-View"}}
-    ChangeRecord.objects.bulk_create([
-        ChangeRecord(
-            inst_id=index,
-            model_id="host",
-            label="主机",
-            type="create_entity",
-            operator="admin",
-            model_object="主机",
-            message=f"创建实例 {index}",
-            scenario=DEVICE_LIFECYCLE,
-        )
-        for index in range(1, 106)
-    ])
-
-    home_response = ChangeRecordViewSet.as_view({"get": "home_recent"})(
-        _req("get", normal_user, query="page=1&page_size=1000")
+    ChangeRecord.objects.bulk_create(
+        [
+            ChangeRecord(
+                inst_id=index,
+                model_id="host",
+                label="主机",
+                type="create_entity",
+                operator="admin",
+                model_object="主机",
+                message=f"创建实例 {index}",
+                scenario=DEVICE_LIFECYCLE,
+            )
+            for index in range(1, 106)
+        ]
     )
+
+    home_response = ChangeRecordViewSet.as_view({"get": "home_recent"})(_req("get", normal_user, query="page=1&page_size=1000"))
     list_response = ChangeRecordViewSet.as_view({"get": "list"})(_req("get", normal_user))
 
     assert len(_body(home_response)["data"]["items"]) == 100
