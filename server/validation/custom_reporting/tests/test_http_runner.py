@@ -4,6 +4,7 @@ import pytest
 
 from validation.custom_reporting.http_runner import (
     CleanupIncompleteError,
+    DjangoFalkorLedgerStateBackend,
     HttpProtocolError,
     HttpResponse,
     HttpRunner,
@@ -165,10 +166,581 @@ def test_requests_transport_disables_redirects_and_bounds_stream(monkeypatch):
     assert calls[0][2]["timeout"] == (3.0, 10.0)
 
 
-@pytest.mark.parametrize("flag", ["--verify-ledger", "--cleanup-ledger"])
-def test_reserved_cli_commands_fail_explicitly(flag, tmp_path):
-    with pytest.raises(SystemExit, match="尚未实现"):
-        main([flag, "--ledger", str(tmp_path / "ledger.json")])
+class FakeLedgerStateBackend:
+    def __init__(self, snapshots, cleanup_result=None):
+        self.snapshots = list(snapshots)
+        self.cleanup_result = cleanup_result or {"deleted": {}}
+        self.calls = []
+
+    def snapshot(self, *, ledger, org_id, expect_present):
+        self.calls.append(("snapshot", ledger.run_id, org_id, expect_present))
+        result = self.snapshots.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    def cleanup(self, *, ledger, org_id):
+        self.calls.append(("cleanup", ledger.run_id, org_id))
+        if isinstance(self.cleanup_result, Exception):
+            raise self.cleanup_result
+        return self.cleanup_result
+
+
+def _state_snapshot(run_id, **counts):
+    defaults = {
+        "task": 1,
+        "credential": 1,
+        "batch": 4,
+        "model": 1,
+        "model_association": 1,
+        "instance": 5,
+        "edge": 2,
+        "pending": 0,
+        "review": 0,
+        "field_registration": 1,
+        "change_record": 7,
+    }
+    defaults.update(counts)
+    return {
+        "run_id": run_id,
+        "counts": defaults,
+        "evidence": {"model_id": f"{run_id}_model".lower(), "identities": [f"{run_id}_immediate_source"]},
+    }
+
+
+def test_verify_ledger_cli_reads_existing_ledger_and_uses_real_state_backend(monkeypatch, tmp_path, capsys):
+    ledger = ValidationLedger.create(now="20260717T080000Z", nonce="verify01")
+    path = tmp_path / "ledger.json"
+    path.write_text(ledger.to_json())
+    backend = FakeLedgerStateBackend([_state_snapshot(ledger.run_id)])
+    monkeypatch.setenv("CRV_ORG_ID", "7")
+
+    assert main(["--verify-ledger", "--ledger", str(path)], state_backend=backend) == 0
+
+    output = json.loads(capsys.readouterr().out)
+    assert output["verified"] is True
+    assert output["counts"]["instance"] == 5
+    assert backend.calls == [("snapshot", ledger.run_id, 7, True)]
+    assert path.exists()
+
+
+def test_verify_ledger_cli_builds_default_django_falkor_backend(monkeypatch, tmp_path, capsys):
+    ledger = ValidationLedger.create(now="20260717T080000Z", nonce="verify02")
+    path = tmp_path / "ledger.json"
+    path.write_text(ledger.to_json())
+    backend = FakeLedgerStateBackend([_state_snapshot(ledger.run_id)])
+    monkeypatch.setenv("CRV_ORG_ID", "7")
+    monkeypatch.setattr(
+        "validation.custom_reporting.http_runner._build_default_state_backend",
+        lambda: backend,
+        raising=False,
+    )
+
+    assert main(["--verify-ledger", "--ledger", str(path)]) == 0
+
+    assert json.loads(capsys.readouterr().out)["verified"] is True
+    assert backend.calls == [("snapshot", ledger.run_id, 7, True)]
+
+
+def test_cleanup_ledger_keeps_ledger_until_backend_reports_zero_residuals(monkeypatch, tmp_path):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    http_runner = real_runner(tmp_path, FakeTransport(), execute=True, cli_execute=True)
+    run_id = http_runner.ledger.run_id
+    http_runner.ledger.record("model", f"{run_id}_model".lower())
+    http_runner._persist_ledger()
+    nonzero = _state_snapshot(
+        run_id,
+        task=0,
+        credential=0,
+        batch=0,
+        model=1,
+        model_association=0,
+        instance=0,
+        edge=0,
+        field_registration=0,
+        change_record=0,
+    )
+    backend = FakeLedgerStateBackend(
+        [nonzero, nonzero],
+        cleanup_result={"deleted": {"model": 1}},
+    )
+    http_runner.state_backend = backend
+    http_runner.client.transport.responses = [
+        web_response({"count": 0, "next": None, "previous": None, "results": []}),
+        web_response({"count": 0, "next": None, "previous": None, "results": []}),
+    ]
+
+    with pytest.raises(CleanupIncompleteError, match="residual"):
+        http_runner.cleanup()
+
+    assert (tmp_path / "ledger.json").exists()
+    assert backend.calls[-1] == ("snapshot", run_id, 7, False)
+
+
+def test_cleanup_ledger_deletes_ledger_only_after_all_residuals_are_zero(monkeypatch, tmp_path):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    http_runner = real_runner(tmp_path, FakeTransport(), execute=True, cli_execute=True)
+    run_id = http_runner.ledger.run_id
+    http_runner.ledger.record("model", f"{run_id}_model".lower())
+    http_runner._persist_ledger()
+    zero = _state_snapshot(
+        run_id,
+        task=0,
+        credential=0,
+        batch=0,
+        model=0,
+        model_association=0,
+        instance=0,
+        edge=0,
+        field_registration=0,
+        change_record=0,
+    )
+    backend = FakeLedgerStateBackend([zero, zero], cleanup_result={"deleted": {"model": 1}})
+    http_runner.state_backend = backend
+    http_runner.client.transport.responses = [
+        web_response({"count": 0, "next": None, "previous": None, "results": []}),
+        web_response({"count": 0, "next": None, "previous": None, "results": []}),
+    ]
+
+    result = http_runner.cleanup()
+
+    assert result["residual"]["model"] == 0
+    assert not (tmp_path / "ledger.json").exists()
+    assert backend.calls == [
+        ("snapshot", run_id, 7, False),
+        ("cleanup", run_id, 7),
+        ("snapshot", run_id, 7, False),
+    ]
+
+
+def test_cleanup_programmatic_dry_run_rejects_before_backend_or_http_write(tmp_path):
+    transport = FakeTransport()
+    http_runner = real_runner(tmp_path, transport)
+    backend = FakeLedgerStateBackend([])
+    http_runner.state_backend = backend
+
+    with pytest.raises(SafetyError, match="执行门"):
+        http_runner.cleanup()
+
+    assert backend.calls == []
+    assert transport.requests == []
+
+
+def test_cleanup_retry_skips_http_association_delete_when_graph_proves_it_absent(monkeypatch, tmp_path):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    http_runner = real_runner(tmp_path, FakeTransport(), execute=True, cli_execute=True)
+    run_id = http_runner.ledger.run_id
+    model_id = f"{run_id}_model".lower()
+    http_runner.ledger.record("model", model_id)
+    http_runner.ledger.record("association", f"{model_id}_crv_rel_review01_{model_id}")
+    http_runner._persist_ledger()
+    zero = _state_snapshot(
+        run_id,
+        task=0,
+        credential=0,
+        batch=0,
+        model=0,
+        model_association=0,
+        instance=0,
+        edge=0,
+        field_registration=0,
+        change_record=0,
+    )
+    backend = FakeLedgerStateBackend([zero, zero])
+    http_runner.state_backend = backend
+    http_runner.client.transport.responses = [
+        web_response({"count": 0, "next": None, "previous": None, "results": []}),
+        web_response({"count": 0, "next": None, "previous": None, "results": []}),
+    ]
+
+    http_runner.cleanup()
+
+    assert [request["method"] for request in http_runner.client.transport.requests] == ["GET", "GET"]
+
+
+def test_cleanup_predelete_backend_rejection_sends_no_delete(monkeypatch, tmp_path):
+    monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
+    http_runner = real_runner(tmp_path, FakeTransport(), execute=True, cli_execute=True)
+    run_id = http_runner.ledger.run_id
+    http_runner.ledger.record("task", f"{run_id}:41")
+    http_runner._persist_ledger()
+    http_runner.state_backend = FakeLedgerStateBackend([SafetyError("foreign task")])
+    http_runner.client.transport.responses = [
+        web_response(
+            {
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{"id": 41, "name": f"{run_id}_quick_task"}],
+            }
+        )
+    ]
+
+    with pytest.raises(CleanupIncompleteError):
+        http_runner.cleanup()
+
+    assert [request["method"] for request in http_runner.client.transport.requests] == ["GET"]
+
+
+def _present_state(*, mode="quick", collect_task="cr_41"):
+    ledger = ValidationLedger.create(now="20260717T080000Z", nonce="verify01")
+    run_id = ledger.run_id
+    model_id = f"{run_id}_model".lower()
+    ledger.record("model", model_id)
+    ledger.record("task", f"{run_id}:41")
+    ledger.record("credential", f"{run_id}:51")
+    for batch_id in (61, 62, 63, 64):
+        ledger.record("batch", f"{run_id}:{batch_id}")
+    ledger.record("association", f"{model_id}_crv_rel_verify01_{model_id}")
+    model_asst_id = f"{model_id}_crv_rel_verify01_{model_id}"
+    snapshot = {
+        "run_id": run_id,
+        "counts": {
+            "task": 1,
+            "credential": 1,
+            "batch": 4,
+            "model": 1,
+            "model_association": 1,
+            "instance": 5,
+            "edge": 2,
+            "pending": 0,
+            "review": 0,
+            "field_registration": 1 if mode == "quick" else 0,
+            "change_record": 7,
+        },
+        "evidence": {
+            "model_id": model_id,
+            "tasks": [{"id": 41, "name": f"{run_id}_{mode}_task", "team": [7], "model_id": model_id}],
+            "credentials": [{"id": 51, "task_id": 41, "is_enabled": False, "token_revoked": True}],
+            "batch_ids": [61, 62, 63, 64],
+            "batches": [{"id": batch_id, "task_id": 41} for batch_id in (61, 62, 63, 64)],
+            "model": {
+                "_id": 71,
+                "model_id": model_id,
+                "classification_id": "other",
+                "group": [7],
+                "is_custom_reporting": True,
+            },
+            "classification": {"_id": 70, "classification_id": "other"},
+            "model_associations": [
+                {
+                    "_id": 81,
+                    "model_asst_id": f"{model_id}_crv_rel_verify01_{model_id}",
+                    "src_model_id": model_id,
+                    "dst_model_id": model_id,
+                }
+            ],
+            "instances": [
+                {
+                    "_id": 90 + index,
+                    "model_id": model_id,
+                    "inst_name": f"{run_id}_{suffix}",
+                    "crv_run_id": run_id,
+                    "organization": [7],
+                    "collect_task": collect_task,
+                }
+                for index, suffix in enumerate(("immediate_source", "immediate_target", "pending_source", "backfill_target", "after_rotate"))
+            ],
+            "edges": [
+                {
+                    "_id": 101,
+                    "model_asst_id": model_asst_id,
+                    "src_inst_id": 90,
+                    "dst_inst_id": 91,
+                },
+                {
+                    "_id": 102,
+                    "model_asst_id": model_asst_id,
+                    "src_inst_id": 92,
+                    "dst_inst_id": 93,
+                },
+            ],
+            "incident_instance_edges": [
+                {"_id": 101, "_label": "instance_association", "src_id": 90, "dst_id": 91},
+                {"_id": 102, "_label": "instance_association", "src_id": 92, "dst_id": 93},
+            ],
+            "incident_model_edges": [
+                {
+                    "_id": 81,
+                    "_label": "model_association",
+                    "src_id": 71,
+                    "dst_id": 71,
+                },
+                {
+                    "_id": 82,
+                    "_label": "subordinate_model",
+                    "src_id": 70,
+                    "dst_id": 71,
+                    "classification_model_asst_id": f"other_subordinate_model_{model_id}",
+                },
+            ],
+            "subordinate_edges": [{"_id": 82, "src_id": 70, "dst_id": 71}],
+            "field_attr_ids": ["crv_run_id"] if mode == "quick" else [],
+        },
+    }
+    return ledger, snapshot
+
+
+def test_real_state_backend_rejects_instance_collect_task_not_owned_by_live_task():
+    ledger, snapshot = _present_state(collect_task="cr_999")
+
+    with pytest.raises(SafetyError, match="collect_task"):
+        DjangoFalkorLedgerStateBackend.validate_present(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_real_state_backend_accepts_standard_without_quick_field_registration():
+    ledger, snapshot = _present_state(mode="standard")
+
+    DjangoFalkorLedgerStateBackend.validate_present(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_real_state_backend_rejects_association_with_foreign_endpoint_model():
+    ledger, snapshot = _present_state()
+    snapshot["evidence"]["model_associations"][0]["dst_model_id"] = "foreign_model"
+
+    with pytest.raises(SafetyError, match="association"):
+        DjangoFalkorLedgerStateBackend.validate_present(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_real_state_backend_rejects_two_different_actual_association_ids():
+    ledger, snapshot = _present_state()
+    model_id = snapshot["evidence"]["model_id"]
+    ledger.record("association", f"{model_id}_crv_rel_other_{model_id}")
+
+    with pytest.raises(SafetyError, match="association"):
+        DjangoFalkorLedgerStateBackend.validate_present(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda evidence: evidence["edges"][0].update(model_asst_id="foreign_association"),
+        lambda evidence: evidence["edges"][0].update(dst_inst_id=93),
+    ],
+)
+def test_real_state_backend_verify_rejects_wrong_relation_association_or_pairing(mutation):
+    ledger, snapshot = _present_state()
+    mutation(snapshot["evidence"])
+
+    with pytest.raises(SafetyError, match="edge|关系"):
+        DjangoFalkorLedgerStateBackend.validate_present(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda evidence: evidence["edges"][0].update(model_asst_id="foreign_association"),
+        lambda evidence: evidence["edges"][0].update(dst_inst_id=93),
+    ],
+)
+def test_cleanup_preflight_rejects_wrong_relation_association_or_pairing(mutation):
+    ledger, snapshot = _present_state()
+    mutation(snapshot["evidence"])
+
+    with pytest.raises(SafetyError, match="edge|关系"):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_cleanup_ownership_rejects_instance_from_non_ledger_collect_task():
+    ledger, snapshot = _present_state(collect_task="cr_999")
+
+    with pytest.raises(SafetyError, match="collect_task"):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_ownership(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        (lambda snapshot: snapshot["evidence"]["tasks"][0].update(team=[8]), "task"),
+        (lambda snapshot: snapshot["evidence"]["tasks"][0].update(model_id="foreign_model"), "task"),
+        (lambda snapshot: snapshot["evidence"]["credentials"][0].update(id=999), "credential"),
+        (lambda snapshot: snapshot["evidence"]["batches"][0].update(id=999), "batch"),
+    ],
+)
+def test_cleanup_preflight_rejects_foreign_orm_ownership(mutation, message):
+    ledger, snapshot = _present_state()
+    mutation(snapshot)
+
+    with pytest.raises(SafetyError, match=message):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_cleanup_preflight_allows_retry_only_when_task_children_are_zero():
+    ledger, snapshot = _present_state()
+    snapshot["counts"].update(task=0, task_scope=0, credential=0, batch=0, pending=0, review=0)
+    snapshot["evidence"].update(tasks=[], credentials=[], batch_ids=[], batches=[])
+
+    DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+    snapshot["counts"]["credential"] = 1
+    with pytest.raises(SafetyError, match="子资源"):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+@pytest.mark.parametrize("kind", ["instance", "model"])
+def test_cleanup_preflight_rejects_foreign_incident_edges(kind):
+    ledger, snapshot = _present_state()
+    if kind == "instance":
+        snapshot["evidence"]["incident_instance_edges"].append({"_id": 999, "_label": "foreign_edge", "src_id": 90, "dst_id": 777})
+    else:
+        snapshot["evidence"]["incident_model_edges"].append({"_id": 999, "_label": "foreign_edge", "src_id": 71, "dst_id": 777})
+
+    with pytest.raises(SafetyError, match="incident"):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda evidence: evidence["incident_instance_edges"][0].update(dst_id=777),
+        lambda evidence: evidence["incident_model_edges"][0].update(dst_id=777),
+        lambda evidence: evidence["incident_model_edges"][1].update(src_id=777),
+        lambda evidence: evidence["incident_model_edges"][1].update(classification_model_asst_id="forged"),
+        lambda evidence: evidence["classification"].update(classification_id="foreign"),
+    ],
+)
+def test_cleanup_preflight_rejects_forged_actual_edge_endpoints_and_subordinate_contract(mutation):
+    ledger, snapshot = _present_state()
+    mutation(snapshot["evidence"])
+
+    with pytest.raises(SafetyError, match="incident|subordinate|classification|edge|端点"):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_cleanup_preflight_accepts_partial_retry_after_subordinate_deleted():
+    ledger, snapshot = _present_state()
+    snapshot["counts"].update(task=0, task_scope=0, credential=0, batch=0, pending=0, review=0, model_association=0, instance=0, edge=0)
+    snapshot["evidence"].update(
+        tasks=[],
+        credentials=[],
+        batch_ids=[],
+        batches=[],
+        model_associations=[],
+        instances=[],
+        edges=[],
+        incident_instance_edges=[],
+        incident_model_edges=[],
+    )
+
+    DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_cleanup_preflight_accepts_partial_retry_with_one_exact_relation_left():
+    ledger, snapshot = _present_state()
+    snapshot["counts"]["edge"] = 1
+    snapshot["evidence"]["edges"] = snapshot["evidence"]["edges"][:1]
+    snapshot["evidence"]["incident_instance_edges"] = snapshot["evidence"]["incident_instance_edges"][:1]
+
+    DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+
+def test_cleanup_entity_delete_is_parameterized_non_detach_and_concurrency_fail_closed():
+    class RecordingGraph:
+        def __init__(self):
+            self.calls = []
+
+        def _execute_query(self, query, params):
+            self.calls.append((query, params))
+            raise RuntimeError("node still has relationships")
+
+        def batch_delete_entity(self, *_args, **_kwargs):
+            raise AssertionError("禁止使用 DETACH DELETE helper")
+
+    graph = RecordingGraph()
+
+    with pytest.raises(RuntimeError, match="relationships"):
+        DjangoFalkorLedgerStateBackend._delete_entities_without_detach(graph, "instance", {91, 90})
+
+    assert graph.calls == [("MATCH (n:instance) WHERE ID(n) IN $node_ids DELETE n", {"node_ids": [90, 91]})]
+
+
+def test_incident_edges_uses_edge_direction_when_undirected_path_nodes_are_reversed():
+    class Node:
+        def __init__(self, node_id):
+            self.id = node_id
+
+    class Edge:
+        id = 101
+        relation = "instance_association"
+        properties = {"src_inst_id": 90, "dst_inst_id": 91}
+        src_node = Node(90)
+        dest_node = Node(91)
+
+    class Path:
+        _edges = [Edge()]
+        _nodes = [Node(91), Node(90)]
+
+    class Graph:
+        def _execute_query(self, query, params):
+            assert query == "MATCH p=(a)-[n]-(b) WHERE ID(a) IN $node_ids RETURN p"
+            assert params == {"node_ids": [90, 91]}
+            return [[Path()], [Path()]]
+
+    assert DjangoFalkorLedgerStateBackend._incident_edges(Graph(), {90, 91}) == [
+        {
+            "_id": 101,
+            "_label": "instance_association",
+            "src_id": 90,
+            "dst_id": 91,
+            "model_asst_id": None,
+            "src_model_id": None,
+            "dst_model_id": None,
+            "src_inst_id": 90,
+            "dst_inst_id": 91,
+            "classification_model_asst_id": None,
+        }
+    ]
+
+
+def test_cleanup_preflight_accepts_task_absent_graph_present_without_association_ledger():
+    original, snapshot = _present_state()
+    ledger = ValidationLedger(run_id=original.run_id)
+    model_id = snapshot["evidence"]["model_id"]
+    ledger.record("model", model_id)
+    ledger.record("task", f"{ledger.run_id}:41")
+    snapshot["counts"].update(
+        task=0,
+        task_scope=0,
+        credential=0,
+        batch=0,
+        model_association=0,
+        instance=0,
+        edge=0,
+        pending=0,
+        review=0,
+    )
+    snapshot["evidence"].update(
+        tasks=[],
+        credentials=[],
+        batch_ids=[],
+        batches=[],
+        model_associations=[],
+        instances=[],
+        edges=[],
+        incident_instance_edges=[],
+        incident_model_edges=[
+            {
+                "_id": 82,
+                "_label": "subordinate_model",
+                "src_id": 70,
+                "dst_id": 71,
+                "classification_model_asst_id": f"other_subordinate_model_{model_id}",
+            }
+        ],
+    )
+
+    DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
+
+    snapshot["evidence"]["model_associations"] = [
+        {
+            "_id": 999,
+            "model_asst_id": "foreign",
+            "src_model_id": model_id,
+            "dst_model_id": model_id,
+        }
+    ]
+    with pytest.raises(SafetyError, match="association"):
+        DjangoFalkorLedgerStateBackend.validate_cleanup_preflight(ledger=ledger, org_id=7, snapshot=snapshot)
 
 
 def test_cli_defaults_to_dry_run_without_network(monkeypatch, tmp_path, capsys):
