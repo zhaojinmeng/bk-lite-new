@@ -133,41 +133,41 @@ class DjangoFalkorLedgerStateBackend:
         if any(type(node_id) is not int or node_id < 0 for node_id in node_ids):
             raise SafetyError("incident edge node id 非法")
         result = graph._execute_query(
-            "MATCH p=(a)-[n]-(b) WHERE ID(a) IN $node_ids RETURN p",
+            "MATCH p=(a)-[n]-(b) WHERE ID(a) IN $node_ids RETURN p, ID(startNode(n)), ID(endNode(n))",
             params={"node_ids": sorted(node_ids)},
         )
         records = getattr(result, "result_set", result)
         found: dict[int, dict[str, Any]] = {}
         for record in records or []:
-            for path in record:
-                edges = list(getattr(path, "_edges", []) or [])
-                nodes = list(getattr(path, "_nodes", []) or [])
-                if len(edges) != 1 or len(nodes) != 2:
-                    raise SafetyError("incident edge 查询结构非法")
-                edge = edges[0]
-                edge_id = getattr(edge, "id", None)
-                src_id = getattr(getattr(edge, "src_node", None), "id", None)
-                dst_id = getattr(getattr(edge, "dest_node", None), "id", None)
-                if any(type(value) is not int or value < 0 for value in (edge_id, src_id, dst_id)):
-                    raise SafetyError("incident edge id 非法")
-                properties = dict(getattr(edge, "properties", {}) or {})
-                found[edge_id] = {
-                    "_id": edge_id,
-                    "_label": str(getattr(edge, "relation", "")),
-                    "src_id": src_id,
-                    "dst_id": dst_id,
-                    **{
-                        key: properties.get(key)
-                        for key in (
-                            "model_asst_id",
-                            "src_model_id",
-                            "dst_model_id",
-                            "src_inst_id",
-                            "dst_inst_id",
-                            "classification_model_asst_id",
-                        )
-                    },
-                }
+            if not isinstance(record, (list, tuple)) or len(record) != 3:
+                raise SafetyError("incident edge 查询结构非法")
+            path, src_id, dst_id = record
+            edges = list(getattr(path, "_edges", []) or [])
+            nodes = list(getattr(path, "_nodes", []) or [])
+            if len(edges) != 1 or len(nodes) != 2:
+                raise SafetyError("incident edge 查询结构非法")
+            edge = edges[0]
+            edge_id = getattr(edge, "id", None)
+            if any(type(value) is not int or value < 0 for value in (edge_id, src_id, dst_id)):
+                raise SafetyError("incident edge id 非法")
+            properties = dict(getattr(edge, "properties", {}) or {})
+            found[edge_id] = {
+                "_id": edge_id,
+                "_label": str(getattr(edge, "relation", "")),
+                "src_id": src_id,
+                "dst_id": dst_id,
+                **{
+                    key: properties.get(key)
+                    for key in (
+                        "model_asst_id",
+                        "src_model_id",
+                        "dst_model_id",
+                        "src_inst_id",
+                        "dst_inst_id",
+                        "classification_model_asst_id",
+                    )
+                },
+            }
         return [found[key] for key in sorted(found)]
 
     @staticmethod

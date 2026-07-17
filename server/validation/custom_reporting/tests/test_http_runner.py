@@ -669,7 +669,7 @@ def test_cleanup_entity_delete_accepts_zero_based_falkordb_node_id():
     assert graph.calls == [("MATCH (n:model) WHERE ID(n) IN $node_ids DELETE n", {"node_ids": [0, 1]})]
 
 
-def test_incident_edges_uses_edge_direction_when_undirected_path_nodes_are_reversed():
+def test_incident_edges_uses_explicit_query_direction_when_decoder_omits_edge_nodes():
     class Node:
         def __init__(self, node_id):
             self.id = node_id
@@ -678,8 +678,8 @@ def test_incident_edges_uses_edge_direction_when_undirected_path_nodes_are_rever
         id = 101
         relation = "instance_association"
         properties = {"src_inst_id": 90, "dst_inst_id": 91}
-        src_node = Node(90)
-        dest_node = Node(91)
+        src_node = None
+        dest_node = None
 
     class Path:
         _edges = [Edge()]
@@ -687,9 +687,9 @@ def test_incident_edges_uses_edge_direction_when_undirected_path_nodes_are_rever
 
     class Graph:
         def _execute_query(self, query, params):
-            assert query == "MATCH p=(a)-[n]-(b) WHERE ID(a) IN $node_ids RETURN p"
+            assert query == ("MATCH p=(a)-[n]-(b) WHERE ID(a) IN $node_ids " "RETURN p, ID(startNode(n)), ID(endNode(n))")
             assert params == {"node_ids": [90, 91]}
-            return [[Path()], [Path()]]
+            return [[Path(), 90, 91], [Path(), 90, 91]]
 
     assert DjangoFalkorLedgerStateBackend._incident_edges(Graph(), {90, 91}) == [
         {
@@ -716,8 +716,8 @@ def test_incident_edges_accepts_zero_based_falkordb_edge_and_node_ids():
         id = 0
         relation = "subordinate_model"
         properties = {"classification_model_asst_id": "other_subordinate_model_crv_model"}
-        src_node = Node(0)
-        dest_node = Node(1)
+        src_node = None
+        dest_node = None
 
     class Path:
         _edges = [Edge()]
@@ -725,9 +725,9 @@ def test_incident_edges_accepts_zero_based_falkordb_edge_and_node_ids():
 
     class Graph:
         def _execute_query(self, query, params):
-            assert query == "MATCH p=(a)-[n]-(b) WHERE ID(a) IN $node_ids RETURN p"
+            assert query == ("MATCH p=(a)-[n]-(b) WHERE ID(a) IN $node_ids " "RETURN p, ID(startNode(n)), ID(endNode(n))")
             assert params == {"node_ids": [0, 1]}
-            return [[Path()]]
+            return [[Path(), 0, 1]]
 
     assert DjangoFalkorLedgerStateBackend._incident_edges(Graph(), {0, 1}) == [
         {
@@ -743,6 +743,66 @@ def test_incident_edges_accepts_zero_based_falkordb_edge_and_node_ids():
             "classification_model_asst_id": "other_subordinate_model_crv_model",
         }
     ]
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        pytest.param([], id="empty-record"),
+        pytest.param([object(), 0], id="two-columns"),
+        pytest.param([object(), 0, 1, 2], id="four-columns"),
+        pytest.param([object(), 0, 1], id="not-a-path"),
+    ],
+)
+def test_incident_edges_rejects_malformed_three_column_query_records(record):
+    class Graph:
+        def _execute_query(self, *_args, **_kwargs):
+            return [record]
+
+    with pytest.raises(SafetyError, match="incident edge 查询结构非法"):
+        DjangoFalkorLedgerStateBackend._incident_edges(Graph(), {0})
+
+
+@pytest.mark.parametrize("edge_count,node_count", [(0, 2), (2, 2), (1, 0), (1, 1), (1, 3)])
+def test_incident_edges_requires_one_edge_and_two_path_nodes(edge_count, node_count):
+    class Edge:
+        id = 0
+        relation = "subordinate_model"
+        properties = {}
+
+    class Path:
+        _edges = [Edge() for _ in range(edge_count)]
+        _nodes = [object() for _ in range(node_count)]
+
+    class Graph:
+        def _execute_query(self, *_args, **_kwargs):
+            return [[Path(), 0, 1]]
+
+    with pytest.raises(SafetyError, match="incident edge 查询结构非法"):
+        DjangoFalkorLedgerStateBackend._incident_edges(Graph(), {0})
+
+
+@pytest.mark.parametrize("src_id,dst_id", [(-1, 1), (True, 1), ("0", 1), (0, -1), (0, False), (0, "1")])
+def test_incident_edges_rejects_invalid_explicit_query_endpoint_ids(src_id, dst_id):
+    class Node:
+        def __init__(self, node_id):
+            self.id = node_id
+
+    class Edge:
+        id = 0
+        relation = "subordinate_model"
+        properties = {}
+
+    class Path:
+        _edges = [Edge()]
+        _nodes = [Node(1), Node(0)]
+
+    class Graph:
+        def _execute_query(self, *_args, **_kwargs):
+            return [[Path(), src_id, dst_id]]
+
+    with pytest.raises(SafetyError, match="incident edge id 非法"):
+        DjangoFalkorLedgerStateBackend._incident_edges(Graph(), {0})
 
 
 @pytest.mark.parametrize("invalid_id", [-1, True, "0"])
