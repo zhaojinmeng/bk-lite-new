@@ -7,6 +7,10 @@ export const useChangeRecordApi = () => {
   const getChangeRecords = (params?: any) =>
     get('/cmdb/api/change_record', { params });
 
+  // 获取 CMDB 首页最近资产变更摘要
+  const getHomeRecentChanges = (params?: any) =>
+    get('/cmdb/api/change_record/home_recent/', { params });
+
   // 获取指定实例的变更记录
   const getInstanceChangeRecords = (params: any) =>
     get('/cmdb/api/change_record/', { params });
@@ -29,6 +33,7 @@ export const useChangeRecordApi = () => {
 
   return {
     getChangeRecords,
+    getHomeRecentChanges,
     getInstanceChangeRecords,
     getChangeRecordDetail,
     getChangeRecordEnumData,

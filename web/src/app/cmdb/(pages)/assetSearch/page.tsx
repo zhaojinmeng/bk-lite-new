@@ -93,7 +93,7 @@ const AssetSearch = () => {
     getModelInstanceCount,
   } = useInstanceApi();
   const { getClassificationList } = useClassificationApi();
-  const { getChangeRecords } = useChangeRecordApi();
+  const { getHomeRecentChanges } = useChangeRecordApi();
   const {
     items: followedItems,
     loading: followedConfigLoading,
@@ -241,7 +241,7 @@ const AssetSearch = () => {
         ? await (async () => {
           const responses = await Promise.all(
             HIGH_RISK_CHANGE_TYPES.map((type: HighRiskChangeType) =>
-              getChangeRecords(
+              getHomeRecentChanges(
                 buildRecentChangeQuery(filter, operator, type, RECENT_CHANGE_LIMIT, 1)
               ) as Promise<ChangeRecordListResponse>
             )
@@ -255,7 +255,7 @@ const AssetSearch = () => {
           };
         })()
         : await (async () => {
-          const response = await getChangeRecords(
+          const response = await getHomeRecentChanges(
             buildRecentChangeQuery(filter, operator, undefined, RECENT_CHANGE_LIMIT, page)
           ) as ChangeRecordListResponse;
           const records = response.items.slice(0, RECENT_CHANGE_LIMIT);
