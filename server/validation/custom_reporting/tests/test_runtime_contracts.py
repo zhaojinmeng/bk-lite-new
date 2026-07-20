@@ -550,6 +550,116 @@ def test_invalid_ingest_token_returns_authentication_error_instead_of_http_500(
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F24")
+@pytest.mark.parametrize(
+    ("source_id", "should_create"),
+    [(0, True), (True, False), (-1, False)],
+    ids=["zero", "bool", "negative"],
+)
+def test_relation_process_accepts_zero_id_but_rejects_bool_and_negative_ids(
+    monkeypatch,
+    source_id,
+    should_create,
+):
+    token_task = create_token_task()
+    graph_write = Mock()
+    monkeypatch.setattr(relation_service, "_create_edge", graph_write)
+    monkeypatch.setattr(
+        relation_service,
+        "_resolve_instance",
+        lambda model_id, identity: {"_id": 2} if model_id == "target" else None,
+    )
+    relation = {
+        "source": {"_id": source_id, "model_id": token_task.task.config["model_id"]},
+        "target": {"model_id": "target", "identity": {"inst_name": "target"}},
+        "asst_id": unique_crval_name("association"),
+    }
+
+    rejected = False
+    try:
+        result = relation_service.process(token_task.task, [relation], {}, "crval_validator")
+    except BaseAppException:
+        rejected = True
+        result = None
+
+    if source_id == 0:
+        observed_bad = result == {"pending": 1} and graph_write.call_count == 0
+        if observed_bad:
+            raise KnownProductDefect("CRV-F24: process treated legitimate FalkorDB ID 0 as missing")
+        assert result == {"pending": 0}
+        graph_write.assert_called_once_with(0, 2, relation["asst_id"], "crval_validator")
+    else:
+        observed_bad = not rejected and graph_write.call_count == 1
+        if observed_bad:
+            raise KnownProductDefect(f"CRV-F24: process accepted invalid source ID {source_id!r}")
+        assert rejected is True
+        graph_write.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F24")
+@pytest.mark.parametrize(
+    ("source_id", "should_create"),
+    [(0, True), (True, False), (-1, False)],
+    ids=["zero", "bool", "negative"],
+)
+def test_relation_backfill_accepts_zero_id_but_rejects_bool_and_negative_ids(
+    monkeypatch,
+    source_id,
+    should_create,
+):
+    token_task = create_token_task()
+    graph_write = Mock()
+    pending = CustomReportingPendingRelation.objects.create(
+        task=token_task.task,
+        source_model_id=token_task.task.config["model_id"],
+        target_model_id="target",
+        relation_payload={
+            "source": {"_id": source_id, "model_id": token_task.task.config["model_id"]},
+            "target": {"model_id": "target", "identity": {"inst_name": "target"}},
+            "asst_id": unique_crval_name("association"),
+        },
+    )
+    monkeypatch.setattr(relation_service, "_create_edge", graph_write)
+    monkeypatch.setattr(
+        relation_service,
+        "_resolve_instance",
+        lambda model_id, identity: {"_id": 2} if model_id == "target" else None,
+    )
+
+    rejected = False
+    try:
+        resolved = relation_service.backfill(token_task.task, "crval_validator")
+    except BaseAppException:
+        rejected = True
+        resolved = None
+
+    if source_id == 0:
+        observed_bad = (
+            resolved == 0
+            and graph_write.call_count == 0
+            and CustomReportingPendingRelation.objects.filter(id=pending.id).exists()
+        )
+        if observed_bad:
+            raise KnownProductDefect("CRV-F24: backfill treated legitimate FalkorDB ID 0 as missing")
+        assert resolved == 1
+        graph_write.assert_called_once_with(0, 2, pending.relation_payload["asst_id"], "crval_validator")
+        assert not CustomReportingPendingRelation.objects.filter(id=pending.id).exists()
+    else:
+        observed_bad = (
+            not rejected
+            and resolved == 1
+            and graph_write.call_count == 1
+            and not CustomReportingPendingRelation.objects.filter(id=pending.id).exists()
+        )
+        if observed_bad:
+            raise KnownProductDefect(f"CRV-F24: backfill accepted invalid source ID {source_id!r}")
+        assert rejected is True
+        graph_write.assert_not_called()
+        assert CustomReportingPendingRelation.objects.filter(id=pending.id).exists()
+
+
+@pytest.mark.django_db
 def test_factories_preserve_explicit_empty_team():
     token_task = create_token_task(team=[])
 

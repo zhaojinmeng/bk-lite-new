@@ -297,6 +297,77 @@ def test_review_approval_does_not_delete_without_durable_approved_state(monkeypa
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F18")
+def test_cleanup_stops_before_graph_delete_when_audit_fact_lookup_fails(monkeypatch):
+    deleted = []
+
+    class RecordingGraph:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def batch_delete_entity(self, entity, ids):
+            deleted.append((entity, list(ids)))
+
+    monkeypatch.setattr(
+        instance_service.InstanceManage,
+        "query_entity_by_ids",
+        Mock(side_effect=RuntimeError("audit fact lookup unavailable")),
+    )
+    monkeypatch.setattr(cleanup_service, "GraphClient", RecordingGraph)
+
+    rejected = False
+    try:
+        cleanup_service._delete_instances([10, 11], "crval_validator")
+    except RuntimeError as exc:
+        assert "audit fact lookup unavailable" in str(exc)
+        rejected = True
+
+    _assert_contract_or_known_defect(
+        actual=(rejected, deleted),
+        expected=(True, []),
+        known_bad=(False, [("instance", [10, 11])]),
+        finding="CRV-F18",
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F21")
+def test_concurrent_cleanup_approval_has_one_cas_winner_and_one_delete(monkeypatch):
+    token_task = create_token_task(cleanup_strategy="snapshot")
+    batch = CustomReportingBatch.objects.create(
+        task=token_task.task,
+        status=CustomReportingBatch.STATUS_SUCCESS,
+    )
+    review = CustomReportingCleanupReview.objects.create(
+        batch=batch,
+        status=CustomReportingCleanupReview.STATUS_PENDING,
+        review_payload={"delete_ids": [10]},
+    )
+    first_reader = CustomReportingCleanupReview.objects.get(id=review.id)
+    second_reader = CustomReportingCleanupReview.objects.get(id=review.id)
+    deleted = []
+    monkeypatch.setattr(cleanup_service, "_delete_instances", lambda ids, operator: deleted.extend(ids))
+    monkeypatch.setattr(cleanup_service, "_get_review", Mock(side_effect=[first_reader, second_reader]))
+
+    first = cleanup_service.approve(token_task.task.id, review.id, "reviewer_one")
+    second_rejected = False
+    try:
+        cleanup_service.approve(token_task.task.id, review.id, "reviewer_two")
+    except BaseAppException:
+        second_rejected = True
+
+    _assert_contract_or_known_defect(
+        actual=(first["status"], second_rejected, deleted),
+        expected=(CustomReportingCleanupReview.STATUS_APPROVED, True, [10]),
+        known_bad=(CustomReportingCleanupReview.STATUS_APPROVED, False, [10, 10]),
+        finding="CRV-F21",
+    )
+
+
+@pytest.mark.django_db
 def test_review_approval_retry_advances_after_transient_db_failure(monkeypatch):
     token_task = create_token_task(cleanup_strategy="snapshot")
     batch = CustomReportingBatch.objects.create(task=token_task.task, status=CustomReportingBatch.STATUS_SUCCESS)
