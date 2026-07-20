@@ -16,6 +16,7 @@ def test_empty_snapshot_requires_authoritative_declaration_and_then_forces_revie
     token_task = create_token_task(cleanup_strategy="snapshot")
     unconfirmed_batch = CustomReportingBatch.objects.create(task=token_task.task)
     confirmed_batch = CustomReportingBatch.objects.create(task=token_task.task)
+    unconfirmed_before = (unconfirmed_batch.status, unconfirmed_batch.summary)
     deleted = []
     monkeypatch.setattr(cleanup_service, "_delete_instances", lambda ids, operator: deleted.append(list(ids)))
 
@@ -28,10 +29,14 @@ def test_empty_snapshot_requires_authoritative_declaration_and_then_forces_revie
         unconfirmed == {"deleted": 2, "review_created": False}
         and confirmed == {"deleted": 2, "review_created": False}
         and deleted == [[10, 11], [10, 11]]
+        and not CustomReportingCleanupReview.objects.filter(batch=unconfirmed_batch).exists()
     )
     if current_bad:
         raise KnownProductDefect("CRV-F17: empty snapshots delete without an authoritative declaration or review")
     assert unconfirmed == {"deleted": 0, "review_created": False}
+    unconfirmed_batch.refresh_from_db()
+    assert (unconfirmed_batch.status, unconfirmed_batch.summary) == unconfirmed_before
+    assert not CustomReportingCleanupReview.objects.filter(batch=unconfirmed_batch).exists()
     assert confirmed == {"deleted": 0, "review_created": True}
     assert deleted == []
     assert CustomReportingCleanupReview.objects.filter(batch=confirmed_batch).exists()

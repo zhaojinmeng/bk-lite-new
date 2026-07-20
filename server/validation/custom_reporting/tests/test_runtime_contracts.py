@@ -552,14 +552,13 @@ def test_invalid_ingest_token_returns_authentication_error_instead_of_http_500(
 @pytest.mark.django_db
 @pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F24")
 @pytest.mark.parametrize(
-    ("source_id", "should_create"),
-    [(0, True), (True, False), (-1, False)],
+    "source_id",
+    [0, True, -1],
     ids=["zero", "bool", "negative"],
 )
 def test_relation_process_accepts_zero_id_but_rejects_bool_and_negative_ids(
     monkeypatch,
     source_id,
-    should_create,
 ):
     token_task = create_token_task()
     graph_write = Mock()
@@ -599,14 +598,13 @@ def test_relation_process_accepts_zero_id_but_rejects_bool_and_negative_ids(
 @pytest.mark.django_db
 @pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F24")
 @pytest.mark.parametrize(
-    ("source_id", "should_create"),
-    [(0, True), (True, False), (-1, False)],
+    "source_id",
+    [0, True, -1],
     ids=["zero", "bool", "negative"],
 )
 def test_relation_backfill_accepts_zero_id_but_rejects_bool_and_negative_ids(
     monkeypatch,
     source_id,
-    should_create,
 ):
     token_task = create_token_task()
     graph_write = Mock()

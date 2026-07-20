@@ -2,10 +2,22 @@ from unittest.mock import Mock
 
 import pytest
 
-from apps.cmdb_enterprise.custom_reporting.models import CustomReportingBatch, CustomReportingPendingRelation, CustomReportingTask
-from apps.cmdb_enterprise.custom_reporting.services import ingest_service, model_service, relation_service, task_service
+from apps.cmdb_enterprise.custom_reporting import models as reporting_models
+from apps.cmdb_enterprise.custom_reporting.models import (
+    CustomReportingBatch,
+    CustomReportingCredential,
+    CustomReportingPendingRelation,
+    CustomReportingTask,
+)
+from apps.cmdb_enterprise.custom_reporting.services import (
+    ingest_service,
+    model_service,
+    relation_service,
+    task_service,
+)
+from apps.core.exceptions.base_app_exception import BaseAppException
 from validation.custom_reporting.tests.factories import create_token_task, unique_crval_name
-from validation.custom_reporting.tests.test_runtime_contracts import KnownProductDefect, _assert_contract_or_known_defect
+from validation.custom_reporting.tests.test_runtime_contracts import KnownProductDefect
 
 
 def _merge_result(**overrides):
@@ -22,38 +34,95 @@ def _merge_result(**overrides):
     return result
 
 
+def _operations_for_scope(scope_key):
+    operation_model = getattr(reporting_models, "CustomReportingOperation", None)
+    if operation_model is None:
+        return []
+    return list(operation_model.objects.filter(scope_key=scope_key))
+
+
+def _deliveries_for_pending(task, pending):
+    delivery_model = getattr(reporting_models, "PendingRelationDelivery", None)
+    if delivery_model is None:
+        return []
+    fields = {field.name for field in delivery_model._meta.get_fields()}
+    if "pending_relation" in fields:
+        return list(delivery_model.objects.filter(pending_relation=pending))
+    return list(delivery_model.objects.filter(task=task))
+
+
 @pytest.mark.django_db
 @pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F19")
-def test_quick_task_db_failure_does_not_leave_an_unowned_graph_model(monkeypatch):
-    graph_models = []
+@pytest.mark.parametrize(
+    "failure_point",
+    ["graph_model", "graph_attribute", "db_task", "db_credential", "credential_token"],
+)
+def test_quick_task_failures_leave_a_scope_bound_recoverable_operation(
+    monkeypatch,
+    failure_point,
+):
+    scope_key = unique_crval_name("provision_scope")
+    graph_facts = []
     payload = {
         "name": unique_crval_name("quick_task"),
         "team": [1],
         "config": {"mode": "quick"},
-        "quick_model": {"model_id": unique_crval_name("quick_model"), "model_name": "CRV quick model", "identity_keys": ["inst_name"],},
+        "scope_key": scope_key,
+        "idempotency_key": scope_key,
+        "quick_model": {
+            "model_id": unique_crval_name("quick_model"),
+            "model_name": "CRV quick model",
+            "identity_keys": ["inst_name"],
+        },
         "is_enabled": True,
     }
-    monkeypatch.setattr(
-        model_service, "bootstrap_model", lambda quick_model, **kwargs: graph_models.append(quick_model["model_id"]),
-    )
-    monkeypatch.setattr(
-        CustomReportingTask, "save", Mock(side_effect=RuntimeError("database write failed")),
-    )
 
-    with pytest.raises(RuntimeError, match="database write failed"):
+    def fail_bootstrap(quick_model, **kwargs):
+        graph_facts.append({"model_id": quick_model["model_id"], "phase": failure_point})
+        if failure_point in {"graph_model", "graph_attribute"}:
+            raise RuntimeError(f"{failure_point} write failed")
+
+    monkeypatch.setattr(model_service, "bootstrap_model", fail_bootstrap)
+    if failure_point == "db_task":
+        monkeypatch.setattr(
+            CustomReportingTask,
+            "save",
+            Mock(side_effect=RuntimeError("db task write failed")),
+        )
+    elif failure_point == "db_credential":
+        monkeypatch.setattr(
+            CustomReportingCredential.objects,
+            "create",
+            Mock(side_effect=RuntimeError("db credential write failed")),
+        )
+    elif failure_point == "credential_token":
+        monkeypatch.setattr(
+            CustomReportingCredential,
+            "issue_token",
+            Mock(side_effect=RuntimeError("credential token write failed")),
+        )
+
+    with pytest.raises(RuntimeError, match="failed"):
         task_service.create_task(payload, username="crval_validator")
 
-    _assert_contract_or_known_defect(
-        actual=(CustomReportingTask.objects.filter(name=payload["name"]).count(), graph_models),
-        expected=(0, []),
-        known_bad=(0, [payload["quick_model"]["model_id"]]),
-        finding="CRV-F19",
-    )
+    operations = _operations_for_scope(scope_key)
+    if graph_facts and not operations:
+        raise KnownProductDefect(
+            f"CRV-F19: {failure_point} left graph facts without a scope-bound recovery operation"
+        )
+
+    assert graph_facts
+    assert len(operations) == 1
+    operation = operations[0]
+    assert operation.action == "task_provision"
+    assert operation.scope_key == scope_key
+    assert operation.state in {"pending", "retry", "compensating", "manual_failed"}
+    assert operation.desired_snapshot["quick_model"]["model_id"] == payload["quick_model"]["model_id"]
 
 
 @pytest.mark.django_db
 @pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F20")
-def test_quick_model_group_sync_failure_keeps_effective_team_unchanged(monkeypatch):
+def test_quick_group_sync_failure_preserves_effective_team_and_retryable_desired_operation(monkeypatch):
     token_task = create_token_task(mode="quick", team=[1])
     token_task.task.config["quick_model"] = {
         "model_id": token_task.task.config["model_id"],
@@ -62,49 +131,82 @@ def test_quick_model_group_sync_failure_keeps_effective_team_unchanged(monkeypat
     }
     token_task.task.save(update_fields=["config", "updated_at"], sync_scopes=False)
     desired_team = [2]
+    scope_key = unique_crval_name("update_scope")
     monkeypatch.setattr(
-        model_service, "sync_model_group", Mock(side_effect=RuntimeError("graph group sync failed")),
+        model_service,
+        "sync_model_group",
+        Mock(side_effect=RuntimeError("graph group sync failed")),
     )
 
     with pytest.raises(RuntimeError, match="graph group sync failed"):
         task_service.update_task(
-            token_task.task.id, {"team": desired_team, "quick_model": token_task.task.config["quick_model"]}, username="crval_validator",
+            token_task.task.id,
+            {
+                "team": desired_team,
+                "quick_model": token_task.task.config["quick_model"],
+                "scope_key": scope_key,
+                "idempotency_key": scope_key,
+            },
+            username="crval_validator",
         )
 
     token_task.task.refresh_from_db()
-    _assert_contract_or_known_defect(
-        actual=token_task.task.team, expected=[1], known_bad=desired_team, finding="CRV-F20",
-    )
+    operations = _operations_for_scope(scope_key)
+    if token_task.task.team == desired_team and not operations:
+        raise KnownProductDefect(
+            "CRV-F20: graph sync failure changed effective team and discarded retryable desired state"
+        )
+
+    assert token_task.task.team == [1]
+    assert len(operations) == 1
+    operation = operations[0]
+    assert operation.action == "task_update"
+    assert operation.state in {"pending", "retry", "compensating", "manual_failed"}
+    assert operation.desired_snapshot["team"] == desired_team
 
 
 @pytest.mark.django_db
 @pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F23")
-def test_poison_pending_relation_isolated_so_new_ingest_can_succeed(monkeypatch):
+def test_poison_pending_relation_is_dead_lettered_once_without_blocking_later_ingest(monkeypatch):
     token_task = create_token_task()
-    CustomReportingPendingRelation.objects.create(
+    pending = CustomReportingPendingRelation.objects.create(
         task=token_task.task,
         source_model_id=token_task.task.config["model_id"],
         target_model_id="target",
-        relation_payload={"source": {"_id": 1}, "target": {"model_id": "target"}, "asst_id": "bad"},
+        relation_payload={
+            "source": {"_id": 1},
+            "target": {"model_id": "target", "identity": {"inst_name": "target"}},
+            "asst_id": "deterministically-invalid-association",
+        },
     )
+    edge_write = Mock(side_effect=BaseAppException("关联类型不存在"))
     monkeypatch.setattr(ingest_service.merge_service, "merge_instances", lambda *args: _merge_result())
     monkeypatch.setattr(ingest_service.relation_service, "process", lambda *args: {"pending": 0})
     monkeypatch.setattr(
-        relation_service, "backfill", Mock(side_effect=RuntimeError("poison pending relation")),
+        relation_service,
+        "_resolve_instance",
+        lambda model_id, identity: {"_id": 2},
     )
+    monkeypatch.setattr(relation_service, "_create_edge", edge_write)
 
-    rejected = False
-    try:
-        result = ingest_service.ingest(token_task.raw_token, {"instances": [{"inst_name": "fresh"}]})
-    except RuntimeError as exc:
-        assert "poison pending relation" in str(exc)
-        rejected = True
-        result = None
+    rejected = []
+    for inst_name in ("first", "second"):
+        try:
+            ingest_service.ingest(token_task.raw_token, {"instances": [{"inst_name": inst_name}]})
+        except BaseAppException:
+            rejected.append(inst_name)
 
-    batch = CustomReportingBatch.objects.get(task=token_task.task)
-    _assert_contract_or_known_defect(
-        actual=(rejected, result, batch.status),
-        expected=(False, {"batch_id": batch.id, "summary": batch.summary}, CustomReportingBatch.STATUS_SUCCESS),
-        known_bad=(True, None, CustomReportingBatch.STATUS_FAILED),
-        finding="CRV-F23",
-    )
+    deliveries = _deliveries_for_pending(token_task.task, pending)
+    if rejected and not deliveries:
+        raise KnownProductDefect(
+            "CRV-F23: deterministic poison pending relation blocks ingest without a dead-letter delivery"
+        )
+
+    assert rejected == []
+    assert edge_write.call_count <= 1
+    assert len(deliveries) == 1
+    delivery = deliveries[0]
+    assert delivery.state == "dead_letter"
+    assert delivery.attempt_count == 1
+    assert delivery.last_error
+    assert CustomReportingBatch.objects.filter(task=token_task.task, status=CustomReportingBatch.STATUS_SUCCESS).count() == 2
