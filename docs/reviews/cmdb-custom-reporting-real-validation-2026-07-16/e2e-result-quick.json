@@ -1,0 +1,43 @@
+{
+  "evidence_kind": "sanitized_terminal_result_summary",
+  "mode": "quick",
+  "run_id": "crval_20260720T022654Z_ad27bc08fef0ac9767478007e7ce2849",
+  "automatic_runner": {
+    "positive_ingests_completed": 4,
+    "stopped_before_revoke": true,
+    "failure_step": "old_token_rejection_after_rotation",
+    "observed_http_status": 500,
+    "expected_http_status": [401, 403],
+    "finding": "CRV-F16"
+  },
+  "controlled_recovery": {
+    "client": "the_same_fail_closed_SafeHttpClient",
+    "ownership_precheck": "task=4 and credential=4 matched the ledger",
+    "action": "revoke_rotated_credential",
+    "completed": true
+  },
+  "verify_snapshot": {
+    "association": 1,
+    "batch": 4,
+    "change_record": 9,
+    "credential": 1,
+    "edge": 2,
+    "field_registration": 1,
+    "instance": 5,
+    "model": 1,
+    "pending": 0,
+    "review": 0,
+    "task": 1,
+    "task_scope": 1,
+    "precise_relation_pairs_verified": 2
+  },
+  "cleanup": {
+    "change_record_deleted": 9,
+    "edge_deleted": 3,
+    "field_registration_deleted": 1,
+    "instance_deleted": 5,
+    "model_deleted": 1,
+    "all_owned_residuals_zero": true,
+    "ledger_removed_after_zero_residuals": true
+  }
+}

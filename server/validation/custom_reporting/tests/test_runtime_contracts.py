@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from apps.cmdb.services.model import ModelManage
-from apps.cmdb_enterprise.custom_reporting.models import CustomReportingPendingRelation, CustomReportingTask
+from apps.cmdb_enterprise.custom_reporting.models import CustomReportingBatch, CustomReportingPendingRelation, CustomReportingTask
 from apps.cmdb_enterprise.custom_reporting.provider import CustomReportingProvider
 from apps.cmdb_enterprise.custom_reporting.services import (
     credential_service,
@@ -18,6 +18,7 @@ from apps.core.exceptions.base_app_exception import BaseAppException
 from validation.custom_reporting.tests.factories import create_token_task, unique_crval_name
 
 TASKS_URL = "/api/v1/cmdb/api/custom_reporting/tasks/"
+INGEST_URL = "/api/v1/cmdb/api/custom_reporting/ingest/"
 
 
 class KnownProductDefect(AssertionError):
@@ -500,6 +501,55 @@ def test_revoking_factory_token_blocks_ingest_capability():
 
 
 @pytest.mark.django_db
+@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F16")
+@pytest.mark.parametrize("token_state", ["missing", "random", "rotated", "revoked"])
+def test_invalid_ingest_token_returns_authentication_error_instead_of_http_500(
+    api_client,
+    monkeypatch,
+    token_state,
+):
+    token_task = create_token_task()
+    credential = token_task.task.credentials.get()
+
+    if token_state == "missing":
+        submitted_token = None
+    elif token_state == "random":
+        submitted_token = unique_crval_name("invalid_token")
+    elif token_state == "rotated":
+        submitted_token = token_task.raw_token
+        credential_service.rotate(token_task.task.id, credential.id)
+    else:
+        submitted_token = token_task.raw_token
+        credential_service.revoke(token_task.task.id, credential.id)
+
+    original_resolve = ingest_service._resolve_credential
+    resolve_calls = []
+
+    def recording_resolve(token):
+        resolve_calls.append(token)
+        return original_resolve(token)
+
+    monkeypatch.setattr(ingest_service, "_resolve_credential", recording_resolve)
+    if submitted_token is not None:
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {submitted_token}")
+
+    response = api_client.post(
+        INGEST_URL,
+        {"instances": [], "relations": []},
+        format="json",
+    )
+
+    exact_known_bad = (
+        response.status_code == 500 and resolve_calls == [submitted_token] and not CustomReportingBatch.objects.filter(task=token_task.task).exists()
+    )
+    if exact_known_bad:
+        raise KnownProductDefect(f"CRV-F16: {token_state} ingest token was mapped to HTTP 500")
+    assert resolve_calls == [submitted_token]
+    assert not CustomReportingBatch.objects.filter(task=token_task.task).exists()
+    assert response.status_code in {401, 403}
+
+
+@pytest.mark.django_db
 def test_factories_preserve_explicit_empty_team():
     token_task = create_token_task(team=[])
 
@@ -542,6 +592,7 @@ def test_known_product_defect_classifier_and_markers_are_precise():
         test_standard_schema_rejects_unknown_and_reserved_fields_before_merge,
         test_quick_mode_reserved_id_field_is_not_registered_or_written,
         test_relation_endpoint_rejects_source_model_mismatch_without_side_effects,
+        test_invalid_ingest_token_returns_authentication_error_instead_of_http_500,
     )
     for test_case in defect_tests:
         marker = next(mark for mark in test_case.pytestmark if mark.name == "xfail")

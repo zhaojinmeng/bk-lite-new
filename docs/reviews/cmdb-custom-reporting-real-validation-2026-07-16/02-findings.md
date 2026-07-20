@@ -267,3 +267,176 @@
   索引化合同；merge/expire 图查询游标与最大页大小测试；pending、batch/review 分页测试；
   周期清理每轮 deadline/最大处理量及幂等续跑测试。
 - Projectmem：#0384（open；本验证任务不修改生产逻辑）。
+
+## CRV-F13：图写成功后同步 Celery 投递失败会返回 500 并留下部分提交
+
+- Severity：P1
+- Location：`server/apps/cmdb/services/auto_relation_reconcile.py:43-49`；
+  `server/apps/cmdb_enterprise/custom_reporting/services/merge_service.py:104-105`；
+  `ingest_service.py:63-127`
+- Trigger：真实 quick ingest 写入实例后，自动关系对账同步调用 `current_app.send_task`，
+  RabbitMQ 不可用时投递异常冒泡。
+- Evidence：隔离真实 HTTP 首次运行收到 500，但图实例和 Batch 已存在；Batch 只能在外围
+  catch 中标记 failed，已完成的图写没有回滚。Task 9 为继续验证显式使用 DEBUG 直执行，
+  没有把该环境绕行当作产品修复。
+- Impact：客户端按 500 重试可能重复执行图/审计副作用；服务端呈现“请求失败”，实际数据
+  已部分生效，破坏可判定性和幂等恢复。
+- Root Cause：图写、关系库状态与消息投递没有 operation/outbox 边界；同步投递被放在业务
+  请求关键路径中。
+- Required Tests：故障注入 `send_task`，断言 HTTP 结果、Batch 状态和图事实具备一致且可恢复
+  的合同；修复应使用持久化 outbox/operation 状态，不以吞异常伪装成功。
+- Projectmem：#0468（open）。
+
+## CRV-F14：API Secret 认证主体的组织结构与 CMDB 消费合同不兼容
+
+- Severity：P0
+- Location：`server/apps/core/backends.py:66-78`；`server/apps/cmdb/views/instance.py:70-82`
+- Trigger：使用合法 `Api-Authorization` 调用 CMDB 管理 API。
+- Evidence：`APISecretAuthBackend` 把 `user.group_list` 设为整数 team ID 列表；
+  `_get_allowed_org_ids` 却无条件执行 `[i["id"] for i in request.user.group_list]`。真实预检
+  在管理 API 上得到 500。Task 9 最终使用隔离 session + 当前团队完成业务 E2E，不能消除
+  API Secret 入口自身的合同缺陷。
+- Impact：合法机器凭据无法可靠调用 CMDB 管理接口，且错误表现为 500；自动化接入、审计
+  主体和组织授权边界同时失真。
+- Root Cause：认证层复用了持久化用户对象并写入与普通登录不同形态的动态属性，没有稳定的
+  caller context 类型或跨认证方式合同测试。
+- Required Tests：分别以 session、平台 token、API Secret 构造同组织授权主体，断言统一
+  `group_list`/组织范围语义；非法组织必须 fail-closed，合法 API Secret 不得 500。
+- Projectmem：#0463（open）。
+
+## CRV-F15：模型关联创建允许缺失 mapping，后续真实上报才以 KeyError 500 失败
+
+- Severity：P1
+- Location：`server/apps/cmdb/views/model.py:267-326`；
+  `server/apps/cmdb/services/instance.py`（`check_asso_mapping`）；
+  `server/validation/custom_reporting/http_runner.py`（关联创建与预检）
+- Trigger：创建没有 `mapping` 的模型关联后，通过自定义上报建立实例关系。
+- Evidence：管理 API 接受并持久化畸形关联；真实 relation ingest 在
+  `check_asso_mapping` 读取 mapping 时触发 `KeyError` 500。Runner 已改为显式创建
+  `mapping="n:n"` 并在写入前校验响应，证明健康路径可运行，但生产 API 仍接受坏配置。
+- Impact：配置创建成功、业务运行时才失败；错误关联可长期潜伏，导致上报批次部分成功、
+  重试和清理复杂化。
+- Root Cause：模型关联写入口和关系执行入口没有共享同一完整 schema/invariant。
+- Required Tests：创建/更新关联时拒绝缺失或非法 mapping；存量畸形关联必须可检测且禁止
+  进入关系写路径；错误响应应为明确 4xx。
+- Projectmem：#0471 的 Runner 防护已完成；生产入口缺陷仍需独立修复。
+
+## CRV-F16：失效、轮换或撤销的上报 Token 被映射成 HTTP 500
+
+- Severity：P1
+- Location：`server/apps/cmdb/views/custom_reporting.py:79-89`；
+  `server/apps/cmdb_enterprise/custom_reporting/services/ingest_service.py:15-34`
+- Trigger：缺失、随机、已轮换旧 Token 或已撤销 Token 调用 open ingest。
+- Evidence：quick 与 standard 两次真实 E2E 都在轮换后的旧 Token 负向请求得到 500；服务端
+  日志显示 `_resolve_credential` 抛 `BaseAppException("上报令牌无效或已作废")`，View 直接
+  包在 `response_success` 调用中，没有稳定的认证错误映射。严格 xfail 已参数化缺失、随机、
+  轮换旧和撤销四类 token；只有 resolver 精确收到提交值、零 Batch 副作用且 HTTP=500 时才
+  分类为 `KnownProductDefect`，其他 500 会普通失败。
+- Impact：调用方无法区分凭据失效与服务器故障，会对不可恢复认证错误进行重试；500 还会
+  误导告警、可用性统计和安全审计。
+- Root Cause：`authentication_classes=[]` 的 open View 自行解析 Token，但没有把业务认证
+  异常转换为 401/403 的统一 `ErrorEnvelope`。
+- Required Tests：缺失/随机/旧/撤销 Token 都返回一致 401（或项目统一的 403）且零 Batch、
+  零图写；有效新 Token 仍成功；异常响应不得包含 token 或内部栈。
+- Projectmem：#0477（open）。
+
+## CRV-F17：空 snapshot 可直接删除作用域内全部旧实例
+
+- Severity：P0
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/ingest_service.py:60,88-101`；
+  `cleanup_service.py:70-108`
+- Trigger：snapshot 任务提交合法空 `instances=[]`，且未设置正数人工审核阈值（默认 0）。
+- Evidence：merge 仍返回 `old_data`，covered_ids 为空；`apply_snapshot` 把全部 old_ids 作为
+  delete_ids，`if threshold` 在 0 时为假并直接删除。结合 F08，当前 old_ids 还未按 owner/org
+  隔离。
+- Impact：上游短暂空采集、过滤错误或恶意空请求都可能触发全量资产删除，并可跨任务/组织
+  放大，属于数据丢失边界。
+- Required Tests：空 snapshot 默认零副作用；只有显式确认的“authoritative empty snapshot”
+  才能进入审核，且候选集必须先按 task/team owner 收敛。
+- Projectmem：#0481（open）。
+
+## CRV-F18：待删实例查询失败被吞后仍执行无审计图删除
+
+- Severity：P1
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/cleanup_service.py:38-62`
+- Trigger：`query_entity_by_ids` 因连接、解码或服务异常失败，但后续图删除可用。
+- Evidence：宽泛 `except Exception` 把 inst_list 置空，代码随后仍调用删除；因为审计循环消费
+  空列表，资产删除不会生成 ChangeRecord。
+- Impact：故障窗口中资产可消失且没有审计线索，恢复和责任追踪均失去事实基础。
+- Required Tests：任何候选事实查询异常必须 fail-close 且零删除；仅明确“不存在”可幂等跳过。
+- Projectmem：#0482（open）。
+
+## CRV-F19：quick 模型先于 DB 事务写图，失败会留下孤儿/半模型
+
+- Severity：P1
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/task_service.py:226-257`；
+  `model_service.py:31-69`
+- Trigger：图模型/部分属性创建成功后，Task 或 Credential 创建失败。
+- Evidence：quick bootstrap 在 `transaction.atomic()` 之前执行，且 bootstrap 本身包含模型与
+  多个属性的多步图写；关系库回滚不能撤销这些图事实。
+- Impact：控制面显示创建失败，图中却留下可冲突的模型、subordinate edge 或半 schema；重试
+  可能失败或复用错误资源。
+- Required Tests：逐写点故障注入；以 operation/reconciler 核对图事实并补偿或续跑，不以裸
+  DB 事务宣称跨存储原子性。
+- Projectmem：#0483（open）。
+
+## CRV-F20：任务更新先提交 DB，再同步图模型组织导致授权分叉
+
+- Severity：P1
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/task_service.py:293-316`
+- Trigger：task team/config 保存成功后，`sync_model_group` 图写失败。
+- Evidence：DB `atomic` 已退出提交，模型组织同步随后才执行；异常返回 500 时 Task/Scope 已是
+  新组织，而图模型仍属于旧 group。
+- Impact：管理授权、任务配置和资产模型组织出现持久分叉，重试又会基于已变化的授权前提。
+- Required Tests：图失败、超时和重试合同；用版本化 operation/CAS 让 DB 期望状态与图实际
+  状态可观察、可对账。
+- Projectmem：#0484（open）。
+
+## CRV-F21：并发批准同一清理审核可重复删除和审计
+
+- Severity：P1
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/cleanup_service.py:116-151`
+- Trigger：两个请求同时读取同一 pending review 并执行 approve。
+- Evidence：普通读取后检查 status，没有 `select_for_update`、lease、generation 或条件更新；
+  两个请求都能进入 `_delete_instances`。
+- Impact：重复图删除、重复/缺失审计和状态竞争；与 F10 的“先删图后存 DB”窗口叠加后恢复
+  结果不可判定。
+- Required Tests：并发双 approve 只有一个 winner；删除 operation 幂等且最终状态由 CAS 推进。
+- Projectmem：#0485（open）。
+
+## CRV-F22：同批重复 identity 后写静默覆盖，summary 不报丢数据
+
+- Severity：P1
+- Location：`server/apps/cmdb/collection/common.py:54-73`；
+  `server/apps/cmdb_enterprise/custom_reporting/services/merge_service.py:146-154`
+- Trigger：同一 payload 提交两条 identity tuple 相同但业务字段不同的实例。
+- Evidence：`new_map` 与批次 index 都用 dict 赋值，后项覆盖前项；后续只遍历 map，未增加
+  errors。请求仍可报告 `instances_received=2`。
+- Impact：客户端得到成功语义但一条输入静默丢失，且最终值依赖 payload 顺序。
+- Required Tests：批内重复 identity 在任何图写前返回明确 4xx；不得以“最后写胜出”隐式处理。
+- Projectmem：#0486（open）。
+
+## CRV-F23：poison pending 可让所有后续 ingest 在部分写入后持续失败
+
+- Severity：P1
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/ingest_service.py:83-86,123-127`；
+  `relation_service.py:120-136`
+- Trigger：pending 的 association 被删除、mapping 畸形或 payload 损坏，之后 source/target 变得
+  可解析。
+- Evidence：每次 ingest 只要存在任一 pending 就同步遍历全表；backfill 没有逐条异常隔离、
+  重试状态或 dead-letter，一条 `_create_edge` 异常会在实例已写后让整批失败。
+- Impact：单条毒化记录可永久阻断任务后续上报，并反复制造“图已写、HTTP 500”的部分提交。
+- Required Tests：单条失败不阻断其他 pending/当前批次；有限重试、错误状态、dead-letter 与
+  分页预算必须可观察。
+- Projectmem：#0487（open）。
+
+## CRV-F24：生产关系逻辑把 FalkorDB 合法 ID=0 当作不存在
+
+- Severity：P1
+- Location：`server/apps/cmdb_enterprise/custom_reporting/services/relation_service.py:91-99,125-135`
+- Trigger：source 是 FalkorDB 首个零基节点（`_id=0`）。
+- Evidence：`process` 使用 `if src_id`，backfill 使用 `if not src_id`/`if src_id`；真实 Runner 已
+  证明 FalkorDB node/edge ID 合法从 0 开始，但生产 relation service 没有同等合同。
+- Impact：合法关系被写入 pending 且可能永久无法回填，表现随图内创建顺序变化。
+- Required Tests：显式使用 `is None` 判断；覆盖 process/backfill 的 ID=0 正向与负数/布尔拒绝。
+- Projectmem：#0488（open）。

@@ -296,3 +296,72 @@ INSTALL_APPS=system_mgmt,node_mgmt,cmdb,cmdb_enterprise \
 projectmem #0382。最终 strict-xfail 为 `3 passed, 5 xfailed in 0.38s`。因此第三种产品行为、普通断言、DB/setup 或环境异常仍会
 正常失败；生产修复会触发 strict XPASS。`covered_ids` 的安全前提依赖 F08 所要求的
 owner/team old_data 查询边界，当前不得把同模型全量 old_data 视为 snapshot 安全集合。
+
+## Task 7—8：可恢复真实 HTTP Runner 与安全门禁
+
+实现并验证了专用 Runner，而不是用临时 `curl` 代替完整流程。写操作默认关闭；只有 CLI、
+参数和环境变量三重门同时打开，且目标是 allowlist 精确匹配的 loopback IP literal（不接受
+DNS hostname），同时没有发生任何重定向时才允许执行。每次运行生成唯一 `run_id`，在本地 ledger 中记录意图、响应 ID、
+模型/关系身份和清理证据；校验或清理遇到所有权歧义时 fail-close 并保留账本。
+
+Runner 的单元/故障注入测试覆盖 dry-run、错误 host、重定向、超时、响应前/后失败、畸形
+账本、部分批次恢复、FalkorDB 零基 ID、真实边方向、关系精确配对、非 `DETACH` 删除和
+TOCTOU 窗口。实现阶段最终证据为 `210 passed, 18 xfailed`（产品合同集）及 Runner
+覆盖率 81%；Task 9 收口时会再次执行最新完整门禁，最终结果见发布建议。
+
+## Task 9：SQLite + FalkorDB + 真实 HTTP 双模式 E2E
+
+### 隔离边界
+
+- Django：隔离 SQLite `/private/tmp/crv_task9_20260717_g1.sqlite3`，监听
+  `127.0.0.1:18011`，仅使用测试用户、测试组织和非生产管理密钥。
+- 图库：一次性 FalkorDB 容器 `crv-task9-20260717-g1`，映射
+  `127.0.0.1:16379`，图名 `crv_task9_20260717_g1`。
+- 写入门禁：真实 Runner 三重门开启，base URL 精确指向 loopback；未连接生产数据库、
+  生产图或公网服务。
+- 终态：两次运行均经 `--verify-ledger` 后执行精准 cleanup；业务资源 residual 全部为 0，
+  Django 与 FalkorDB 已停止。脱敏资源 ledger 分别保存在 `e2e-ledger-quick.json` 与
+  `e2e-ledger-standard.json`；自动中止、受控恢复、verify/cleanup/residual 摘要保存在
+  `e2e-result-quick.json` 与 `e2e-result-standard.json`。
+
+### 快速模式（quick）
+
+运行 `crval_20260720T022654Z_ad27bc08fef0ac9767478007e7ce2849` 完成任务、快速模型、
+自关联、动态字段登记、5 个实例、4 个批次、立即关系、pending 关系及后续 backfill。
+真实快照验证结果：batch=4、change_record=9、field_registration=1、instance=5、
+edge=2、pending=0、review=0，并确认两条边分别为
+`immediate_source -> immediate_target` 和 `pending_source -> backfill_target`。
+cleanup 删除 change_record=9、edge=3、field_registration=1、instance=5、model=1，
+所有已记账 ORM/图资源归零。
+
+### 标准模式（standard）
+
+运行 `crval_20260720T023424Z_56542498a176cf54232a43778bb7a29c` 先用隔离 quick seed
+创建目标模型，再删除 seed task，随后用标准模式复用既有模型及字段合同。真实快照验证结果：
+batch=4、change_record=8、field_registration=0、instance=5、edge=2、pending=0、
+review=0，并验证同一组立即关系和 pending/backfill 精确方向。cleanup 删除
+change_record=8、edge=3、instance=5、model=1，所有已记账 ORM/图资源归零。
+
+### 真实失败与判定
+
+两种模式都在“轮换后旧 Token 必须被拒绝”的负向步骤稳定收到 HTTP 500；正向写入、关系
+事实已经完成，但自动 Runner 在 revoke 前中止。随后先按 ledger 核对 task/credential 所有权，
+再用同一 fail-closed `SafeHttpClient` 受控撤销凭据，才继续 verify 与精准清理。根因合同是 `_resolve_credential()` 抛出的
+`BaseAppException` 未在 open ingest 边界映射为 401/403。已增加
+`CRV-F16` 的 `xfail(strict=True, raises=KnownProductDefect)`，防止产品缺陷被环境失败或
+普通 500 掩盖。故双模式结论不是“全通过”，而是“正向数据链路通过、认证错误协议阻断发布”。
+
+## 最终新鲜门禁（2026-07-20）
+
+| 门禁 | 结果 |
+| --- | --- |
+| runtime/failure/task-registration 产品合同 | `12 passed, 22 xfailed in 5.33s`；22 项均为已登记严格产品缺陷，F16 覆盖四种 token 状态 |
+| Enterprise 既有 overlay 基线 | `81 passed in 2.06s`；覆盖率 `83%` |
+| Runner + ledger + artifact | `198 passed in 0.34s` |
+| Runner 覆盖率 | `http_runner.py 81%`，三模块合计 `84%`，高于 75% 门禁 |
+| 格式与静态检查 | `black --check`、`isort --check-only`、`flake8` 对 `validation/custom_reporting` 全绿 |
+| diff/证据格式 | `git diff --check` 通过；两份 ledger 均为合法 JSON，敏感词扫描无命中 |
+| 运行环境残留 | 两次业务 cleanup residual=0；临时 Django/FalkorDB 已停止，一次性容器及临时 SQLite/settings 已删除 |
+
+`xfail` 不计为修复：它们使用 `strict=True` 且只在观察到精确的
+`KnownProductDefect` 时生效；普通异常、环境错误、第三种行为或未来修复后的 XPASS 都会使门禁失败。
