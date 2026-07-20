@@ -78,9 +78,13 @@ def test_quick_task_failures_leave_a_scope_bound_recoverable_operation(
     }
 
     def fail_bootstrap(quick_model, **kwargs):
-        graph_facts.append({"model_id": quick_model["model_id"], "phase": failure_point})
-        if failure_point in {"graph_model", "graph_attribute"}:
-            raise RuntimeError(f"{failure_point} write failed")
+        if failure_point != "graph_model":
+            graph_facts.append({"kind": "model", "model_id": quick_model["model_id"]})
+        if failure_point == "graph_model":
+            raise RuntimeError("graph_model write failed")
+        if failure_point == "graph_attribute":
+            raise RuntimeError("graph_attribute write failed after model fact")
+        graph_facts.append({"kind": "identity_attribute", "attr_id": "inst_name"})
 
     monkeypatch.setattr(model_service, "bootstrap_model", fail_bootstrap)
     if failure_point == "db_task":
@@ -106,18 +110,28 @@ def test_quick_task_failures_leave_a_scope_bound_recoverable_operation(
         task_service.create_task(payload, username="crval_validator")
 
     operations = _operations_for_scope(scope_key)
-    if graph_facts and not operations:
+    if not operations:
         raise KnownProductDefect(
             f"CRV-F19: {failure_point} left graph facts without a scope-bound recovery operation"
         )
 
-    assert graph_facts
+    if failure_point == "graph_model":
+        assert graph_facts == []
+    elif failure_point == "graph_attribute":
+        assert graph_facts == [{"kind": "model", "model_id": payload["quick_model"]["model_id"]}]
+    else:
+        assert graph_facts == [
+            {"kind": "model", "model_id": payload["quick_model"]["model_id"]},
+            {"kind": "identity_attribute", "attr_id": "inst_name"},
+        ]
     assert len(operations) == 1
     operation = operations[0]
     assert operation.action == "task_provision"
     assert operation.scope_key == scope_key
     assert operation.state in {"pending", "retry", "compensating", "manual_failed"}
     assert operation.desired_snapshot["quick_model"]["model_id"] == payload["quick_model"]["model_id"]
+    if failure_point == "graph_attribute":
+        assert payload["quick_model"]["model_id"] in str(operation.fact_snapshot)
 
 
 @pytest.mark.django_db
