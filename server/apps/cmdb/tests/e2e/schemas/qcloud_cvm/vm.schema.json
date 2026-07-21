@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "qcloud_cvm VictoriaMetrics 查询响应",
+  "description": "机械迁移既有 03_vm_metrics_response.json 所使用的公共响应约束。",
+  "type": "object",
+  "required": ["status", "data"],
+  "properties": {
+    "status": {"type": "string", "enum": ["success", "error"]},
+    "data": {
+      "type": "object",
+      "required": ["resultType", "result"],
+      "properties": {
+        "resultType": {"type": "string", "enum": ["vector", "matrix", "scalar"]},
+        "result": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["metric", "value"],
+            "properties": {
+              "metric": {
+                "type": "object",
+                "required": ["__name__", "instance_id"],
+                "properties": {
+                  "__name__": {"type": "string", "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"},
+                  "instance_id": {"type": "string"},
+                  "collect_status": {"type": "string", "enum": ["success", "error"]}
+                },
+                "additionalProperties": true
+              },
+              "value": {
+                "type": "array",
+                "items": {"type": ["string", "number"]},
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

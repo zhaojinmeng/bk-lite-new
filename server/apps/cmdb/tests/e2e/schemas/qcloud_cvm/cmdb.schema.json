@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "qcloud_cvm CMDB Golden 文档",
+  "description": "仅约束既有独立 expected 文档的 envelope 与实例子集，未从生产 mapping 生成。",
+  "type": "object",
+  "required": ["model_id", "instance_count_min", "expected_instance_subset"],
+  "properties": {
+    "model_id": {"const": "qcloud_cvm"},
+    "instance_count_min": {"type": "integer", "minimum": 1},
+    "expected_instance_subset": {
+      "type": "object",
+      "required": ["inst_name", "resource_name", "resource_id"],
+      "properties": {
+        "inst_name": {"type": "string", "minLength": 1},
+        "resource_name": {"type": "string"},
+        "resource_id": {"type": "string"},
+        "ip_addr": {"type": "string"},
+        "public_ip": {"type": "string"},
+        "region": {"type": "string"},
+        "zone": {"type": "string"},
+        "vpc": {"type": "string"},
+        "status": {"type": "string"},
+        "instance_type": {"type": "string"},
+        "os_name": {"type": "string"},
+        "vcpus": {"type": "integer"},
+        "memory_mb": {"type": "integer"},
+        "charge_type": {"type": "string"}
+      }
+    }
+  }
+}

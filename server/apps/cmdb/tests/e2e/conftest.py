@@ -3,12 +3,110 @@
 复用上层 apps/cmdb/tests/conftest.py 的 fake_graph fixture（pytest 自动继承）。
 """
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Tuple
 
 import pytest
 
 E2E_ROOT = Path(__file__).parent
+
+
+@dataclass(frozen=True)
+class CompleteEvidence:
+    case_id: str
+    root: Path
+
+
+@pytest.fixture
+def complete_evidence(tmp_path):
+    """创建与生产矩阵隔离的完整契约样例，只用于验证 evidence loader。"""
+    case_id = "complete_case"
+    fixture_dir = tmp_path / "fixtures" / case_id
+    schema_dir = tmp_path / "schemas" / case_id
+    fixture_dir.mkdir(parents=True)
+    schema_dir.mkdir(parents=True)
+
+    documents = {
+        "00_provenance.json": {
+            "source_type": "contract_example",
+            "vendor": "not_applicable",
+            "service": "evidence_loader",
+            "api_operation": "not_applicable",
+            "api_or_sdk_version": "not_applicable",
+            "documentation_url": "not_applicable",
+            "read_at": "2026-07-21T10:30:00+08:00",
+            "sanitization": "仅含保留域名与人工边界值，无真实环境标识",
+        },
+        "01_source_raw.json": {
+            "zero": 0,
+            "disabled": False,
+            "empty": "",
+            "unicode": "采集节点一",
+            "quote": '值包含"引号"',
+            "backslash": "C:\\采集\\bin",
+            "multiline": "第一行\n第二行",
+            "password": "***",
+        },
+        "04_vm_response.json": {"status": "success", "data": {"resultType": "vector", "result": []}},
+        "05_expected_cmdb.json": {
+            "model_id": "contract_example",
+            "instances": [{"inst_name": "node-01.example.invalid", "enabled": False, "count": 0}],
+        },
+    }
+    for filename, document in documents.items():
+        (fixture_dir / filename).write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+    (fixture_dir / "02_prometheus.txt").write_text(
+        'contract_example_info{label="采集节点一",empty="",quoted="\\"",path="C:\\\\采集"} 0\n', encoding="utf-8",
+    )
+    (fixture_dir / "03_line_protocol.txt").write_text(
+        'contract_example,host=node-01.example.invalid enabled=false,count=0i,note="第一行\\n第二行"\n', encoding="utf-8",
+    )
+
+    schemas = {
+        "source.schema.json": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "required": ["zero", "disabled", "empty", "unicode", "quote", "backslash", "multiline", "password"],
+            "properties": {
+                "zero": {"type": "integer", "const": 0},
+                "disabled": {"type": "boolean", "const": False},
+                "empty": {"type": "string", "const": ""},
+                "unicode": {"type": "string"},
+                "quote": {"type": "string"},
+                "backslash": {"type": "string"},
+                "multiline": {"type": "string"},
+                "password": {"type": "string", "const": "***"},
+            },
+            "additionalProperties": False,
+        },
+        "vm.schema.json": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "required": ["status", "data"],
+            "properties": {
+                "status": {"const": "success"},
+                "data": {
+                    "type": "object",
+                    "required": ["resultType", "result"],
+                    "properties": {"resultType": {"const": "vector"}, "result": {"type": "array"}},
+                },
+            },
+        },
+        "cmdb.schema.json": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "required": ["model_id", "instances"],
+            "properties": {
+                "model_id": {"const": "contract_example"},
+                "instances": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["inst_name", "enabled", "count"]}},
+            },
+        },
+    }
+    for filename, schema in schemas.items():
+        (schema_dir / filename).write_text(json.dumps(schema, ensure_ascii=False), encoding="utf-8")
+
+    return CompleteEvidence(case_id=case_id, root=tmp_path)
 
 
 # --------------------------------------------------------------------------
