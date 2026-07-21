@@ -31,7 +31,6 @@ from sanic.log import logger
 
 from core.nats import NATSConfig
 
-
 # 进程级共享连接与连接锁
 _shared_nc: Optional[NATS] = None
 _connect_lock: Optional[asyncio.Lock] = None
@@ -217,9 +216,9 @@ async def nats_publish_lines(subject: str, lines: List[str]) -> int:
     if not lines:
         return 0
 
-    nc = await get_shared_nats()
     count = 0
     try:
+        nc = await get_shared_nats()
         for line in lines:
             await nc.publish(subject, line.encode("utf-8"))
             count += 1
