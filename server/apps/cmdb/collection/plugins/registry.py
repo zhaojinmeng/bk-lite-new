@@ -1,5 +1,22 @@
 from apps.core.logger import cmdb_logger as logger
 
+_NON_PRODUCTION_MODEL_IDS = {"tuxedo"}
+
+
+def emitted_model_ids(plugin_cls: type) -> tuple[str, ...]:
+    names = set()
+    for attr in ("field_mapping", "field_mappings", "related_field_mappings"):
+        value = getattr(plugin_cls, attr, None)
+        if isinstance(value, dict):
+            names.update(str(key) for key, mapping in value.items() if isinstance(mapping, dict))
+    for metric in getattr(plugin_cls, "metric_names", ()) or ():
+        model_id = metric.removesuffix("_info_gauge")
+        if model_id:
+            names.add(model_id)
+    if not names:
+        names.add(plugin_cls.supported_model_id)
+    return tuple(sorted(names))
+
 
 class CollectionPluginRegistry:
     _registry = {}
@@ -72,6 +89,8 @@ class CollectionPluginRegistry:
                         "module": plugin_cls.__module__,
                         "plugin_source": getattr(plugin_cls, "plugin_source", "unknown"),
                         "priority": getattr(plugin_cls, "priority", 0),
+                        "emitted_model_ids": emitted_model_ids(plugin_cls),
+                        "is_production": (".archived." not in plugin_cls.__module__ and model_id not in _NON_PRODUCTION_MODEL_IDS),
                     }
                 )
         return snapshot

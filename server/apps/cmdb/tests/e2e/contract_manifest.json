@@ -1,0 +1,854 @@
+{
+  "production_contracts": [
+    {
+      "task_type": "cloud",
+      "supported_model_id": "aliyun_account",
+      "emitted_model_id": "aliyun_bucket",
+      "case_id": "aliyun_bucket",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "aliyun_account",
+      "emitted_model_id": "aliyun_clb",
+      "case_id": "aliyun_clb",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "aliyun_account",
+      "emitted_model_id": "aliyun_ecs",
+      "case_id": "aliyun_ecs",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "aliyun_account",
+      "emitted_model_id": "aliyun_kafka_inst",
+      "case_id": "aliyun_kafka_inst",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "aliyun_account",
+      "emitted_model_id": "aliyun_mongodb",
+      "case_id": "aliyun_mongodb",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "aliyun_account",
+      "emitted_model_id": "aliyun_mysql",
+      "case_id": "aliyun_mysql",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "aliyun_account",
+      "emitted_model_id": "aliyun_pgsql",
+      "case_id": "aliyun_pgsql",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "aliyun_account",
+      "emitted_model_id": "aliyun_redis",
+      "case_id": "aliyun_redis",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "fusioninsight",
+      "emitted_model_id": "fusioninsight_cluster",
+      "case_id": "fusioninsight_cluster",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "fusioninsight",
+      "emitted_model_id": "fusioninsight_host",
+      "case_id": "fusioninsight_host",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "h3c_cas",
+      "emitted_model_id": "h3c_cas",
+      "case_id": "h3c_cas",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud",
+      "case_id": "hwcloud",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud_dcs",
+      "case_id": "hwcloud_dcs",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud_ecs",
+      "case_id": "hwcloud_ecs",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud_eip",
+      "case_id": "hwcloud_eip",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud_elb",
+      "case_id": "hwcloud_elb",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud_evs",
+      "case_id": "hwcloud_evs",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud_obs",
+      "case_id": "hwcloud_obs",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud_rds",
+      "case_id": "hwcloud_rds",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud_sg",
+      "case_id": "hwcloud_sg",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud_subnet",
+      "case_id": "hwcloud_subnet",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "hwcloud",
+      "emitted_model_id": "hwcloud_vpc",
+      "case_id": "hwcloud_vpc",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_bucket",
+      "case_id": "qcloud_bucket",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_clb",
+      "case_id": "qcloud_clb",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_cmq",
+      "case_id": "qcloud_cmq",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_cmq_topic",
+      "case_id": "qcloud_cmq_topic",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_cvm",
+      "case_id": "qcloud_cvm",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_domain",
+      "case_id": "qcloud_domain",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_eip",
+      "case_id": "qcloud_eip",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_filesystem",
+      "case_id": "qcloud_filesystem",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_mongodb",
+      "case_id": "qcloud_mongodb",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_mysql",
+      "case_id": "qcloud_mysql",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_pgsql",
+      "case_id": "qcloud_pgsql",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_plusar_cluster",
+      "case_id": "qcloud_plusar_cluster",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_pulsar_cluster",
+      "case_id": "qcloud_pulsar_cluster",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_redis",
+      "case_id": "qcloud_redis",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "qcloud",
+      "emitted_model_id": "qcloud_rocketmq",
+      "case_id": "qcloud_rocketmq",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "storage",
+      "emitted_model_id": "storage",
+      "case_id": "storage",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "storage",
+      "emitted_model_id": "storage_disk",
+      "case_id": "storage_disk",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "storage",
+      "emitted_model_id": "storage_pool",
+      "case_id": "storage_pool",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "storage",
+      "emitted_model_id": "storage_volume",
+      "case_id": "storage_volume",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "zstack",
+      "emitted_model_id": "zstack",
+      "case_id": "zstack",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "db",
+      "supported_model_id": "es",
+      "emitted_model_id": "es",
+      "case_id": "es",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "db",
+      "supported_model_id": "hbase",
+      "emitted_model_id": "hbase",
+      "case_id": "hbase",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "db",
+      "supported_model_id": "mongodb",
+      "emitted_model_id": "mongodb",
+      "case_id": "mongodb",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "db",
+      "supported_model_id": "postgresql",
+      "emitted_model_id": "postgresql",
+      "case_id": "postgresql",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "db",
+      "supported_model_id": "redis",
+      "emitted_model_id": "redis",
+      "case_id": "redis",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "host",
+      "supported_model_id": "host",
+      "emitted_model_id": "host",
+      "case_id": "host",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "host",
+      "supported_model_id": "host",
+      "emitted_model_id": "host_proc_usage",
+      "case_id": "host_proc_usage",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "host",
+      "supported_model_id": "physcial_server",
+      "emitted_model_id": "disk",
+      "case_id": "disk",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "host",
+      "supported_model_id": "physcial_server",
+      "emitted_model_id": "gpu",
+      "case_id": "gpu",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "host",
+      "supported_model_id": "physcial_server",
+      "emitted_model_id": "memory",
+      "case_id": "memory",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "host",
+      "supported_model_id": "physcial_server",
+      "emitted_model_id": "nic",
+      "case_id": "nic",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "host",
+      "supported_model_id": "physcial_server",
+      "emitted_model_id": "physcial_server",
+      "case_id": "physcial_server",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "ip",
+      "supported_model_id": "ip",
+      "emitted_model_id": "ip",
+      "case_id": "ip",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "ip",
+      "supported_model_id": "ip",
+      "emitted_model_id": "ip_info",
+      "case_id": "ip_info",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "k8s",
+      "supported_model_id": "k8s_cluster",
+      "emitted_model_id": "k8s_cluster",
+      "case_id": "k8s_cluster",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "activemq",
+      "emitted_model_id": "activemq",
+      "case_id": "activemq",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "apache",
+      "emitted_model_id": "apache",
+      "case_id": "apache",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "consul",
+      "emitted_model_id": "consul",
+      "case_id": "consul",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "docker",
+      "emitted_model_id": "docker",
+      "case_id": "docker",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "etcd",
+      "emitted_model_id": "etcd",
+      "case_id": "etcd",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "haproxy",
+      "emitted_model_id": "haproxy",
+      "case_id": "haproxy",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "iis",
+      "emitted_model_id": "iis",
+      "case_id": "iis",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "kafka",
+      "emitted_model_id": "kafka",
+      "case_id": "kafka",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "keepalive",
+      "emitted_model_id": "keepalived",
+      "case_id": "keepalived",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "memcached",
+      "emitted_model_id": "memcached",
+      "case_id": "memcached",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "minio",
+      "emitted_model_id": "minio",
+      "case_id": "minio",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "nginx",
+      "emitted_model_id": "nginx",
+      "case_id": "nginx",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "openresty",
+      "emitted_model_id": "openresty",
+      "case_id": "openresty",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "rabbitmq",
+      "emitted_model_id": "rabbitmq",
+      "case_id": "rabbitmq",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "rocketmq",
+      "emitted_model_id": "rocketmq",
+      "case_id": "rocketmq",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "spark",
+      "emitted_model_id": "spark",
+      "case_id": "spark",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "squid",
+      "emitted_model_id": "squid",
+      "case_id": "squid",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "tomcat",
+      "emitted_model_id": "tomcat",
+      "case_id": "tomcat",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "zookeeper",
+      "emitted_model_id": "zookeeper",
+      "case_id": "zookeeper",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "protocol",
+      "supported_model_id": "influxdb",
+      "emitted_model_id": "influxdb",
+      "case_id": "influxdb",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "protocol",
+      "supported_model_id": "mssql",
+      "emitted_model_id": "mssql",
+      "case_id": "mssql",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "protocol",
+      "supported_model_id": "mysql",
+      "emitted_model_id": "mysql",
+      "case_id": "mysql",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "protocol",
+      "supported_model_id": "oracle",
+      "emitted_model_id": "oracle",
+      "case_id": "oracle",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "protocol",
+      "supported_model_id": "physcial_server",
+      "emitted_model_id": "physcial_server",
+      "case_id": "physcial_server",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "protocol",
+      "supported_model_id": "postgresql",
+      "emitted_model_id": "postgresql",
+      "case_id": "postgresql",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "snmp",
+      "supported_model_id": "network",
+      "emitted_model_id": "network",
+      "case_id": "network",
+      "lane_a": true,
+      "lane_b": true
+    },
+    {
+      "task_type": "vm",
+      "supported_model_id": "vmware_vc",
+      "emitted_model_id": "vmware_vc",
+      "case_id": "vmware_vc",
+      "lane_a": true,
+      "lane_b": true
+    }
+  ],
+  "non_production_contracts": [
+    {
+      "task_type": "host",
+      "supported_model_id": "domestic_linux",
+      "emitted_model_id": "domestic_linux",
+      "case_id": "domestic_linux",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "host",
+      "supported_model_id": "mycat",
+      "emitted_model_id": "mycat",
+      "case_id": "mycat",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "apusic",
+      "emitted_model_id": "apusic",
+      "case_id": "apusic",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "bes",
+      "emitted_model_id": "bes",
+      "case_id": "bes",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "couchbase",
+      "emitted_model_id": "couchbase",
+      "case_id": "couchbase",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "ihs",
+      "emitted_model_id": "ihs",
+      "case_id": "ihs",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "informix",
+      "emitted_model_id": "informix",
+      "case_id": "informix",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "inforsuite_as",
+      "emitted_model_id": "inforsuite_as",
+      "case_id": "inforsuite_as",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "iris",
+      "emitted_model_id": "iris",
+      "case_id": "iris",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "oceanbase",
+      "emitted_model_id": "oceanbase",
+      "case_id": "oceanbase",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "oscar",
+      "emitted_model_id": "oscar",
+      "case_id": "oscar",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "sap_hana",
+      "emitted_model_id": "sap_hana",
+      "case_id": "sap_hana",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "sybase",
+      "emitted_model_id": "sybase",
+      "case_id": "sybase",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "tonggtp",
+      "emitted_model_id": "tonggtp",
+      "case_id": "tonggtp",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "tonglinkq",
+      "emitted_model_id": "tonglinkq",
+      "case_id": "tonglinkq",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "tongrds",
+      "emitted_model_id": "tongrds",
+      "case_id": "tongrds",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "weblogic",
+      "emitted_model_id": "weblogic",
+      "case_id": "weblogic",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "websphere",
+      "emitted_model_id": "websphere",
+      "case_id": "websphere",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "protocol",
+      "supported_model_id": "hdfs",
+      "emitted_model_id": "hdfs",
+      "case_id": "hdfs",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "protocol",
+      "supported_model_id": "storm",
+      "emitted_model_id": "storm",
+      "case_id": "storm",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "protocol",
+      "supported_model_id": "yarn",
+      "emitted_model_id": "yarn",
+      "case_id": "yarn",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "middleware",
+      "supported_model_id": "tuxedo",
+      "emitted_model_id": "tuxedo",
+      "case_id": "tuxedo",
+      "lane_a": false,
+      "lane_b": false
+    }
+  ]
+}
