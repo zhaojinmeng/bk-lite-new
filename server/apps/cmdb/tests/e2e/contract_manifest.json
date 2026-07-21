@@ -267,14 +267,6 @@
     {
       "task_type": "cloud",
       "supported_model_id": "qcloud",
-      "emitted_model_id": "qcloud_pulsar_cluster",
-      "case_id": "qcloud_pulsar_cluster",
-      "lane_a": true,
-      "lane_b": true
-    },
-    {
-      "task_type": "cloud",
-      "supported_model_id": "qcloud",
       "emitted_model_id": "qcloud_redis",
       "case_id": "qcloud_redis",
       "lane_a": true,

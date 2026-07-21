@@ -54,6 +54,49 @@ def test_父插件必须展开所有产出模型():
     }
 
 
+def test_原始指标别名不能重复计为最终生产模型():
+    snapshot = CollectionPluginRegistry.get_registry_snapshot()
+    qcloud = next(item for item in snapshot if item["model_id"] == "qcloud")
+
+    assert "qcloud_plusar_cluster" in qcloud["emitted_model_ids"]
+    assert "qcloud_pulsar_cluster" not in qcloud["emitted_model_ids"]
+
+
+def test_pulsar原始指标经真实runner只产出plusar最终模型(monkeypatch):
+    import time
+
+    from apps.cmdb.collection.collect_plugin.qcloud import QCloudCollectMetrics
+    from apps.cmdb.collection.plugins.base import bind_collection_mapping
+    from apps.cmdb.collection.plugins.community.cloud.qcloud import QCloudCollectionPlugin
+
+    monkeypatch.setattr(
+        QCloudCollectMetrics, "_metrics", property(lambda self: list(QCloudCollectionPlugin.metric_names)),
+    )
+    monkeypatch.setattr(
+        QCloudCollectMetrics,
+        "model_field_mapping",
+        property(
+            lambda self: {model_id: bind_collection_mapping(self, mapping) for model_id, mapping in QCloudCollectionPlugin.field_mappings.items()}
+        ),
+    )
+    runner = QCloudCollectMetrics(inst_name="腾讯云测试账号", inst_id=1, task_id=33011)
+    runner.format_data(
+        {
+            "result": [
+                {
+                    "metric": {"__name__": "qcloud_pulsar_cluster_info_gauge", "resource_name": "pulsar-contract", "resource_id": "pulsar-001"},
+                    "value": [time.time(), "1"],
+                }
+            ]
+        }
+    )
+    runner.format_metrics()
+
+    non_empty_models = {model_id for model_id, rows in runner.result.items() if rows}
+    assert non_empty_models == {"qcloud_plusar_cluster"}
+    assert "qcloud_pulsar_cluster" not in runner.result
+
+
 def test_许可证阻塞插件不计入生产覆盖():
     snapshot = CollectionPluginRegistry.get_registry_snapshot()
     tuxedo = next(item for item in snapshot if item["model_id"] == "tuxedo")

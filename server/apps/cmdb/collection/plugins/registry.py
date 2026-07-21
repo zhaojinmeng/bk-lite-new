@@ -5,6 +5,7 @@ _NON_PRODUCTION_MODEL_IDS = {"h3c_cas", "tuxedo", "zstack"}
 
 def emitted_model_ids(plugin_cls: type) -> tuple[str, ...]:
     names = set()
+    model_id_aliases = getattr(plugin_cls, "MODEL_ID_ALIASES", {}) or {}
     for attr in ("field_mapping", "field_mappings", "related_field_mappings"):
         value = getattr(plugin_cls, attr, None)
         if isinstance(value, dict):
@@ -12,7 +13,7 @@ def emitted_model_ids(plugin_cls: type) -> tuple[str, ...]:
     for metric in getattr(plugin_cls, "metric_names", ()) or ():
         model_id = metric.removesuffix("_info_gauge")
         if model_id:
-            names.add(model_id)
+            names.add(model_id_aliases.get(model_id, model_id))
     if not names:
         names.add(plugin_cls.supported_model_id)
     return tuple(sorted(names))
