@@ -243,11 +243,11 @@ git commit -m "test(cmdb): 统一采集链路证据包契约"
 - Create: `agents/stargazer/tests/collection_contract/test_publish_boundary.py`
 - Modify: `server/apps/cmdb/tests/e2e/pipeline.py`
 
-**Step 1: 写 RED 测试，证明不再伪造 VM 响应**
+**Step 1: 写 RED 测试，证明语义框架运行真实转换而非伪造 VM 响应**
 
 ```python
-@pytest.mark.parametrize("case", lane_a_cases(), ids=lambda c: c.case_id)
-def test_源数据经过真实_prometheus_与_line_protocol(case, evidence):
+@pytest.mark.parametrize("case", representative_lane_a_cases(), ids=lambda c: c.case_id)
+def test_已证明样例经过真实_prometheus_与_line_protocol(case, evidence):
     payload = case.run_real_adapter(evidence.source_raw)
     prometheus_text = convert_to_prometheus_format(payload)
     assert parse_prometheus(prometheus_text) == parse_prometheus(evidence.prometheus_text)
@@ -256,7 +256,7 @@ def test_源数据经过真实_prometheus_与_line_protocol(case, evidence):
     assert parse_line_protocol(lines) == parse_line_protocol(evidence.line_protocol_text)
 ```
 
-Expected: FAIL；现有 `step2_push_to_vm` 只构造 dict，且没有真实格式转换覆盖。
+Expected: FAIL；现有 `step2_push_to_vm` 只构造 dict，且没有真实格式转换覆盖。本任务使用自包含的已证明样例验证框架；Task 5 将参数化集合替换为全部生产三元组并以集合相等强制零遗漏。
 
 **Step 2: 实现语义比较器**
 
@@ -292,7 +292,7 @@ Run:
 cd agents/stargazer && uv run pytest -q tests/collection_contract/test_lane_a_contract.py tests/collection_contract/test_publish_boundary.py
 ```
 
-Expected: 语义解析和发布边界测试 PASS；尚未补齐对象在 Task 5 的矩阵测试中保持 RED，不允许 skip。
+Expected: 语义解析和发布边界测试 PASS；不完整对象不在本任务伪造期望，也不得用 skip/xfail 占位。Task 5 新增 `covered_lane_a_contracts() == production_contracts()` 门禁并补齐全部对象。
 
 **Step 6: Commit**
 
