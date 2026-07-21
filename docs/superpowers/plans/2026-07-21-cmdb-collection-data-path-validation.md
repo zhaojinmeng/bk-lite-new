@@ -168,19 +168,28 @@ git commit -m "test(cmdb): 建立采集对象三元组覆盖清单"
 - Rename/Modify: `server/apps/cmdb/tests/e2e/fixtures/**`
 - Rename/Modify: `server/apps/cmdb/tests/e2e/schemas/**`
 
-**Step 1: 写 RED 测试，缺任一制品即失败**
+**Step 1: 写 RED 测试，严格 loader 对缺失制品一次性汇总失败**
 
 ```python
-@pytest.mark.parametrize("case", production_cases(), ids=lambda c: c.case_id)
-def test_每个生产对象证据包完整(case):
-    evidence = load_evidence(case.case_id)
-    assert evidence.missing_files == []
+def test_证据包缺失项一次性汇总(tmp_path):
+    evidence = load_evidence("broken_case", root=tmp_path)
+    assert evidence.missing_files == [
+        "00_provenance.json", "01_source_raw.json", "02_prometheus.txt",
+        "03_line_protocol.txt", "04_vm_response.json", "05_expected_cmdb.json",
+        "source.schema.json", "vm.schema.json", "cmdb.schema.json",
+    ]
+    with pytest.raises(EvidenceValidationError, match="broken_case"):
+        evidence.validate_complete()
+
+
+def test_完整证据包通过_schema_溯源和敏感信息校验(complete_evidence):
+    evidence = load_evidence(complete_evidence.case_id, root=complete_evidence.root)
     evidence.validate_schemas()
     evidence.validate_provenance()
     evidence.assert_no_secrets()
 ```
 
-Expected: FAIL，并一次性列出当前全部缺 provenance、source、Prometheus、Line Protocol、VM、Golden、schema 的对象，禁止首错即停。
+Expected: FAIL，证明尚无严格 loader；测试必须验证缺失项完整汇总，禁止首错即停。针对生产矩阵的零缺口断言在 Task 5（Lane A 制品）和 Task 6（Lane B 制品）完成后启用，避免在真实转换代码接入前臆造中间 Golden。
 
 **Step 2: 实现严格 loader**
 
@@ -198,11 +207,12 @@ def load_evidence(case_id: str) -> Evidence:
 
 Provenance 必填字段为 `source_type`、`vendor`、`service`、`api_operation`、`api_or_sdk_version`、`documentation_url`、`read_at`、`sanitization`；真实环境来源可将 API 字段设为明确的 `not_applicable`，不得缺键。
 
-**Step 3: 迁移既有有效 fixture，补齐统一 schema**
+**Step 3: 迁移既有有效 fixture，建立统一 schema**
 
 - 保留原始值语义，不从 expected 生成 raw。
 - 对每个对象加入 `0`、`False`、空字符串、Unicode、引号、反斜杠、换行中适用的边界值。
 - 扫描高风险键和值：`secret`、`token`、`password`、`api_key`、私网域名和未脱敏主机标识。
+- 本任务只迁移能够从现有原始样本和 expected 独立证明的制品；不得为了让矩阵提前全绿而复制生产 mapping 或伪造 Prometheus/Line Protocol。其余缺口由结构化 audit 列出，并在 Task 5/6 收敛为零。
 
 **Step 4: GREEN**
 
@@ -212,7 +222,7 @@ Run:
 cd server && MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/e2e/test_contract_evidence.py
 ```
 
-Expected: 所有生产 case PASS；历史非生产 case 只校验其声明的归档状态。
+Expected: 严格 loader、完整样例、缺失汇总、schema、provenance 与敏感信息测试 PASS；audit 能列出尚待 Task 5/6 补齐的生产 case，历史非生产 case 只校验其声明的归档状态。
 
 **Step 5: Commit**
 
