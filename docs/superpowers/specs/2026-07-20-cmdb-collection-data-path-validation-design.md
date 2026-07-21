@@ -41,11 +41,11 @@ VictoriaMetrics
 
 ## 2. 目标
 
-- 生产插件注册中心中的全部生产采集对象均通过两段离线契约验证；
+- 除显式生产验证豁免外，生产插件注册中心中的全部可测试生产采集对象均通过两段离线契约验证；
 - 已有真实环境 Mock 数据从插件原始结果开始运行真实转换代码；
 - 云采集对象从官方 API 文档构造 SDK/API 响应边界 Mock，测试运行时保持离线；
 - 严格验证 Prometheus 文本、Line Protocol、VM 查询、字段清洗、模型约束、实例名称和关联关系；
-- 使用八类代表对象运行真实 NATS、Telegraf、VM、CMDB 和 FalkorDB 闭环烟测；
+- 使用七类代表对象运行真实 NATS、Telegraf、VM、CMDB 和 FalkorDB 闭环烟测；
 - 测试发现的生产缺陷在同一工作分支内按系统化调试和 TDD 完成最小修复；
 - 所有分层测试、真实烟测和质量门禁全绿后才创建 PR。
 
@@ -94,14 +94,22 @@ Stargazer → NATS → Telegraf → VictoriaMetrics → CMDB → FalkorDB
 
 测试从每个生产插件的 `metric_names`、`field_mapping`、`field_mappings`、`related_field_mappings` 及同类声明中展开全部 `emitted_model_id`。云、VMware、Host 等一个任务产生多个模型时，每个产出模型都必须独立进入验证矩阵；只有同一 fixture 和 Golden 确实覆盖全部产出模型时，才允许共享测试用例。
 
-测试启动时动态取得上述生产启用三元组集合，并与显式维护的验证清单进行双向比较：
+测试启动时动态取得上述生产启用三元组集合，并与显式维护的验证清单进行双向比较。清单严格分为三组且互不相交：
+
+- `validation_contracts`：必须同时通过 Lane A 和 Lane B 的可测试生产三元组；
+- `production_exemptions`：仍属于生产注册表、但经明确批准不进入 Lane A、Lane B 或 smoke 的三元组；
+- `non_production_contracts`：归档、许可证阻塞或 placeholder 等非生产三元组。
+
+三集合必须满足 `validation_contracts + production_exemptions = registry production`、`non_production_contracts = registry non-production`，并执行以下失败规则：
 
 - 注册中心新增对象但验证清单未登记：失败；
 - 验证清单登记对象但注册中心不存在或已停用：失败；
 - 对象缺 fixture、schema 或 expected：失败；
-- 生产对象不得用无理由 `skip` 或 `xfail` 冒充覆盖。
+- 可测试生产对象不得用无理由 `skip` 或 `xfail` 冒充覆盖；生产豁免必须有稳定 `reason` 和 `source_kind`，并在验收报告单列且不计入通过数。
 
 归档、许可证阻塞和 placeholder 对象可保留历史 fixture，但不计入生产对象通过率。它们应在独立的非生产清单中明确状态，避免与生产验证结果混淆。
+
+本次唯一生产验证豁免为 `(k8s, k8s_cluster, k8s_cluster)`：数据由外部 kube-state-metrics 直接写入 VM，再由 CMDB `CollectK8sMetrics` 查询和格式化，不经过 Stargazer；经用户明确批准，不运行 Lane A、Lane B 或真实 smoke，但其生产注册身份保持不变。
 
 ### 5.2 真实烟测代表对象
 
@@ -115,10 +123,9 @@ Stargazer → NATS → Telegraf → VictoriaMetrics → CMDB → FalkorDB
 | Middleware | `nginx` | `metric.result` JSON 解码 |
 | Cloud | `qcloud` | 云 SDK Mock、多子模型和云字段清洗 |
 | VMware | `vmware` | 多模型及关联关系 |
-| K8s | `k8s` | K8s 特殊指标和字段清洗 |
 | Network | `network` | SNMP、接口和拓扑关联 |
 
-其他生产对象全部通过 Lane A 和 Lane B；不要求逐对象启动完整基础设施。
+除显式 K8s 生产豁免外，其他可测试生产对象全部通过 Lane A 和 Lane B；不要求逐对象启动完整基础设施。
 
 ## 6. Fixture 设计
 
@@ -275,7 +282,7 @@ Lane A 运行真实生产函数，测试边界停在 NATS 发布调用之前。
 5. 实施只针对根因的最小生产修复；
 6. 确认定向测试 GREEN，并运行同类对象和全量回归；
 7. 每个缺陷独立提交，避免混入无关重构；
-8. 不使用 `skip` 或 `xfail` 掩盖生产对象缺陷。
+8. 不使用 `skip` 或 `xfail` 掩盖可测试生产对象缺陷；显式生产豁免只通过清单模型表达。
 
 如果连续三次修复尝试仍失败，应停止继续打补丁，回到架构层讨论。
 
@@ -283,12 +290,12 @@ Lane A 运行真实生产函数，测试边界停在 NATS 发布调用之前。
 
 仅在以下条件全部满足后允许创建 PR：
 
-- 生产注册中心展开的 `(task_type, supported_model_id, emitted_model_id)` 与验证矩阵双向一致，覆盖率为 100%；
-- 每个生产对象同时通过 Lane A 和 Lane B；
-- 生产对象没有无理由 `skip` 或 `xfail`；
+- 生产注册中心展开的 `(task_type, supported_model_id, emitted_model_id)` 与“可测试生产矩阵 + 显式生产豁免”双向一致；
+- 每个可测试生产对象同时通过 Lane A 和 Lane B，覆盖率为 100%；
+- K8s 豁免在报告中单列 reason/source_kind 且不计入通过数；可测试生产对象没有无理由 `skip` 或 `xfail`；
 - 真实环境 fixture 已脱敏，云 fixture 的官方来源和 API/SDK 版本完整；
 - 必填字段、类型、枚举、Golden 值、`0`/`False`/空值、单位、时间、名称和关联全部正确；
-- 八个代表对象的真实 NATS → Telegraf → VM → CMDB → FalkorDB 烟测全部通过；
+- 七个代表对象的真实 NATS → Telegraf → VM → CMDB → FalkorDB 烟测全部通过；
 - 烟测最终残留为零，失败证据和清理证据完整；
 - 测试发现的生产缺陷全部完成根因调查、RED、最小修复和 GREEN；
 - Stargazer 定向测试、CMDB 定向/全量测试和触及文件静态门禁通过；
@@ -300,7 +307,7 @@ Lane A 运行真实生产函数，测试边界停在 NATS 发布调用之前。
 
 - 本设计文档；
 - 后续详细实施计划；
-- 生产对象验证矩阵；
+- 可测试生产对象验证矩阵与显式生产豁免清单；
 - 真实环境与云文档溯源 fixture；
 - Lane A、Lane B 参数化测试基础设施；
 - 隔离真实基础设施 smoke runner；

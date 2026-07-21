@@ -2,9 +2,9 @@
 
 > **Required skill:** 实施本计划时必须使用 `subagent-driven-development` 或 `executing-plans`；每个生产缺陷还必须使用 `systematic-debugging` 与 `test-driven-development`。
 
-**Goal:** 为全部生产采集对象建立 Stargazer→Prometheus/Line Protocol/NATS 与 VM→CMDB→FalkorDB 两段可定位的离线契约，并为八类代表对象建立隔离真实基础设施烟测。
+**Goal:** 为除 K8s 显式生产豁免外的全部可测试生产采集对象建立 Stargazer→Prometheus/Line Protocol/NATS 与 VM→CMDB→FalkorDB 两段可定位的离线契约，并为七类代表对象建立隔离真实基础设施烟测。
 
-**Architecture:** 以生产插件注册中心展开的 `(task_type, supported_model_id, emitted_model_id)` 为唯一覆盖真相源。Lane A 运行 Stargazer 的真实格式转换至 NATS 发布边界；Lane B 从真实形态 VM vector 响应运行 collect plugin、模型约束和图库写入意图；smoke 使用独立 NATS、Telegraf、VictoriaMetrics、FalkorDB 容器闭环验证。
+**Architecture:** 以生产插件注册中心展开的 `(task_type, supported_model_id, emitted_model_id)` 为唯一覆盖真相源，并严格分为可测试生产、显式生产豁免和非生产三集合。Lane A 运行 Stargazer 的真实格式转换至 NATS 发布边界；Lane B 从真实形态 VM vector 响应运行 collect plugin、模型约束和图库写入意图；smoke 使用独立 NATS、Telegraf、VictoriaMetrics、FalkorDB 容器闭环验证。K8s 保持生产身份，但因外部 kube-state-metrics→VM 不经 Stargazer，经用户批准不运行 Lane A、Lane B 或 smoke。
 
 **Tech Stack:** Python 3.12、pytest、Django 4.2、Sanic、`prometheus_client.parser`、`influxdb_client.Point`、NATS、Telegraf、VictoriaMetrics、FalkorDB、Docker Compose。
 
@@ -12,10 +12,10 @@
 
 - 中文注释、测试名、提交信息和文档；仅改本任务相关文件，不做全仓格式化。
 - 严格 TDD：每个行为先运行 RED，再写最小实现并运行 GREEN；发现生产缺陷先记录根因，单独提交。
-- 生产对象缺 fixture、schema、Golden 或 provenance 必须失败，不得以 `skip`/`xfail` 计入覆盖。
+- 可测试生产对象缺 fixture、schema、Golden 或 provenance 必须失败，不得以 `skip`/`xfail` 计入覆盖；显式生产豁免必须有稳定 reason/source_kind 并在报告单列。
 - Golden 不能从生产 mapping 反向生成；云 fixture 只来自官方 API 文档，测试运行时禁止联网。
 - 烟测只允许 loopback/Compose 网络；必须显式 `CMDB_COLLECTION_SMOKE=1`，所有资源带 `run_id`，清理按账本精准且幂等。
-- 每个任务提交前只暂存该任务文件；最终全部分层测试、八类烟测、静态门禁和覆盖率通过后才创建 PR。
+- 每个任务提交前只暂存该任务文件；最终全部分层测试、七类烟测、静态门禁和可测试生产对象 100% 覆盖率通过后才创建 PR。
 
 ---
 
@@ -35,7 +35,7 @@ agents/stargazer/
 
 server/apps/cmdb/tests/e2e/
 ├── contract_manifest.py                         # 三元组展开与清单比较
-├── contract_manifest.json                       # 显式生产/非生产验证清单
+├── contract_manifest.json                       # 可测试生产/生产豁免/非生产三集合清单
 ├── contract_loader.py                           # 证据包及 schema 装载
 ├── graph_intent_spy.py                          # 可观测图库写入替身
 ├── pipeline.py                                  # 删除伪 VM 的覆盖职责，仅保留兼容 helper
@@ -61,7 +61,7 @@ server/apps/cmdb/tests/smoke/collection_chain/
 ├── telegraf.conf                                 # NATS consumer → VM import
 ├── conftest.py                                   # 门禁、健康检查、账本、清理
 ├── runner.py                                     # 发布、轮询、CMDB 运行、图回读
-├── cases.py                                      # 八类代表对象
+├── cases.py                                      # 七类代表对象
 ├── test_full_chain.py                            # 闭环参数化烟测
 └── README.md                                     # 本地/CI 命令与故障证据
 ```
@@ -137,7 +137,7 @@ def emitted_model_ids(plugin_cls: type) -> tuple[str, ...]:
 }
 ```
 
-归档、许可证阻塞、占位型对象放入 `non_production_contracts`，不得计入生产覆盖率。
+归档、许可证阻塞、占位型对象放入 `non_production_contracts`，不得计入生产覆盖率。可测试生产对象放入 `validation_contracts`；仍属生产、但经明确批准不参与本次验证的对象放入 `production_exemptions`，固定包含 `reason`、`source_kind` 且 `lane_a/lane_b=false`。三集合必须满足：可测试生产 + 生产豁免 = 注册表生产，非生产 = 注册表非生产，且彼此不相交。
 
 **Step 4: 运行 GREEN 与现有注册表回归**
 
@@ -256,7 +256,7 @@ def test_已证明样例经过真实_prometheus_与_line_protocol(case, evidence
     assert parse_line_protocol(lines) == parse_line_protocol(evidence.line_protocol_text)
 ```
 
-Expected: FAIL；现有 `step2_push_to_vm` 只构造 dict，且没有真实格式转换覆盖。本任务使用自包含的已证明样例验证框架；Task 5 将参数化集合替换为全部生产三元组并以集合相等强制零遗漏。
+Expected: FAIL；现有 `step2_push_to_vm` 只构造 dict，且没有真实格式转换覆盖。本任务使用自包含的已证明样例验证框架；Task 5 将参数化集合替换为全部可测试生产三元组并以集合相等强制零遗漏，K8s 由显式生产豁免审计。
 
 **Step 2: 实现语义比较器**
 
@@ -292,7 +292,7 @@ Run:
 cd agents/stargazer && uv run pytest -q tests/collection_contract/test_lane_a_contract.py tests/collection_contract/test_publish_boundary.py
 ```
 
-Expected: 语义解析和发布边界测试 PASS；不完整对象不在本任务伪造期望，也不得用 skip/xfail 占位。Task 5 新增 `covered_lane_a_contracts() == production_contracts()` 门禁并补齐全部对象。
+Expected: 语义解析和发布边界测试 PASS；不完整对象不在本任务伪造期望，也不得用 skip/xfail 占位。Task 5 新增 `covered_lane_a_contracts() == validation_contracts()` 门禁并补齐全部可测试生产对象。
 
 **Step 6: Commit**
 
@@ -360,7 +360,7 @@ git commit -m "fix(stargazer): 保留指标标签合法假值"
 
 ---
 
-### Task 5：补齐全部生产对象 Lane A 与云 API 边界
+### Task 5：补齐全部可测试生产对象 Lane A 与云 API 边界
 
 **Files:**
 
@@ -373,15 +373,15 @@ git commit -m "fix(stargazer): 保留指标标签合法假值"
 **Step 1: 写 RED 覆盖审计**
 
 ```python
-def test_lane_a覆盖全部生产三元组():
-    assert covered_lane_a_contracts() == production_contracts()
+def test_lane_a覆盖全部可测试生产三元组():
+    assert covered_lane_a_contracts() == validation_contracts()
 ```
 
 Expected: FAIL，并列出未绑定真实 Stargazer adapter 或缺 Lane A Golden 的三元组。
 
 **Step 2: 按适配器族补齐真实环境样本**
 
-依次处理 Host、DB、Protocol、Middleware、VMware、K8s、Network；同一父插件共享 raw 时，测试必须证明一次运行实际产出清单中全部 `emitted_model_id`。
+依次处理 Host、DB、Protocol、Middleware、VMware、Network；同一父插件共享 raw 时，测试必须证明一次运行实际产出清单中全部 `emitted_model_id`。K8s 仅由 `production_exemptions` 审计，不进入 Lane A 参数化集合。
 
 每一族执行：添加一个最小 case → 运行 RED → 补 fixture/适配器绑定 → GREEN → 再加入下一个 case。不得一次生成全部 expected 后只跑一次。
 
@@ -407,7 +407,7 @@ cd agents/stargazer && uv run pytest -q tests/collection_contract
 cd server && MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/e2e/test_cloud_source_contract.py apps/cmdb/tests/e2e/test_collection_contract_manifest.py apps/cmdb/tests/e2e/test_contract_evidence.py
 ```
 
-Expected: Lane A 覆盖集合与生产三元组集合完全相等。
+Expected: Lane A 覆盖集合与可测试生产三元组集合完全相等；K8s 生产豁免单列且不计入通过数。
 
 **Step 5: Commit**
 
@@ -466,7 +466,7 @@ Run:
 cd server && MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/e2e/test_vm_query_contract.py apps/cmdb/tests/e2e/test_lane_b_contract.py
 ```
 
-Expected: 全部生产三元组 Lane B PASS；新增未映射可选原字段只进入 drift，不改变 Golden。
+Expected: 全部可测试生产三元组 Lane B PASS；K8s 生产豁免不进入参数化集合；新增未映射可选原字段只进入 drift，不改变 Golden。
 
 **Step 5: Commit**
 
@@ -600,7 +600,7 @@ git commit -m "test(cmdb): 搭建隔离采集链路烟测环境"
 
 ---
 
-### Task 9：八类真实基础设施闭环烟测
+### Task 9：七类真实基础设施闭环烟测
 
 **Files:**
 
@@ -609,10 +609,10 @@ git commit -m "test(cmdb): 搭建隔离采集链路烟测环境"
 - Modify: `server/apps/cmdb/tests/smoke/collection_chain/runner.py`
 - Modify: `server/apps/cmdb/tests/smoke/collection_chain/README.md`
 
-**Step 1: 写八类 RED 测试**
+**Step 1: 写七类 RED 测试**
 
 ```python
-SMOKE_CASES = ("host", "mysql", "influxdb", "nginx", "qcloud", "vmware", "k8s", "network")
+SMOKE_CASES = ("host", "mysql", "influxdb", "nginx", "qcloud", "vmware", "network")
 
 @pytest.mark.parametrize("case_id", SMOKE_CASES)
 def test_真实基础设施闭环(case_id, smoke_environment):
@@ -643,19 +643,19 @@ Run 单个 case：
 cd server && CMDB_COLLECTION_SMOKE=1 MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/smoke/collection_chain/test_full_chain.py -k mysql
 ```
 
-然后运行八类：
+然后运行七类：
 
 ```bash
 cd server && CMDB_COLLECTION_SMOKE=1 MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/smoke/collection_chain/test_full_chain.py
 ```
 
-Expected: 8 PASS；成功与失败路径结束后 VM/FalkorDB 残留均为零。
+Expected: 7 PASS；成功与失败路径结束后 VM/FalkorDB 残留均为零。
 
 **Step 5: Commit**
 
 ```bash
 git add server/apps/cmdb/tests/smoke/collection_chain
-git commit -m "test(cmdb): 覆盖八类真实采集闭环烟测"
+git commit -m "test(cmdb): 覆盖七类真实采集闭环烟测"
 ```
 
 ---
@@ -677,7 +677,7 @@ git commit -m "test(cmdb): 覆盖八类真实采集闭环烟测"
 
 **Step 2: 生成确定性验证报告**
 
-报告包含：生产三元组总数、Lane A/B 通过数、缺失证据数、mapped contract errors、optional drift、八类 smoke 结果、清理残留、fixture provenance 摘要。测试断言生产覆盖率必须为 100%。
+报告包含：注册表生产三元组总数、可测试生产三元组数、生产豁免及 reason/source_kind、Lane A/B 通过数、缺失证据数、mapped contract errors、optional drift、七类 smoke 结果、清理残留、fixture provenance 摘要。测试断言可测试生产对象覆盖率必须为 100%，豁免不计入通过数。
 
 **Step 3: 运行 Stargazer 门禁**
 
@@ -703,7 +703,7 @@ Expected: PASS；触及代码覆盖率不低于 75%。
 cd server && CMDB_COLLECTION_SMOKE=1 MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/smoke/collection_chain/test_full_chain.py
 ```
 
-Expected: 8 PASS，VM/FalkorDB residuals=0。
+Expected: 7 PASS，VM/FalkorDB residuals=0。
 
 **Step 6: 文档与报告提交**
 
@@ -729,4 +729,4 @@ git commit -m "docs(cmdb): 记录采集全链路验证结果"
 - `0`、`False`、空字符串、时间、单位、枚举、实例名、关联、敏感信息均有明确断言。
 - NATS、Telegraf、VM、FalkorDB 的真实兼容性仅在显式开启的隔离 smoke 中验证，且有资源边界与零残留门禁。
 - 每个已知生产缺陷有独立 RED/修复/GREEN/提交；未知缺陷按同一流程收敛，不预设修改范围。
-- 最终 PR 条件与已批准设计一致：全部对象、八类烟测、门禁和覆盖率完成后才创建。
+- 最终 PR 条件与已批准设计一致：全部可测试生产对象、显式生产豁免审计、七类烟测、门禁和覆盖率完成后才创建。
