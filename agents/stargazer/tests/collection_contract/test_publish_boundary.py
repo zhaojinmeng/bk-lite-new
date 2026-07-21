@@ -3,13 +3,15 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
-from core import nats_utils
 from semantics import (
     assert_timestamp_propagation,
+    find_legacy_vm_helper_calls,
     parse_line_protocol,
     parse_prometheus,
 )
 from tasks.utils import nats_helper
+
+from core import nats_utils
 
 PROMETHEUS_TWO_LINES = """# TYPE host_info gauge
 host_info{model_id="host",inst_name="node-a"} 1 1700000000123
@@ -132,6 +134,49 @@ async def test_zero_delivery_failure_retries_then_succeeds(monkeypatch):
     assert attempts == 2
 
 
+@pytest.mark.parametrize("failure_point", ["connect", "first_publish"])
+@pytest.mark.asyncio
+async def test_real_transport_zero_delivery_failure_retries_then_succeeds(
+    monkeypatch, failure_point,
+):
+    connection_attempts = 0
+    publish_attempts = 0
+    published = []
+
+    class RecoveringNatsConnection:
+        async def publish(self, subject, payload):
+            nonlocal publish_attempts
+            publish_attempts += 1
+            if failure_point == "first_publish" and publish_attempts == 1:
+                raise ConnectionError("first publish failed before delivery")
+            published.append((subject, payload))
+
+        async def flush(self):
+            return None
+
+    connection = RecoveringNatsConnection()
+
+    async def recovering_get_shared_nats():
+        nonlocal connection_attempts
+        connection_attempts += 1
+        if failure_point == "connect" and connection_attempts == 1:
+            raise ConnectionError("connect failed before delivery")
+        return connection
+
+    monkeypatch.setenv("NATS_METRICS_PUBLISH_RETRIES", "2")
+    monkeypatch.setattr(nats_utils, "get_shared_nats", recovering_get_shared_nats)
+    monkeypatch.setattr(nats_helper.asyncio, "sleep", AsyncMock())
+
+    count = await nats_helper.publish_metrics_to_nats(
+        {}, PROMETHEUS_TWO_LINES, {"monitor_type": "host"}, task_id="1003-real"
+    )
+
+    assert count == 2
+    assert connection_attempts == 2
+    assert len(published) == 2
+    assert publish_attempts == (3 if failure_point == "first_publish" else 2)
+
+
 @pytest.mark.asyncio
 async def test_partial_delivery_aborts_without_republishing_confirmed_lines(
     monkeypatch,
@@ -188,25 +233,30 @@ async def test_real_transport_failure_after_delivery_is_not_retried(
 
 
 def test_lane_a_contract_does_not_call_lane_b_legacy_vm_fixture_helper():
-    forbidden_helper = "step2_" + "push_to_vm"
     contract_dir = Path(__file__).parent
-    lane_a_paths = [contract_dir / "conftest.py", *contract_dir.glob("test_lane_a*.py")]
+    gate_file = Path(__file__).resolve()
+    violations = {}
 
-    for lane_a_path in lane_a_paths:
-        lane_a_tree = ast.parse(lane_a_path.read_text(encoding="utf-8"))
-        forbidden_calls = [
-            node
-            for node in ast.walk(lane_a_tree)
-            if isinstance(node, ast.Call)
-            and (
-                (isinstance(node.func, ast.Name) and node.func.id == forbidden_helper)
-                or (
-                    isinstance(node.func, ast.Attribute)
-                    and node.func.attr == forbidden_helper
-                )
-            )
-        ]
-        assert not forbidden_calls, f"Lane A cannot call legacy helper: {lane_a_path}"
+    for contract_path in contract_dir.rglob("*.py"):
+        if contract_path.resolve() == gate_file:
+            continue
+        line_numbers = find_legacy_vm_helper_calls(
+            contract_path.read_text(encoding="utf-8")
+        )
+        if line_numbers:
+            violations[str(contract_path.relative_to(contract_dir))] = line_numbers
+
+    assert not violations, f"Lane A cannot call legacy helper: {violations}"
+
+
+def test_legacy_helper_gate_detects_import_alias_calls():
+    helper_name = "step2_" + "push_to_vm"
+    source = (
+        f"from server.apps.cmdb.tests.e2e.pipeline import {helper_name} as build_vm\n"
+        "build_vm({'result': {}})\n"
+    )
+
+    assert find_legacy_vm_helper_calls(source) == [2]
 
 
 def test_vm_response_builder_is_explicitly_scoped_to_lane_b_legacy_fixtures():

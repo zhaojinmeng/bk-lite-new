@@ -1,8 +1,11 @@
+from decimal import Decimal
+
 import pytest
 from plugins import base_utils
 from plugins.base_utils import convert_to_prometheus_format
 from semantics import (
     SemanticParseError,
+    TypedField,
     assert_timestamp_propagation,
     parse_line_protocol,
     parse_prometheus,
@@ -53,6 +56,21 @@ def test_line_protocol_comparison_is_order_independent_but_preserves_duplicates(
     assert parse_line_protocol([first, first]) != parse_line_protocol([first])
 
 
+def test_line_protocol_parser_preserves_every_supported_field_type():
+    parsed = parse_line_protocol(
+        r'metric text="a\"b\\c",enabled=true,count=42u,delta=-7i,ratio=1.25 1700000000123000000'
+    )
+
+    record = next(parsed.elements())
+    assert dict(record.typed_fields) == {
+        "text": TypedField("string", 'a"b\\c'),
+        "enabled": TypedField("boolean", True),
+        "count": TypedField("unsigned", 42),
+        "delta": TypedField("integer", -7),
+        "ratio": TypedField("float", Decimal("1.25")),
+    }
+
+
 def test_timestamp_propagation_is_bound_to_each_metric_identity():
     prometheus = parse_prometheus(
         'metric{host="one"} 1 1700000000123\n' 'metric{host="two"} 1 1700000000456\n'
@@ -60,6 +78,21 @@ def test_timestamp_propagation_is_bound_to_each_metric_identity():
     swapped_line_protocol = parse_line_protocol(
         "metric,host=one gauge=1i 1700000000456000000\n"
         "metric,host=two gauge=1i 1700000000123000000\n"
+    )
+
+    with pytest.raises(AssertionError, match="timestamp propagation"):
+        assert_timestamp_propagation(prometheus, swapped_line_protocol)
+
+
+def test_timestamp_propagation_is_bound_to_corresponding_typed_field():
+    prometheus = parse_prometheus(
+        "# TYPE metric gauge\n"
+        'metric{host="same"} 1 1700000000123\n'
+        'metric{host="same"} 2 1700000000456\n'
+    )
+    swapped_line_protocol = parse_line_protocol(
+        "metric,host=same gauge=2i 1700000000123000000\n"
+        "metric,host=same gauge=1i 1700000000456000000\n"
     )
 
     with pytest.raises(AssertionError, match="timestamp propagation"):
@@ -91,6 +124,9 @@ def test_prometheus_parser_rejects_non_finite_values_bad_timestamps_and_bad_line
         "metric,host=one value=1 yesterday",
         "metric,host=one value=1 1700000000123",
         "metric,host=one 1700000000123000000",
+        'metric,host=one text="a""b" 1700000000123000000',
+        'metric,host=one text="a\\q" 1700000000123000000',
+        'metric,host=one text="a\\ 1700000000123000000',
     ],
 )
 def test_line_protocol_parser_rejects_non_finite_values_bad_timestamps_and_bad_lines(

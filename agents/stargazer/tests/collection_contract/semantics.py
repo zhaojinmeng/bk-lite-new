@@ -1,6 +1,7 @@
+import ast
 import re
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from typing import Iterable
 
@@ -20,6 +21,8 @@ class PrometheusSample:
     labels: tuple[tuple[str, str], ...]
     numeric_value: Decimal
     timestamp_ms: int
+    field_name: str = field(compare=False, hash=False, repr=False)
+    numeric_kind: str = field(compare=False, hash=False, repr=False)
 
 
 @dataclass(frozen=True)
@@ -129,9 +132,19 @@ def _parse_prometheus_labels(
 
 def parse_prometheus(text: str) -> Counter[PrometheusSample]:
     records: Counter[PrometheusSample] = Counter()
+    metric_types = {}
+    current_type = None
     for line_number, raw_line in enumerate(str(text).splitlines(), start=1):
         line = raw_line.strip()
-        if not line or line.startswith("#"):
+        if not line:
+            continue
+        if line.startswith("# TYPE "):
+            type_parts = line.split()
+            if len(type_parts) >= 4:
+                metric_types[type_parts[2]] = type_parts[3]
+                current_type = type_parts[3]
+            continue
+        if line.startswith("#"):
             continue
 
         labels: tuple[tuple[str, str], ...] = ()
@@ -179,6 +192,12 @@ def parse_prometheus(text: str) -> Counter[PrometheusSample]:
                 labels=labels,
                 numeric_value=value,
                 timestamp_ms=int(timestamp_token),
+                field_name=metric_types.get(metric_name, current_type or "value"),
+                numeric_kind=(
+                    "float"
+                    if "." in value_token or "e" in value_token.lower()
+                    else "integer"
+                ),
             )
         ] += 1
     return records
@@ -239,6 +258,13 @@ def _parse_string_field(raw_value: str, line_number: int, line: str) -> str:
     index = 1
     while index < len(raw_value) - 1:
         char = raw_value[index]
+        if char == '"':
+            _error(
+                "Line Protocol",
+                line_number,
+                line,
+                "unescaped quote inside string field",
+            )
         if char != "\\":
             output.append(char)
             index += 1
@@ -248,7 +274,12 @@ def _parse_string_field(raw_value: str, line_number: int, line: str) -> str:
             _error("Line Protocol", line_number, line, "dangling string escape")
         escaped = raw_value[index]
         if escaped not in {'"', "\\"}:
-            output.append("\\")
+            _error(
+                "Line Protocol",
+                line_number,
+                line,
+                f"unsupported string escape \\{escaped}",
+            )
         output.append(escaped)
         index += 1
     return "".join(output)
@@ -358,10 +389,20 @@ def assert_timestamp_propagation(
         identity_labels = tuple(
             (key, value) for key, value in sample.labels if key not in common_tag_keys
         )
+        expected_typed_field = TypedField(
+            sample.numeric_kind,
+            (
+                sample.numeric_value
+                if sample.numeric_kind == "float"
+                else int(sample.numeric_value)
+            ),
+        )
+        expected_fields = ((sample.field_name, expected_typed_field),)
         identity_matches = [
             record
             for record in unmatched_lines
             if record.measurement == sample.metric_name
+            and record.typed_fields == expected_fields
             and all(
                 dict(record.tags).get(key) == value for key, value in identity_labels
             )
@@ -397,3 +438,49 @@ def assert_timestamp_propagation(
             "timestamp propagation found unmatched Line Protocol records: "
             f"{unmatched_lines!r}"
         )
+
+
+def find_legacy_vm_helper_calls(source: str) -> list[int]:
+    helper_name = "step2_" + "push_to_vm"
+    tree = ast.parse(source)
+    helper_aliases = {helper_name}
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        for imported_name in node.names:
+            if imported_name.name == helper_name:
+                helper_aliases.add(imported_name.asname or imported_name.name)
+
+    changed = True
+    while changed:
+        changed = False
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                continue
+            value = node.value
+            aliases_helper = (
+                isinstance(value, ast.Name) and value.id in helper_aliases
+            ) or (isinstance(value, ast.Attribute) and value.attr == helper_name)
+            if not aliases_helper:
+                continue
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            for target in targets:
+                if isinstance(target, ast.Name) and target.id not in helper_aliases:
+                    helper_aliases.add(target.id)
+                    changed = True
+
+    return sorted(
+        {
+            node.lineno
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and (
+                (isinstance(node.func, ast.Name) and node.func.id in helper_aliases)
+                or (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr == helper_name
+                )
+            )
+        }
+    )
