@@ -62,6 +62,13 @@ def test_原始指标别名不能重复计为最终生产模型():
     assert "qcloud_pulsar_cluster" not in qcloud["emitted_model_ids"]
 
 
+def test_显式最终模型声明排除仅用于查询的指标别名():
+    snapshot = CollectionPluginRegistry.get_registry_snapshot()
+    ipam = next(item for item in snapshot if item["task_type"] == "ip" and item["model_id"] == "ip")
+
+    assert ipam["emitted_model_ids"] == ("ip",)
+
+
 def test_pulsar原始指标经真实runner只产出plusar最终模型(monkeypatch):
     import time
 

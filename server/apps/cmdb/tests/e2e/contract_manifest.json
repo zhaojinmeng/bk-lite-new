@@ -417,14 +417,6 @@
       "lane_b": true
     },
     {
-      "task_type": "ip",
-      "supported_model_id": "ip",
-      "emitted_model_id": "ip_info",
-      "case_id": "ip_info",
-      "lane_a": true,
-      "lane_b": true
-    },
-    {
       "task_type": "middleware",
       "supported_model_id": "activemq",
       "emitted_model_id": "activemq",

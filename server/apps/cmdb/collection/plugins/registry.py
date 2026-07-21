@@ -4,6 +4,10 @@ _NON_PRODUCTION_MODEL_IDS = {"h3c_cas", "tuxedo", "zstack"}
 
 
 def emitted_model_ids(plugin_cls: type) -> tuple[str, ...]:
+    final_model_ids = getattr(plugin_cls, "final_model_ids", ()) or ()
+    if final_model_ids:
+        return tuple(sorted({str(model_id) for model_id in final_model_ids}))
+
     names = set()
     model_id_aliases = getattr(plugin_cls, "MODEL_ID_ALIASES", {}) or {}
     for attr in ("field_mapping", "field_mappings", "related_field_mappings"):

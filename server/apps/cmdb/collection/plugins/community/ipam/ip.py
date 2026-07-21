@@ -12,6 +12,7 @@ class IPAMDiscoveryCollectionPlugin(AutoRegisterCollectionPluginMixin, CollectBa
     priority = 10
     # Stargazer 会把 ip 模型输出为 ip_info_gauge；保留旧名兼容历史样本/测试数据。
     metric_names = ("ip_info_gauge", "ip_info")
+    final_model_ids = ("ip",)
     TASK_FORMAT_DATA_KEY = "__task_format_data__"
 
     @property
