@@ -4,7 +4,7 @@
   [1] Stargazer 采集脚本/SDK 原始输出      (fixture)
         ↓ step1_stargazer_normalize
   [2] Stargazer 标准化 payload             (fixture)
-        ↓ step2_push_to_vm
+        ↓ step2_push_to_vm（仅 Lane B legacy fixture）
   [3] VictoriaMetrics PromQL 响应          (fixture)
         ↓ step3_cmdb_consume_generic
   [4] CMDB 实例字典（落库前）              (fixture)
@@ -73,7 +73,9 @@ def step2_push_to_vm(
     metric_name_suffix: str = "_info_gauge",
     extra_payload_keys: Optional[dict] = None,
 ) -> dict:
-    """通用 VM PromQL 响应构造：把 stargazer payload 的每个 item 变成一条 metric。
+    """Lane B legacy fixture helper：把 payload 的每个 item 构造成 VM PromQL 响应。
+
+    此函数不执行 Prometheus/Line Protocol 转换，Lane A 合同禁止调用。
 
     - 一级 key (model_id) → 对应 metric_name = "{key}{suffix}"
     - 每个 item 的字段 → metric labels
