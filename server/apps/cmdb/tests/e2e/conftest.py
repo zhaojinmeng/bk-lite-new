@@ -29,9 +29,9 @@ def complete_evidence(tmp_path):
 
     documents = {
         "00_provenance.json": {
-            "source_type": "contract_example",
+            "source_type": "sanitized_real_environment",
             "vendor": "not_applicable",
-            "service": "evidence_loader",
+            "service": "not_applicable",
             "api_operation": "not_applicable",
             "api_or_sdk_version": "not_applicable",
             "documentation_url": "not_applicable",

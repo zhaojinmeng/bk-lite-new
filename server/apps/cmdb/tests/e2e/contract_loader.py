@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import urlsplit
 
 import jsonschema
 
@@ -36,18 +37,42 @@ PROVENANCE_FIELDS = (
     "read_at",
     "sanitization",
 )
+SOURCE_TYPE_SANITIZED_REAL_ENVIRONMENT = "sanitized_real_environment"
+SOURCE_TYPE_OFFICIAL_CLOUD_API_DOCUMENTATION = "official_cloud_api_documentation"
+SOURCE_TYPES = {
+    SOURCE_TYPE_SANITIZED_REAL_ENVIRONMENT,
+    SOURCE_TYPE_OFFICIAL_CLOUD_API_DOCUMENTATION,
+}
+_NOT_APPLICABLE = "not_applicable"
+_REAL_ENVIRONMENT_NOT_APPLICABLE_FIELDS = (
+    "service",
+    "api_operation",
+    "api_or_sdk_version",
+    "documentation_url",
+)
+_OFFICIAL_DOCUMENTATION_HOSTS = {
+    "qcloud": frozenset({"cloud.tencent.com", "www.tencentcloud.com"}),
+    "tencentcloud": frozenset({"cloud.tencent.com", "www.tencentcloud.com"}),
+    "aliyun": frozenset({"help.aliyun.com", "www.alibabacloud.com"}),
+    "alibaba_cloud": frozenset({"help.aliyun.com", "www.alibabacloud.com"}),
+    "hwcloud": frozenset({"developer.huaweicloud.com", "support.huaweicloud.com"}),
+    "huawei_cloud": frozenset({"developer.huaweicloud.com", "support.huaweicloud.com"}),
+    "fusioninsight": frozenset({"support.huawei.com", "support.huaweicloud.com"}),
+    "h3c_cas": frozenset({"www.h3c.com"}),
+    "zstack": frozenset({"www.zstack.io"}),
+}
 
 _SCHEMA_TARGETS = (
     ("01_source_raw.json", "source.schema.json"),
     ("04_vm_response.json", "vm.schema.json"),
     ("05_expected_cmdb.json", "cmdb.schema.json"),
 )
-_SENSITIVE_KEY = re.compile(r"(?:^|_)(?:secret|token|password|api_key)(?:$|_)", re.I)
-_SENSITIVE_ASSIGNMENT = re.compile(r"\b(?:secret|token|password|api[_-]?key)\b\s*[:=]\s*['\"]?([^\s,'\"}]+)", re.I,)
+_ASSIGNMENT = re.compile(r"(?<![A-Za-z0-9_-])['\"]?(?P<key>[A-Za-z][A-Za-z0-9_-]*)['\"]?\s*[:=]\s*['\"]?(?P<value>[^\s,'\"}]+)", re.I,)
 _BEARER = re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{6,}", re.I)
 _PRIVATE_DOMAIN = re.compile(r"\b(?:[a-z0-9-]+\.)+(?:internal|local|corp|lan)\b", re.I)
-_HOST_ASSIGNMENT = re.compile(r"\b(?:host|hostname|host_name|node_name|machine_name)\s*=\s*['\"]?([^,\s}'\"]+)", re.I)
-_HOST_KEYS = {"host", "hostname", "host_name", "inst_name", "node_name", "machine_name"}
+_HOST_ASSIGNMENT = re.compile(r"\b(?:host|hostname|host_name|inst_name|node_name|machine_name)\s*=\s*['\"]?([^,\s}'\"]+)", re.I)
+_HOST_KEYS = {"host", "hostname", "instname", "nodename", "machinename"}
+_SENSITIVE_KEY_MARKERS = ("secret", "token", "password", "apikey")
 _REDACTED_VALUES = {"***", "redacted", "<redacted>", "[redacted]", "not_applicable"}
 
 
@@ -124,6 +149,7 @@ class Evidence:
             raise EvidenceValidationError(f"{self.case_id}: read_at 必须是 ISO-8601 时间") from error
         if read_at.tzinfo is None:
             raise EvidenceValidationError(f"{self.case_id}: read_at 必须包含时区")
+        _validate_provenance_source(self.case_id, provenance)
 
     def assert_no_secrets(self) -> None:
         self.validate_complete()
@@ -228,6 +254,38 @@ def _format_validation_error(error: jsonschema.ValidationError) -> str:
     return f"{path}: {error.message}"
 
 
+def _validate_provenance_source(case_id: str, provenance: dict[str, str]) -> None:
+    source_type = provenance["source_type"]
+    if source_type not in SOURCE_TYPES:
+        raise EvidenceValidationError(f"{case_id}: source_type 必须是受控值: {', '.join(sorted(SOURCE_TYPES))}")
+    if source_type == SOURCE_TYPE_SANITIZED_REAL_ENVIRONMENT:
+        invalid = [field for field in _REAL_ENVIRONMENT_NOT_APPLICABLE_FIELDS if provenance[field] != _NOT_APPLICABLE]
+        if invalid:
+            raise EvidenceValidationError(f"{case_id}: 真实环境脱敏样本字段必须为 not_applicable: {', '.join(invalid)}")
+        return
+
+    invalid = [field for field in _REAL_ENVIRONMENT_NOT_APPLICABLE_FIELDS if provenance[field] == _NOT_APPLICABLE]
+    if invalid:
+        raise EvidenceValidationError(f"{case_id}: 官方云 API 文档字段不得为 not_applicable: {', '.join(invalid)}")
+    vendor = provenance["vendor"].lower()
+    allowed_hosts = _OFFICIAL_DOCUMENTATION_HOSTS.get(vendor)
+    if allowed_hosts is None:
+        raise EvidenceValidationError(f"{case_id}: vendor 不在官方文档 allowlist: {vendor}")
+    if not _is_allowed_documentation_url(provenance["documentation_url"], allowed_hosts):
+        raise EvidenceValidationError(f"{case_id}: documentation_url 必须是 vendor 官方 HTTPS 文档域名且不得含 userinfo/异常端口")
+
+
+def _is_allowed_documentation_url(url: str, allowed_hosts: frozenset[str]) -> bool:
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme == "https" and parsed.hostname in allowed_hosts and parsed.username is None and parsed.password is None and port in (None, 443)
+    )
+
+
 def _load_archive_reasons(path: Path) -> dict[str, str]:
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
@@ -255,9 +313,9 @@ def _scan_json(filename: str, value: Any, path: tuple[str, ...] = ()) -> list[st
     if isinstance(value, dict):
         for key, child in value.items():
             child_path = (*path, str(key))
-            if _SENSITIVE_KEY.search(str(key)) and not _is_redacted(child):
+            if _is_sensitive_key(str(key)) and not _is_redacted(child):
                 findings.append(f"{filename}:{'.'.join(child_path)}")
-            if str(key).lower() in _HOST_KEYS and _is_unredacted_hostname(child):
+            if _normalize_key(str(key)) in _HOST_KEYS and _is_unredacted_hostname(child):
                 findings.append(f"{filename}:{'.'.join(child_path)}={child}")
             findings.extend(_scan_json(filename, child, child_path))
     elif isinstance(value, list):
@@ -271,8 +329,8 @@ def _scan_text(filename: str, content: str) -> Iterable[str]:
         yield f"{filename}:{match.group(0)}"
     for match in _PRIVATE_DOMAIN.finditer(content):
         yield f"{filename}:{match.group(0)}"
-    for match in _SENSITIVE_ASSIGNMENT.finditer(content):
-        if match.group(1).lower() not in _REDACTED_VALUES:
+    for match in _ASSIGNMENT.finditer(content):
+        if _is_sensitive_key(match.group("key")) and not _is_redacted(match.group("value")):
             yield f"{filename}:{match.group(0)}"
     for match in _HOST_ASSIGNMENT.finditer(content):
         if _is_unredacted_hostname(match.group(1)):
@@ -281,6 +339,15 @@ def _scan_text(filename: str, content: str) -> Iterable[str]:
 
 def _is_redacted(value: Any) -> bool:
     return isinstance(value, str) and value.strip().lower() in _REDACTED_VALUES
+
+
+def _normalize_key(key: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", key.lower())
+
+
+def _is_sensitive_key(key: str) -> bool:
+    normalized = _normalize_key(key)
+    return any(marker in normalized for marker in _SENSITIVE_KEY_MARKERS)
 
 
 def _is_unredacted_hostname(value: Any) -> bool:
