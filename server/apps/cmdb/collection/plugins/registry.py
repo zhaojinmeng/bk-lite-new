@@ -1,6 +1,6 @@
 from apps.core.logger import cmdb_logger as logger
 
-_NON_PRODUCTION_MODEL_IDS = {"tuxedo"}
+_NON_PRODUCTION_MODEL_IDS = {"h3c_cas", "tuxedo", "zstack"}
 
 
 def emitted_model_ids(plugin_cls: type) -> tuple[str, ...]:

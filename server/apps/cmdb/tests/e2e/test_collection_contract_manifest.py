@@ -1,7 +1,10 @@
 import copy
+from pathlib import Path
 
 import pytest
 
+from apps.cmdb.collection.plugins.community.cloud.h3c_cas import H3CCASCollectionPlugin
+from apps.cmdb.collection.plugins.community.cloud.zstack import ZStackCollectionPlugin
 from apps.cmdb.collection.plugins.registry import CollectionPluginRegistry
 from apps.cmdb.tests.e2e.contract_manifest import expand_contract_partition, expand_plugin_contract, load_manifest, parse_manifest
 
@@ -54,6 +57,22 @@ def test_许可证阻塞插件不计入生产覆盖():
 
     assert tuxedo["is_production"] is False
     assert ("middleware", "tuxedo", "tuxedo") in set(load_manifest().non_production_contracts)
+
+
+@pytest.mark.parametrize(
+    ("model_id", "plugin_cls"), [("h3c_cas", H3CCASCollectionPlugin), ("zstack", ZStackCollectionPlugin),],
+)
+def test_显式占位云插件不计入生产覆盖(model_id, plugin_cls):
+    repository_root = Path(__file__).resolve().parents[5]
+    snapshot = CollectionPluginRegistry.get_registry_snapshot()
+    plugin = next(item for item in snapshot if item["model_id"] == model_id)
+
+    assert plugin_cls.metric_names == []
+    assert plugin_cls.field_mappings == {}
+    assert "stub" in (plugin_cls.__doc__ or "").lower()
+    assert not (repository_root / "agents" / "stargazer" / "plugins" / "inputs" / model_id / "plugin.yml").exists()
+    assert plugin["is_production"] is False
+    assert ("cloud", model_id, model_id) in set(load_manifest().non_production_contracts)
 
 
 def _entry(**overrides):

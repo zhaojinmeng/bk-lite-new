@@ -82,14 +82,6 @@
     },
     {
       "task_type": "cloud",
-      "supported_model_id": "h3c_cas",
-      "emitted_model_id": "h3c_cas",
-      "case_id": "h3c_cas",
-      "lane_a": true,
-      "lane_b": true
-    },
-    {
-      "task_type": "cloud",
       "supported_model_id": "hwcloud",
       "emitted_model_id": "hwcloud",
       "case_id": "hwcloud",
@@ -325,14 +317,6 @@
       "supported_model_id": "storage",
       "emitted_model_id": "storage_volume",
       "case_id": "storage_volume",
-      "lane_a": true,
-      "lane_b": true
-    },
-    {
-      "task_type": "cloud",
-      "supported_model_id": "zstack",
-      "emitted_model_id": "zstack",
-      "case_id": "zstack",
       "lane_a": true,
       "lane_b": true
     },
@@ -674,6 +658,22 @@
     }
   ],
   "non_production_contracts": [
+    {
+      "task_type": "cloud",
+      "supported_model_id": "h3c_cas",
+      "emitted_model_id": "h3c_cas",
+      "case_id": "h3c_cas",
+      "lane_a": false,
+      "lane_b": false
+    },
+    {
+      "task_type": "cloud",
+      "supported_model_id": "zstack",
+      "emitted_model_id": "zstack",
+      "case_id": "zstack",
+      "lane_a": false,
+      "lane_b": false
+    },
     {
       "task_type": "host",
       "supported_model_id": "domestic_linux",
