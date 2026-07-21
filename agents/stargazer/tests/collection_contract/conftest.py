@@ -31,6 +31,7 @@ class ProductionAdapterBinding:
     adapter_dir: str
     emitted_model_ids: tuple[str, ...]
     source_model_aliases: tuple[tuple[str, str], ...] = ()
+    additional_execution_source_model_ids: tuple[str, ...] = ()
 
     @property
     def case_id(self) -> str:
@@ -57,6 +58,10 @@ class ProductionAdapterBinding:
             self.source_model_id(emitted_model_id)
             for emitted_model_id in self.emitted_model_ids
         )
+
+    @property
+    def execution_source_model_ids(self) -> tuple[str, ...]:
+        return self.source_model_ids + self.additional_execution_source_model_ids
 
     @property
     def publish_params(self) -> dict[str, Any]:
@@ -212,11 +217,32 @@ PRODUCTION_ADAPTER_BINDINGS = (
     ProductionAdapterBinding("protocol", "mysql", "mysql", ("mysql",)),
     ProductionAdapterBinding("protocol", "oracle", "oracle", ("oracle",)),
     ProductionAdapterBinding(
-        "protocol", "physcial_server", "physcial_server", ("physcial_server",)
+        "protocol",
+        "physcial_server",
+        "physcial_server",
+        ("physcial_server",),
+        additional_execution_source_model_ids=("disk", "gpu", "memory", "nic"),
     ),
     ProductionAdapterBinding("protocol", "postgresql", "postgresql", ("postgresql",)),
-    ProductionAdapterBinding("snmp", "network", "network", ("network",)),
-    ProductionAdapterBinding("vm", "vmware_vc", "vmware_vc", ("vmware_vc",)),
+    ProductionAdapterBinding(
+        "snmp",
+        "network",
+        "network",
+        ("network",),
+        (("network", "network_system"),),
+        ("network_interfaces",),
+    ),
+    ProductionAdapterBinding(
+        "vm",
+        "vmware_vc",
+        "vmware_vc",
+        ("vmware_vc",),
+        additional_execution_source_model_ids=(
+            "vmware_ds",
+            "vmware_vm",
+            "vmware_esxi",
+        ),
+    ),
 )
 
 
