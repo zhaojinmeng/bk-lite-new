@@ -144,7 +144,7 @@ def emitted_model_ids(plugin_cls: type) -> tuple[str, ...]:
 Run 上述命令，并追加：
 
 ```bash
-cd server && MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/test_new_collect_objects_registry.py
+cd server && MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/test_influxdb_collection_pure.py apps/cmdb/tests/test_storage_collection_pure.py apps/cmdb/tests/test_minio_collection_pure.py
 ```
 
 Expected: PASS；差异输出按 missing-in-manifest / stale-in-manifest 分组。
@@ -681,7 +681,7 @@ Expected: PASS，无未解释 warning。
 **Step 4: 运行 CMDB 定向与全量门禁**
 
 ```bash
-cd server && MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/e2e apps/cmdb/tests/test_collect_management_svc.py apps/cmdb/tests/test_new_collect_objects_registry.py apps/cmdb/tests/test_new_collect_objects_formatters.py
+cd server && MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/e2e apps/cmdb/tests/test_collect_management_svc.py apps/cmdb/tests/test_influxdb_collection_pure.py apps/cmdb/tests/test_storage_collection_pure.py apps/cmdb/tests/test_minio_collection_pure.py
 cd server && make test
 ```
 
