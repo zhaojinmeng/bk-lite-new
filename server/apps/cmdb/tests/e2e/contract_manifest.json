@@ -1,5 +1,5 @@
 {
-  "production_contracts": [
+  "validation_contracts": [
     {
       "task_type": "cloud",
       "supported_model_id": "aliyun_account",
@@ -433,14 +433,6 @@
       "lane_b": true
     },
     {
-      "task_type": "k8s",
-      "supported_model_id": "k8s_cluster",
-      "emitted_model_id": "k8s_cluster",
-      "case_id": "k8s_cluster",
-      "lane_a": true,
-      "lane_b": true
-    },
-    {
       "task_type": "middleware",
       "supported_model_id": "activemq",
       "emitted_model_id": "activemq",
@@ -655,6 +647,18 @@
       "case_id": "vmware_vc",
       "lane_a": true,
       "lane_b": true
+    }
+  ],
+  "production_exemptions": [
+    {
+      "task_type": "k8s",
+      "supported_model_id": "k8s_cluster",
+      "emitted_model_id": "k8s_cluster",
+      "case_id": "k8s_cluster",
+      "lane_a": false,
+      "lane_b": false,
+      "reason": "用户批准：外部 kube-state-metrics 直接写入 VM，不经过 Stargazer",
+      "source_kind": "external_kube_state_metrics_vm"
     }
   ],
   "non_production_contracts": [

@@ -166,7 +166,7 @@ class Evidence:
 
 
 @dataclass(frozen=True)
-class ProductionEvidenceAudit:
+class ValidationEvidenceAudit:
     contract_id: Contract
     case_id: str
     missing_files: tuple[str, ...]
@@ -191,16 +191,16 @@ class NonProductionEvidenceAudit:
 
 @dataclass(frozen=True)
 class ManifestEvidenceAudit:
-    production: tuple[ProductionEvidenceAudit, ...]
+    validation: tuple[ValidationEvidenceAudit, ...]
     non_production: tuple[NonProductionEvidenceAudit, ...]
 
     @property
-    def incomplete_production(self) -> tuple[ProductionEvidenceAudit, ...]:
-        return tuple(item for item in self.production if item.status != "ready")
+    def incomplete_validation(self) -> tuple[ValidationEvidenceAudit, ...]:
+        return tuple(item for item in self.validation if item.status != "ready")
 
     def to_dict(self) -> dict[str, list[dict[str, Any]]]:
         return {
-            "production": [asdict(item) | {"status": item.status} for item in self.production],
+            "validation": [asdict(item) | {"status": item.status} for item in self.validation],
             "non_production": [asdict(item) for item in self.non_production],
         }
 
@@ -217,7 +217,7 @@ def audit_manifest_evidence(
     evidence_root = E2E_ROOT if root is None else Path(root)
     archive_path = evidence_root / "fixtures" / "_task4_archived_summary.json" if archive_declaration is None else Path(archive_declaration)
     archive_reasons = _load_archive_reasons(archive_path) if manifest.non_production_entries else {}
-    production = tuple(_audit_production_entry(entry, evidence_root) for entry in manifest.production_entries)
+    validation = tuple(_audit_validation_entry(entry, evidence_root) for entry in manifest.validation_entries)
     non_production = tuple(
         NonProductionEvidenceAudit(
             contract_id=entry.contract_id,
@@ -227,10 +227,10 @@ def audit_manifest_evidence(
         )
         for entry in manifest.non_production_entries
     )
-    return ManifestEvidenceAudit(production=production, non_production=non_production)
+    return ManifestEvidenceAudit(validation=validation, non_production=non_production)
 
 
-def _audit_production_entry(entry: ContractEntry, evidence_root: Path) -> ProductionEvidenceAudit:
+def _audit_validation_entry(entry: ContractEntry, evidence_root: Path) -> ValidationEvidenceAudit:
     evidence = load_evidence(entry.case_id, root=evidence_root)
     missing_files = tuple(evidence.missing_files)
     validation_errors = []
@@ -244,7 +244,7 @@ def _audit_production_entry(entry: ContractEntry, evidence_root: Path) -> Produc
                 validate()
             except EvidenceValidationError as error:
                 validation_errors.append(str(error))
-    return ProductionEvidenceAudit(
+    return ValidationEvidenceAudit(
         contract_id=entry.contract_id, case_id=entry.case_id, missing_files=missing_files, validation_errors=tuple(validation_errors),
     )
 

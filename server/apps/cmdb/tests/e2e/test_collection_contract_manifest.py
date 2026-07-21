@@ -18,27 +18,30 @@ class FakeCloudPlugin:
     }
 
 
-def test_生产插件三元组与显式清单双向一致():
+def test_生产插件三元组与可测试清单加显式豁免双向一致():
     actual = expand_contract_partition(CollectionPluginRegistry.get_registry_snapshot())
     declared = load_manifest()
 
-    assert not actual.production_contracts - set(
-        declared.production_contracts
-    ), f"missing-in-manifest={sorted(actual.production_contracts - set(declared.production_contracts))}"
-    assert (
-        not set(declared.production_contracts) - actual.production_contracts
-    ), f"stale-in-manifest={sorted(set(declared.production_contracts) - actual.production_contracts)}"
+    declared_production = set(declared.validation_contracts) | set(declared.exempted_contracts)
+
+    assert not actual.production_contracts - declared_production, (
+        "missing-in-manifest=" f"{sorted(actual.production_contracts - declared_production)}"
+    )
+    assert not declared_production - actual.production_contracts, "stale-in-manifest=" f"{sorted(declared_production - actual.production_contracts)}"
 
 
-def test_生产与非生产清单共同精确分区注册表全集():
+def test_可测试生产_生产豁免_非生产三集合严格分区注册表全集():
     actual = expand_contract_partition(CollectionPluginRegistry.get_registry_snapshot())
     declared = load_manifest()
 
-    declared_production = set(declared.production_contracts)
+    declared_validation = set(declared.validation_contracts)
+    declared_exemptions = set(declared.exempted_contracts)
     declared_non_production = set(declared.non_production_contracts)
 
-    assert not declared_production & declared_non_production
-    assert declared_production | declared_non_production == actual.all_contracts
+    assert not declared_validation & declared_exemptions
+    assert not declared_validation & declared_non_production
+    assert not declared_exemptions & declared_non_production
+    assert declared_validation | declared_exemptions == actual.production_contracts
     assert declared_non_production == actual.non_production_contracts
 
 
@@ -75,6 +78,22 @@ def test_显式占位云插件不计入生产覆盖(model_id, plugin_cls):
     assert ("cloud", model_id, model_id) in set(load_manifest().non_production_contracts)
 
 
+def test_k8s保持生产身份但以稳定来源理由显式豁免验证():
+    snapshot = CollectionPluginRegistry.get_registry_snapshot()
+    k8s = next(item for item in snapshot if item["model_id"] == "k8s_cluster")
+    manifest = load_manifest()
+    exemption = manifest.production_exemptions[0]
+
+    assert k8s["is_production"] is True
+    assert exemption.contract_id == ("k8s", "k8s_cluster", "k8s_cluster")
+    assert exemption.lane_a is False
+    assert exemption.lane_b is False
+    assert exemption.source_kind == "external_kube_state_metrics_vm"
+    assert exemption.reason == "用户批准：外部 kube-state-metrics 直接写入 VM，不经过 Stargazer"
+    assert exemption.contract_id not in set(manifest.validation_contracts)
+    assert exemption.contract_id not in set(manifest.non_production_contracts)
+
+
 def _entry(**overrides):
     entry = {
         "task_type": "cloud",
@@ -88,11 +107,62 @@ def _entry(**overrides):
     return entry
 
 
-def _manifest(production_contracts=None, non_production_contracts=None):
+def _manifest(validation_contracts=None, non_production_contracts=None):
+    return _three_way_manifest(validation_contracts=validation_contracts, non_production_contracts=non_production_contracts,)
+
+
+def _exemption(**overrides):
+    entry = _entry(
+        task_type="k8s", supported_model_id="k8s_cluster", emitted_model_id="k8s_cluster", case_id="k8s_cluster", lane_a=False, lane_b=False,
+    )
+    entry.update(
+        reason="用户批准：外部 kube-state-metrics 直接写入 VM，不经过 Stargazer", source_kind="external_kube_state_metrics_vm",
+    )
+    entry.update(overrides)
+    return entry
+
+
+def _three_way_manifest(
+    validation_contracts=None, production_exemptions=None, non_production_contracts=None,
+):
     return {
-        "production_contracts": production_contracts if production_contracts is not None else [_entry()],
-        "non_production_contracts": non_production_contracts if non_production_contracts is not None else [],
+        "validation_contracts": (validation_contracts if validation_contracts is not None else [_entry()]),
+        "production_exemptions": (production_exemptions if production_exemptions is not None else []),
+        "non_production_contracts": (non_production_contracts if non_production_contracts is not None else []),
     }
+
+
+def test_三集合清单解析为语义明确的可测试生产与豁免():
+    manifest = parse_manifest(_three_way_manifest(production_exemptions=[_exemption()]))
+
+    assert manifest.validation_contracts == (("cloud", "qcloud", "qcloud_cvm"),)
+    assert manifest.exempted_contracts == (("k8s", "k8s_cluster", "k8s_cluster"),)
+
+
+@pytest.mark.parametrize(
+    ("entry", "message"),
+    [
+        (_exemption(reason=None), "reason 必须是字符串"),
+        (_exemption(reason=""), "reason 必须是非空字符串"),
+        (_exemption(source_kind=None), "source_kind 必须是字符串"),
+        (_exemption(source_kind=""), "source_kind 必须是非空字符串"),
+        (_exemption(lane_a=True), "lane"),
+    ],
+)
+def test_生产豁免拒绝缺理由_缺来源和错误lane(entry, message):
+    with pytest.raises(ValueError, match=message):
+        parse_manifest(_three_way_manifest(production_exemptions=[entry]))
+
+
+def test_三集合顶层缺键与跨集合重复均拒绝():
+    missing_exemptions = _three_way_manifest()
+    missing_exemptions.pop("production_exemptions")
+    with pytest.raises(ValueError, match="清单字段必须精确为"):
+        parse_manifest(missing_exemptions)
+
+    duplicate = _exemption(task_type="cloud", supported_model_id="qcloud", emitted_model_id="qcloud_cvm", case_id="qcloud_cvm",)
+    with pytest.raises(ValueError, match="重复"):
+        parse_manifest(_three_way_manifest(production_exemptions=[duplicate]))
 
 
 @pytest.mark.parametrize(
@@ -106,7 +176,7 @@ def _manifest(production_contracts=None, non_production_contracts=None):
 )
 def test_清单条目拒绝缺键错类型和额外字段(entry, message):
     with pytest.raises(ValueError, match=message):
-        parse_manifest(_manifest(production_contracts=[entry]))
+        parse_manifest(_manifest(validation_contracts=[entry]))
 
 
 def test_清单条目拒绝缺少固定字段():
@@ -114,14 +184,14 @@ def test_清单条目拒绝缺少固定字段():
     entry.pop("emitted_model_id")
 
     with pytest.raises(ValueError, match="字段必须精确为"):
-        parse_manifest(_manifest(production_contracts=[entry]))
+        parse_manifest(_manifest(validation_contracts=[entry]))
 
 
 @pytest.mark.parametrize(
     "manifest",
     [
-        _manifest(production_contracts=[_entry(), copy.deepcopy(_entry())]),
-        _manifest(production_contracts=[_entry(), _entry(emitted_model_id="qcloud_vpc")]),
+        _manifest(validation_contracts=[_entry(), copy.deepcopy(_entry())]),
+        _manifest(validation_contracts=[_entry(), _entry(emitted_model_id="qcloud_vpc")]),
         _manifest(non_production_contracts=[_entry(emitted_model_id="qcloud_vpc", lane_a=False, lane_b=False)]),
     ],
 )
@@ -131,7 +201,7 @@ def test_清单条目拒绝重复三元组或重复_case_id(manifest):
 
 
 @pytest.mark.parametrize(
-    "manifest", [_manifest(production_contracts=[_entry(lane_a=False)]), _manifest(non_production_contracts=[_entry(lane_a=False, lane_b=True)]),],
+    "manifest", [_manifest(validation_contracts=[_entry(lane_a=False)]), _manifest(non_production_contracts=[_entry(lane_a=False, lane_b=True)]),],
 )
 def test_清单条目强制生产与非生产_lane_规则(manifest):
     with pytest.raises(ValueError, match="lane"):

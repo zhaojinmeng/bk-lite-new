@@ -15,7 +15,7 @@ def _update_provenance(complete_evidence, **changes):
 
 def _single_production_manifest(case_id):
     return ContractManifest(
-        production_entries=(
+        validation_entries=(
             ContractEntry(
                 task_type="cloud",
                 supported_model_id="contract_example",
@@ -25,6 +25,7 @@ def _single_production_manifest(case_id):
                 lane_b=True,
             ),
         ),
+        production_exemptions=(),
         non_production_entries=(),
     )
 
@@ -200,8 +201,8 @@ def test_audit_伪造官方文档域名不能进入ready(complete_evidence):
 
     audit = audit_manifest_evidence(_single_production_manifest(complete_evidence.case_id), root=complete_evidence.root)
 
-    assert audit.production[0].status == "invalid_evidence"
-    assert "documentation_url" in audit.production[0].validation_errors[0]
+    assert audit.validation[0].status == "invalid_evidence"
+    assert "documentation_url" in audit.validation[0].validation_errors[0]
 
 
 @pytest.mark.parametrize(
@@ -242,9 +243,9 @@ def test_生产缺口与非生产归档状态由结构化_audit_返回():
 
     audit = audit_manifest_evidence(manifest)
 
-    assert {item.contract_id for item in audit.production} == set(manifest.production_contracts)
-    assert audit.incomplete_production
-    assert all(item.missing_files for item in audit.incomplete_production)
+    assert {item.contract_id for item in audit.validation} == set(manifest.validation_contracts)
+    assert audit.incomplete_validation
+    assert all(item.missing_files for item in audit.incomplete_validation)
     assert {item.contract_id for item in audit.non_production} == set(manifest.non_production_contracts)
     assert all(item.status == "archived" for item in audit.non_production)
 
@@ -256,8 +257,8 @@ def test_audit_对文件齐全但门禁失败的生产包返回invalid(complete_
 
     audit = audit_manifest_evidence(manifest, root=complete_evidence.root)
 
-    assert audit.production[0].status == "invalid_evidence"
-    assert "01_source_raw.json" in audit.production[0].validation_errors[0]
+    assert audit.validation[0].status == "invalid_evidence"
+    assert "01_source_raw.json" in audit.validation[0].validation_errors[0]
 
 
 def test_qcloud_cvm_只迁移可独立证明的制品():

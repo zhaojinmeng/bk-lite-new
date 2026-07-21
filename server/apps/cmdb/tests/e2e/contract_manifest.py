@@ -14,7 +14,12 @@ _ENTRY_FIELDS = {
     "lane_a",
     "lane_b",
 }
-_MANIFEST_FIELDS = {"production_contracts", "non_production_contracts"}
+_EXEMPTION_FIELDS = _ENTRY_FIELDS | {"reason", "source_kind"}
+_MANIFEST_FIELDS = {
+    "validation_contracts",
+    "production_exemptions",
+    "non_production_contracts",
+}
 _MANIFEST_PATH = Path(__file__).with_suffix(".json")
 
 
@@ -33,13 +38,34 @@ class ContractEntry:
 
 
 @dataclass(frozen=True)
+class ProductionExemptionEntry:
+    task_type: str
+    supported_model_id: str
+    emitted_model_id: str
+    case_id: str
+    lane_a: bool
+    lane_b: bool
+    reason: str
+    source_kind: str
+
+    @property
+    def contract_id(self) -> Contract:
+        return (self.task_type, self.supported_model_id, self.emitted_model_id)
+
+
+@dataclass(frozen=True)
 class ContractManifest:
-    production_entries: tuple[ContractEntry, ...]
+    validation_entries: tuple[ContractEntry, ...]
+    production_exemptions: tuple[ProductionExemptionEntry, ...]
     non_production_entries: tuple[ContractEntry, ...]
 
     @property
-    def production_contracts(self) -> tuple[Contract, ...]:
-        return tuple(entry.contract_id for entry in self.production_entries)
+    def validation_contracts(self) -> tuple[Contract, ...]:
+        return tuple(entry.contract_id for entry in self.validation_entries)
+
+    @property
+    def exempted_contracts(self) -> tuple[Contract, ...]:
+        return tuple(entry.contract_id for entry in self.production_exemptions)
 
     @property
     def non_production_contracts(self) -> tuple[Contract, ...]:
@@ -69,11 +95,37 @@ def _parse_entry(entry: Any, section: str) -> ContractEntry:
         if type(entry[field]) is not bool:
             raise ValueError(f"{field} 必须是 bool")
 
-    is_production = section == "production_contracts"
-    if entry["lane_a"] is not is_production or entry["lane_b"] is not is_production:
-        raise ValueError(f"{section} 的 lane_a/lane_b 必须均为 {is_production}")
+    is_validation = section == "validation_contracts"
+    if entry["lane_a"] is not is_validation or entry["lane_b"] is not is_validation:
+        raise ValueError(f"{section} 的 lane_a/lane_b 必须均为 {is_validation}")
 
     return ContractEntry(**entry)
+
+
+def _parse_exemption(entry: Any) -> ProductionExemptionEntry:
+    section = "production_exemptions"
+    if not isinstance(entry, dict) or set(entry) != _EXEMPTION_FIELDS:
+        raise ValueError(f"{section} 条目字段必须精确为 {sorted(_EXEMPTION_FIELDS)}")
+
+    for field in (
+        "task_type",
+        "supported_model_id",
+        "emitted_model_id",
+        "case_id",
+        "reason",
+        "source_kind",
+    ):
+        if not isinstance(entry[field], str):
+            raise ValueError(f"{field} 必须是字符串")
+        if not entry[field].strip():
+            raise ValueError(f"{field} 必须是非空字符串")
+    for field in ("lane_a", "lane_b"):
+        if type(entry[field]) is not bool:
+            raise ValueError(f"{field} 必须是 bool")
+        if entry[field] is not False:
+            raise ValueError(f"{section} 的 lane_a/lane_b 必须均为 False")
+
+    return ProductionExemptionEntry(**entry)
 
 
 def _parse_entries(data: dict[str, Any], section: str) -> tuple[ContractEntry, ...]:
@@ -83,7 +135,14 @@ def _parse_entries(data: dict[str, Any], section: str) -> tuple[ContractEntry, .
     return tuple(_parse_entry(entry, section) for entry in entries)
 
 
-def _validate_unique(entries: tuple[ContractEntry, ...]) -> None:
+def _parse_exemptions(data: dict[str, Any]) -> tuple[ProductionExemptionEntry, ...]:
+    entries = data["production_exemptions"]
+    if not isinstance(entries, list):
+        raise ValueError("production_exemptions 必须是列表")
+    return tuple(_parse_exemption(entry) for entry in entries)
+
+
+def _validate_unique(entries: tuple[ContractEntry | ProductionExemptionEntry, ...],) -> None:
     contract_ids = [entry.contract_id for entry in entries]
     if len(contract_ids) != len(set(contract_ids)):
         raise ValueError("contract_id 重复")
@@ -96,10 +155,13 @@ def parse_manifest(data: Any) -> ContractManifest:
     if not isinstance(data, dict) or set(data) != _MANIFEST_FIELDS:
         raise ValueError(f"清单字段必须精确为 {sorted(_MANIFEST_FIELDS)}")
 
-    production_entries = _parse_entries(data, "production_contracts")
+    validation_entries = _parse_entries(data, "validation_contracts")
+    production_exemptions = _parse_exemptions(data)
     non_production_entries = _parse_entries(data, "non_production_contracts")
-    _validate_unique(production_entries + non_production_entries)
-    return ContractManifest(production_entries=production_entries, non_production_entries=non_production_entries,)
+    _validate_unique(validation_entries + production_exemptions + non_production_entries)
+    return ContractManifest(
+        validation_entries=validation_entries, production_exemptions=production_exemptions, non_production_entries=non_production_entries,
+    )
 
 
 def load_manifest() -> ContractManifest:
