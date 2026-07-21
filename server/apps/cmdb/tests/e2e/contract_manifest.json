@@ -428,7 +428,7 @@
       "task_type": "host",
       "supported_model_id": "physcial_server",
       "emitted_model_id": "physcial_server",
-      "case_id": "physcial_server",
+      "case_id": "host_physcial_server",
       "lane_a": true,
       "lane_b": true
     },
@@ -652,7 +652,7 @@
       "task_type": "protocol",
       "supported_model_id": "postgresql",
       "emitted_model_id": "postgresql",
-      "case_id": "postgresql",
+      "case_id": "protocol_postgresql",
       "lane_a": true,
       "lane_b": true
     },
