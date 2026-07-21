@@ -6,6 +6,7 @@ import pytest
 from semantics import (
     assert_timestamp_propagation,
     find_legacy_vm_helper_calls,
+    find_legacy_vm_helper_violations,
     parse_line_protocol,
     parse_prometheus,
 )
@@ -234,17 +235,7 @@ async def test_real_transport_failure_after_delivery_is_not_retried(
 
 def test_lane_a_contract_does_not_call_lane_b_legacy_vm_fixture_helper():
     contract_dir = Path(__file__).parent
-    gate_file = Path(__file__).resolve()
-    violations = {}
-
-    for contract_path in contract_dir.rglob("*.py"):
-        if contract_path.resolve() == gate_file:
-            continue
-        line_numbers = find_legacy_vm_helper_calls(
-            contract_path.read_text(encoding="utf-8")
-        )
-        if line_numbers:
-            violations[str(contract_path.relative_to(contract_dir))] = line_numbers
+    violations = find_legacy_vm_helper_violations(contract_dir)
 
     assert not violations, f"Lane A cannot call legacy helper: {violations}"
 
@@ -257,6 +248,21 @@ def test_legacy_helper_gate_detects_import_alias_calls():
     )
 
     assert find_legacy_vm_helper_calls(source) == [2]
+
+
+def test_legacy_helper_tree_gate_scans_gate_file_without_string_false_positives(
+    tmp_path,
+):
+    helper_name = "step2_" + "push_to_vm"
+    gate_path = tmp_path / "test_publish_boundary.py"
+    gate_path.write_text(f"{helper_name}({{'result': {{}}}})\n", encoding="utf-8")
+    (tmp_path / "test_dynamic_source.py").write_text(
+        f'payload = "{helper_name}({{}})"\n', encoding="utf-8"
+    )
+
+    assert find_legacy_vm_helper_violations(tmp_path) == {
+        "test_publish_boundary.py": [1]
+    }
 
 
 def test_vm_response_builder_is_explicitly_scoped_to_lane_b_legacy_fixtures():

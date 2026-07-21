@@ -3,6 +3,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Iterable
 
 _METRIC_NAME = re.compile(r"[a-zA-Z_:][a-zA-Z0-9_:]*\Z")
@@ -484,3 +485,14 @@ def find_legacy_vm_helper_calls(source: str) -> list[int]:
             )
         }
     )
+
+
+def find_legacy_vm_helper_violations(contract_dir: Path) -> dict[str, list[int]]:
+    violations = {}
+    for contract_path in contract_dir.rglob("*.py"):
+        line_numbers = find_legacy_vm_helper_calls(
+            contract_path.read_text(encoding="utf-8")
+        )
+        if line_numbers:
+            violations[str(contract_path.relative_to(contract_dir))] = line_numbers
+    return violations
