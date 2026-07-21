@@ -1,9 +1,9 @@
 {
-  "task": "Task 4: P2 Archived placeholder(22 套)— 17 license + 5 集群/平台",
+  "task": "Task 4: P2 Archived placeholder(24 套)— 17 license + 7 集群/平台",
   "generated_at": "2026-07-14T10:30:00+08:00",
-  "total_objects": 22,
+  "total_objects": 24,
   "license_count": 17,
-  "cluster_platform_count": 5,
+  "cluster_platform_count": 7,
   "objects": [
     {
       "model_id": "apusic",
@@ -180,6 +180,22 @@
       "task_type": "HOST",
       "placeholder_reason": "platform_constraint",
       "test_filename": "test_domestic_linux_pipeline.py"
+    },
+    {
+      "model_id": "h3c_cas",
+      "task_n": "Task 1 follow-up",
+      "display_name": "H3C CAS 私有云",
+      "task_type": "CLOUD",
+      "placeholder_reason": "plugin_stub",
+      "test_filename": "test_h3c_cas_pipeline.py"
+    },
+    {
+      "model_id": "zstack",
+      "task_n": "Task 1 follow-up",
+      "display_name": "ZStack 私有云",
+      "task_type": "CLOUD",
+      "placeholder_reason": "plugin_stub",
+      "test_filename": "test_zstack_pipeline.py"
     }
   ]
 }
