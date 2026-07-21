@@ -379,8 +379,8 @@ class Aliyun(object):
             total_count = ali_response.get("TotalCount", 0)
             page = total_count // 50 if total_count % 50 == 0 else total_count // 50 + 1
             key1, key2 = RESOURCE_MAP[resource]
-            for i in range(page):
-                request.set_PageNumber(str(i + 2))
+            for page_number in range(2, page + 1):
+                request.set_PageNumber(str(page_number))
                 ali_res = self._get_result(request, True)
                 ali_response[key1][key2].extend(ali_res[key1][key2])
         except Exception as e:
@@ -399,8 +399,8 @@ class Aliyun(object):
             total_count = ali_response.get("TotalCount", 0)
             page = (total_count + page_size - 1) // page_size
             key1, key2 = RESOURCE_MAP[resource]
-            for i in range(page):
-                request = self._add_required_params(request, {"PageNumber": str(i + 2)})
+            for page_number in range(2, page + 1):
+                request = self._add_required_params(request, {"PageNumber": str(page_number)})
                 ali_res = self._get_result_c(request, True)
                 ali_response[key1][key2].extend(ali_res[key1][key2])
         except Exception as e:

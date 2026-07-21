@@ -31,7 +31,6 @@ class ProductionAdapterBinding:
     adapter_dir: str
     emitted_model_ids: tuple[str, ...]
     source_model_aliases: tuple[tuple[str, str], ...] = ()
-    collector_import_exemption_reason: str | None = None
 
     @property
     def case_id(self) -> str:
@@ -123,7 +122,6 @@ PRODUCTION_ADAPTER_BINDINGS = (
             "aliyun_pgsql",
             "aliyun_redis",
         ),
-        collector_import_exemption_reason="测试环境未安装阿里云可选SDK，改验真实源码类定义",
     ),
     ProductionAdapterBinding(
         "cloud",
@@ -170,7 +168,6 @@ PRODUCTION_ADAPTER_BINDINGS = (
             "qcloud_rocketmq",
         ),
         (("qcloud_plusar_cluster", "qcloud_pulsar_cluster"),),
-        collector_import_exemption_reason="测试环境未安装腾讯云可选SDK，改验真实源码类定义",
     ),
     ProductionAdapterBinding(
         "cloud",
@@ -218,20 +215,8 @@ PRODUCTION_ADAPTER_BINDINGS = (
         "protocol", "physcial_server", "physcial_server", ("physcial_server",)
     ),
     ProductionAdapterBinding("protocol", "postgresql", "postgresql", ("postgresql",)),
-    ProductionAdapterBinding(
-        "snmp",
-        "network",
-        "network",
-        ("network",),
-        collector_import_exemption_reason="测试环境未安装pysnmp可选SDK，改验真实源码类定义",
-    ),
-    ProductionAdapterBinding(
-        "vm",
-        "vmware_vc",
-        "vmware_vc",
-        ("vmware_vc",),
-        collector_import_exemption_reason="测试环境未安装pyVmomi可选SDK，改验真实源码类定义",
-    ),
+    ProductionAdapterBinding("snmp", "network", "network", ("network",)),
+    ProductionAdapterBinding("vm", "vmware_vc", "vmware_vc", ("vmware_vc",)),
 )
 
 

@@ -74,7 +74,6 @@ aliyun = [
     "alibabacloud_mse20190531==6.9.0",
     "alibabacloud_alb20200616==1.2.1",
     "alibabacloud_nas20170626==2.4.0",
-    "aliyun-python-sdk-core-v3==2.13.32",
     "aliyun-python-sdk-r-kvstore==2.19.0",
     "aliyun-python-sdk-dds==3.5.4",
     "aliyun-python-sdk-bssopenapi==1.7.6",

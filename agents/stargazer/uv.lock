@@ -532,16 +532,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3e/09/da9f58eb38b4fdb97ba6523274fbf445ef6a06be64b433693da8307b4bec/aliyun-python-sdk-core-2.16.0.tar.gz", hash = "sha256:651caad597eb39d4fad6cf85133dffe92837d53bdf62db9d8f37dab6508bb8f9", size = 449555, upload-time = "2024-10-09T06:01:01.762Z" }
 
 [[package]]
-name = "aliyun-python-sdk-core-v3"
-version = "2.13.32"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cryptography" },
-    { name = "jmespath" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/53/7b/e7831f6c025b41c17df5c6a9dd63b6967c68ac743ce2f28e76d280c95ab7/aliyun-python-sdk-core-v3-2.13.32.tar.gz", hash = "sha256:afe44fca89776623e4f75ab1684be13321655e17f689c4ec7f8091b51629a0a4", size = 440781, upload-time = "2021-03-18T08:47:10.847Z" }
-
-[[package]]
 name = "aliyun-python-sdk-dds"
 version = "3.5.4"
 source = { registry = "https://pypi.org/simple" }
@@ -3303,7 +3293,6 @@ aliyun = [
     { name = "alibabacloud-waf-openapi20211001" },
     { name = "aliyun-python-sdk-bssopenapi" },
     { name = "aliyun-python-sdk-cms" },
-    { name = "aliyun-python-sdk-core-v3" },
     { name = "aliyun-python-sdk-dds" },
     { name = "aliyun-python-sdk-ecs" },
     { name = "aliyun-python-sdk-nas" },
@@ -3388,7 +3377,6 @@ requires-dist = [
     { name = "alibabacloud-waf-openapi20211001", marker = "extra == 'aliyun'", specifier = "==3.5.0" },
     { name = "aliyun-python-sdk-bssopenapi", marker = "extra == 'aliyun'", specifier = "==1.7.6" },
     { name = "aliyun-python-sdk-cms", marker = "extra == 'aliyun'", specifier = "==7.0.3" },
-    { name = "aliyun-python-sdk-core-v3", marker = "extra == 'aliyun'", specifier = "==2.13.32" },
     { name = "aliyun-python-sdk-dds", marker = "extra == 'aliyun'", specifier = "==3.5.4" },
     { name = "aliyun-python-sdk-ecs", marker = "extra == 'aliyun'", specifier = "==4.24.8" },
     { name = "aliyun-python-sdk-nas", marker = "extra == 'aliyun'", specifier = "==3.11.0" },
