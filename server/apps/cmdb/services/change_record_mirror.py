@@ -12,6 +12,10 @@ from apps.core.logger import cmdb_logger as logger
 from apps.rpc.system_mgmt import SystemMgmt
 
 
+class OperationLogRejected(Exception):
+    """SystemMgmt 已返回业务失败，Outbox 必须进入可恢复状态。"""
+
+
 def dispatch_change_record_mirror(event_id):
     from apps.cmdb.tasks.celery_tasks import consume_change_record_mirror_outbox
 
@@ -80,7 +84,9 @@ class ChangeRecordMirrorService:
         try:
             client = SystemMgmt()
             for payload in event.payloads[: cls.BATCH_SIZE]:
-                client.save_operation_log(**payload)
+                response = client.save_operation_log(**payload)
+                if not isinstance(response, dict) or response.get("result") is not True:
+                    raise OperationLogRejected("downstream operation log rejected")
         except Exception as exc:
             status = (
                 CmdbOperationOutboxStatus.FAILED
@@ -95,7 +101,11 @@ class ChangeRecordMirrorService:
                 owner_token="",
                 lease_expires_at=None,
                 next_attempt_at=now() + timedelta(seconds=delay),
-                last_error=f"{exc.__class__.__name__}: downstream operation log unavailable",
+                last_error=(
+                    str(exc)
+                    if isinstance(exc, OperationLogRejected)
+                    else f"{exc.__class__.__name__}: downstream operation log unavailable"
+                ),
             )
             return False
         return bool(

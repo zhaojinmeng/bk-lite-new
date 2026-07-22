@@ -1,3 +1,7 @@
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass, field
+
 from celery import current_app
 from django.conf import settings
 from django.db import transaction
@@ -24,6 +28,31 @@ RULE_FULL_SYNC_TASK = "apps.cmdb.tasks.celery_tasks.full_sync_auto_association_r
 _PENDING_RULE_FULL_SYNC_IDS: set[str] = set()
 
 
+@dataclass
+class AutoRelationDispatchIntents:
+    """一次主写链路产生的自动关系后置意图。"""
+
+    instance_ids: list[int] = field(default_factory=list)
+    rule_ids: list[str] = field(default_factory=list)
+
+
+_CAPTURED_DISPATCH_INTENTS: ContextVar[AutoRelationDispatchIntents | None] = ContextVar(
+    "cmdb_auto_relation_dispatch_intents", default=None,
+)
+
+
+@contextmanager
+def capture_auto_relation_dispatch_intents():
+    """截获当前执行上下文的派发意图，由调用方持久化后再异步投递。"""
+
+    intents = AutoRelationDispatchIntents()
+    token = _CAPTURED_DISPATCH_INTENTS.set(intents)
+    try:
+        yield intents
+    finally:
+        _CAPTURED_DISPATCH_INTENTS.reset(token)
+
+
 def schedule_instance_auto_relation_reconcile(instance_ids: list[int] | tuple[int, ...] | set[int] | None) -> None:
     normalized_ids = []
     for instance_id in list(instance_ids or []):
@@ -36,6 +65,13 @@ def schedule_instance_auto_relation_reconcile(instance_ids: list[int] | tuple[in
         normalized_ids.append(normalized_id)
 
     if not normalized_ids:
+        return
+
+    captured = _CAPTURED_DISPATCH_INTENTS.get()
+    if captured is not None:
+        for instance_id in normalized_ids:
+            if instance_id not in captured.instance_ids:
+                captured.instance_ids.append(instance_id)
         return
 
     def _dispatch() -> None:
@@ -54,10 +90,20 @@ def schedule_rule_auto_relation_full_sync(model_asst_ids: list[str] | tuple[str,
     normalized_ids = []
     for model_asst_id in list(model_asst_ids or []):
         normalized_id = str(model_asst_id or "").strip()
-        if not normalized_id or normalized_id in normalized_ids or normalized_id in _PENDING_RULE_FULL_SYNC_IDS:
+        if not normalized_id or normalized_id in normalized_ids:
             continue
         normalized_ids.append(normalized_id)
-        _PENDING_RULE_FULL_SYNC_IDS.add(normalized_id)
+
+    captured = _CAPTURED_DISPATCH_INTENTS.get()
+    if captured is not None:
+        for model_asst_id in normalized_ids:
+            if model_asst_id not in captured.rule_ids:
+                captured.rule_ids.append(model_asst_id)
+        return
+
+    normalized_ids = [model_asst_id for model_asst_id in normalized_ids if model_asst_id not in _PENDING_RULE_FULL_SYNC_IDS]
+    for model_asst_id in normalized_ids:
+        _PENDING_RULE_FULL_SYNC_IDS.add(model_asst_id)
 
     if not normalized_ids:
         return
@@ -134,10 +180,7 @@ class AutoRelationRuleReconcileService:
     @staticmethod
     def _query_instances_by_model(model_id: str) -> list[dict]:
         with GraphClient() as ag:
-            instances, _ = ag.query_entity(
-                INSTANCE,
-                [{"field": "model_id", "type": "str=", "value": model_id}],
-            )
+            instances, _ = ag.query_entity(INSTANCE, [{"field": "model_id", "type": "str=", "value": model_id}],)
         return instances
 
     @staticmethod
@@ -145,10 +188,7 @@ class AutoRelationRuleReconcileService:
         with GraphClient() as ag:
             return ag.query_edge(
                 INSTANCE_ASSOCIATION,
-                [
-                    {"field": "model_asst_id", "type": "str=", "value": model_asst_id},
-                    {"field": "src_inst_id", "type": "int=", "value": src_inst_id},
-                ],
+                [{"field": "model_asst_id", "type": "str=", "value": model_asst_id}, {"field": "src_inst_id", "type": "int=", "value": src_inst_id},],
             )
 
     @classmethod
@@ -188,11 +228,7 @@ class AutoRelationRuleReconcileService:
 
     @classmethod
     def _calculate_desired_target_ids(
-        cls,
-        source_instance: dict,
-        association: dict,
-        rules: list[AutoRelationRule],
-        target_instances: list[dict] | None = None,
+        cls, source_instance: dict, association: dict, rules: list[AutoRelationRule], target_instances: list[dict] | None = None,
     ) -> set[int]:
         candidate_targets = target_instances if target_instances is not None else cls._query_instances_by_model(association["dst_model_id"])
         desired_ids: set[int] = set()
@@ -208,11 +244,7 @@ class AutoRelationRuleReconcileService:
             for target_instance in candidate_targets:
                 matched = True
                 for pair in rule.match_pairs:
-                    if not cls._matches_pair(
-                        source_instance.get(pair.src_field_id),
-                        target_instance.get(pair.dst_field_id),
-                        pair,
-                    ):
+                    if not cls._matches_pair(source_instance.get(pair.src_field_id), target_instance.get(pair.dst_field_id), pair,):
                         matched = False
                         break
                 if matched:
@@ -225,16 +257,8 @@ class AutoRelationRuleReconcileService:
             edges = ag.query_edge(
                 INSTANCE_ASSOCIATION,
                 [
-                    {
-                        "field": AUTO_RELATION_EDGE_SOURCE_FIELD,
-                        "type": "str=",
-                        "value": AUTO_RELATION_EDGE_SOURCE,
-                    },
-                    {
-                        "field": AUTO_RELATION_EDGE_RULE_ID_FIELD,
-                        "type": "str=",
-                        "value": model_asst_id,
-                    },
+                    {"field": AUTO_RELATION_EDGE_SOURCE_FIELD, "type": "str=", "value": AUTO_RELATION_EDGE_SOURCE},
+                    {"field": AUTO_RELATION_EDGE_RULE_ID_FIELD, "type": "str=", "value": model_asst_id},
                 ],
             )
             for edge in edges:
@@ -254,11 +278,7 @@ class AutoRelationRuleReconcileService:
 
     @classmethod
     def _filter_desired_targets_for_mapping(
-        cls,
-        association: dict,
-        source_instance: dict,
-        desired_target_ids: set[int],
-        target_claims: dict[int, int] | None = None,
+        cls, association: dict, source_instance: dict, desired_target_ids: set[int], target_claims: dict[int, int] | None = None,
     ) -> tuple[set[int], int]:
         mapping = cls._get_mapping(association)
         if not desired_target_ids:
@@ -303,16 +323,12 @@ class AutoRelationRuleReconcileService:
         auto_edges = [
             edge
             for edge in existing_edges
-            if edge.get(AUTO_RELATION_EDGE_SOURCE_FIELD) == AUTO_RELATION_EDGE_SOURCE
-            and edge.get(AUTO_RELATION_EDGE_RULE_ID_FIELD) == model_asst_id
+            if edge.get(AUTO_RELATION_EDGE_SOURCE_FIELD) == AUTO_RELATION_EDGE_SOURCE and edge.get(AUTO_RELATION_EDGE_RULE_ID_FIELD) == model_asst_id
         ]
         all_existing_target_ids = {int(edge["dst_inst_id"]) for edge in existing_edges if edge.get("dst_inst_id") is not None}
         desired_target_ids = cls._calculate_desired_target_ids(source_instance, association, rules, target_instances=target_instances)
         desired_target_ids, mapping_conflicts = cls._filter_desired_targets_for_mapping(
-            association,
-            source_instance,
-            desired_target_ids,
-            target_claims=target_claims,
+            association, source_instance, desired_target_ids, target_claims=target_claims,
         )
 
         summary = {
@@ -354,16 +370,10 @@ class AutoRelationRuleReconcileService:
 
                 InstanceManage.check_asso_mapping(edge_data)
                 with GraphClient() as ag:
-                    ag.create_edge(
-                        INSTANCE_ASSOCIATION,
-                        edge_data["src_inst_id"],
-                        INSTANCE,
-                        edge_data["dst_inst_id"],
-                        INSTANCE,
-                        edge_data,
-                        "model_asst_id",
+                    _edge, created = ag.ensure_auto_relation_edge(
+                        INSTANCE_ASSOCIATION, edge_data["src_inst_id"], INSTANCE, edge_data["dst_inst_id"], INSTANCE, edge_data, "model_asst_id",
                     )
-                summary["created"] += 1
+                summary["created" if created else "skipped"] += 1
                 all_existing_target_ids.add(dst_inst_id)
             except BaseAppException as exc:
                 summary["conflicts"] += 1
@@ -452,11 +462,7 @@ class AutoRelationRuleReconcileService:
 
         for source_instance in source_instances:
             item_summary = cls.reconcile_source_instance(
-                source_instance,
-                association,
-                enabled_rules,
-                target_instances=target_instances,
-                target_claims=target_claims,
+                source_instance, association, enabled_rules, target_instances=target_instances, target_claims=target_claims,
             )
             summary["created"] += item_summary["created"]
             summary["deleted"] += item_summary["deleted"]

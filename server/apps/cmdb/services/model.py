@@ -74,6 +74,15 @@ MODEL_ATTR_USER_OPTION_CACHE_KEY = "cmdb:model_attr_options:user"
 
 
 class ModelManage(object):
+    ASSOCIATION_MAPPINGS = frozenset({"n:n", "n:1", "1:n", "1:1"})
+
+    @classmethod
+    def validate_model_association_mapping(cls, data: dict) -> str:
+        mapping = data.get("mapping")
+        if not isinstance(mapping, str) or mapping not in cls.ASSOCIATION_MAPPINGS:
+            raise BaseAppException(f"association mapping error! mapping={mapping}")
+        return mapping
+
     @staticmethod
     def _clone_options(option: list[dict]) -> list[dict]:
         return [dict(item) for item in option]
@@ -212,12 +221,7 @@ class ModelManage(object):
 
         with GraphClient() as ag:
             ag.set_entity_properties(
-                MODEL,
-                [model_info["_id"]],
-                {"attrs": json.dumps(attrs, ensure_ascii=False)},
-                {},
-                [],
-                False,
+                MODEL, [model_info["_id"]], {"attrs": json.dumps(attrs, ensure_ascii=False)}, {}, [], False,
             )
 
     @staticmethod
@@ -471,13 +475,7 @@ class ModelManage(object):
 
     @staticmethod
     def _handle_attr_type_change(
-        attrs: list,
-        attr_id: str,
-        old_type: str,
-        new_type: str,
-        attr_info: dict,
-        model_id: str,
-        graph_client,
+        attrs: list, attr_id: str, old_type: str, new_type: str, attr_info: dict, model_id: str, graph_client,
     ):
         """
         处理属性类型变更时的 _display 字段逻辑
@@ -511,11 +509,8 @@ class ModelManage(object):
         return attrs
 
     @staticmethod
-    def create_model(data: dict, username="admin"):
-        """
-        创建模型
-        """
-
+    def create_model_entity(data: dict):
+        """只创建 MODEL 实体，不联写从属边、字段分组、缓存或审计。"""
         attrs = list(INST_NAME_INFOS)  # 复制默认字段列表
         model_id = str(data.get("model_id", ""))
 
@@ -534,6 +529,17 @@ class ModelManage(object):
             ]
             exist_items, _ = ag.query_entity(MODEL, conflict_filter, param_type="OR")
             result = ag.create_entity(MODEL, data, CREATE_MODEL_CHECK_ATTR, exist_items)
+        return result
+
+    @staticmethod
+    def create_model(data: dict, username="admin"):
+        """
+        创建模型
+        """
+
+        result = ModelManage.create_model_entity(data)
+        attrs = ModelManage.parse_attrs(data["attrs"])
+        with GraphClient() as ag:
             classification_info = ClassificationManage.search_model_classification_info(data["classification_id"])
             _ = ag.create_edge(
                 SUBORDINATE_MODEL,
@@ -577,16 +583,8 @@ class ModelManage(object):
         return result
 
     @staticmethod
-    def register_custom_reporting_model_fields(
-        model_id: str,
-        instances: list[dict],
-        username="admin",
-    ) -> list[str]:
-        return get_custom_reporting_extension().register_model_fields(
-            model_id,
-            instances,
-            username=username,
-        )
+    def register_custom_reporting_model_fields(model_id: str, instances: list[dict], username="admin",) -> list[str]:
+        return get_custom_reporting_extension().register_model_fields(model_id, instances, username=username,)
 
     @staticmethod
     def validate_custom_reporting_instance_fields(model_id: str, instances: list[dict]) -> None:
@@ -597,15 +595,9 @@ class ModelManage(object):
         return get_custom_reporting_extension().get_declared_attr_ids(model_id)
 
     @staticmethod
-    def validate_custom_reporting_relation_fields(
-        model_id: str,
-        relations: list[dict],
-        identity_keys: list[str] | None = None,
-    ) -> None:
+    def validate_custom_reporting_relation_fields(model_id: str, relations: list[dict], identity_keys: list[str] | None = None,) -> None:
         get_custom_reporting_extension().validate_relation_fields(
-            model_id,
-            relations,
-            identity_keys=identity_keys,
+            model_id, relations, identity_keys=identity_keys,
         )
 
     @staticmethod
@@ -614,19 +606,11 @@ class ModelManage(object):
 
     @staticmethod
     def bootstrap_custom_reporting_model(quick_model: dict, team: list[int], username="admin"):
-        return get_custom_reporting_extension().bootstrap_model(
-            quick_model,
-            team=team,
-            username=username,
-        )
+        return get_custom_reporting_extension().bootstrap_model(quick_model, team=team, username=username,)
 
     @staticmethod
     def sync_custom_reporting_model_group(quick_model: dict, team: list[int], username="admin"):
-        return get_custom_reporting_extension().sync_model_group(
-            quick_model,
-            team=team,
-            username=username,
-        )
+        return get_custom_reporting_extension().sync_model_group(quick_model, team=team, username=username,)
 
     @staticmethod
     def copy_model(
@@ -725,10 +709,7 @@ class ModelManage(object):
                 src_field_groups = FIELD_GROUP_MANAGER.filter(model_id=src_model_id).order_by("order")
                 for src_group in src_field_groups:
                     FIELD_GROUP_MANAGER.create(
-                        model_id=new_model_id,
-                        group_name=src_group.group_name,
-                        attr_orders=src_group.attr_orders or [],
-                        order=src_group.order,
+                        model_id=new_model_id, group_name=src_group.group_name, attr_orders=src_group.attr_orders or [], order=src_group.order,
                     )
                 copy_unique_rules_to_model(src_model_id, new_model_id, username)
             else:
@@ -748,6 +729,7 @@ class ModelManage(object):
                 associations = ModelManage.model_association_search(src_model_id)
 
                 for assoc in associations:
+                    mapping = ModelManage.validate_model_association_mapping(assoc)
                     # 确定新的源模型ID和目标模型ID
                     new_src_model_id = new_model_id if assoc["src_model_id"] == src_model_id else assoc["src_model_id"]
                     new_dst_model_id = new_model_id if assoc["dst_model_id"] == src_model_id else assoc["dst_model_id"]
@@ -776,7 +758,7 @@ class ModelManage(object):
                             dst_model_id=new_dst_model_id,
                             asst_id=assoc.get("asst_id", ""),
                             asst_name=assoc.get("asst_name", ""),
-                            mapping=assoc.get("mapping", "1:n"),
+                            mapping=mapping,
                             on_delete=assoc.get("on_delete", "none"),
                             is_pre=assoc.get("is_pre", False),
                             model_asst_id=new_model_asst_id,
@@ -858,13 +840,7 @@ class ModelManage(object):
         for organization_id, organization_permission_data in permissions_map.items():
             _query_list = []
             if classification_ids:
-                _query_list.append(
-                    {
-                        "field": "classification_id",
-                        "type": "str[]",
-                        "value": classification_ids,
-                    }
-                )
+                _query_list.append({"field": "classification_id", "type": "str[]", "value": classification_ids})
             model_ids = organization_permission_data["inst_names"]
             if model_ids:
                 _query_list.append({"field": "model_id", "type": "str[]", "value": model_ids})
@@ -906,7 +882,9 @@ class ModelManage(object):
         return json.loads(attrs.replace('\\"', '"'))
 
     @staticmethod
-    def create_model_attr(model_id, attr_info, username="admin"):
+    def create_model_attr(
+        model_id, attr_info, username="admin", operation_event_id=None, refresh_cache=True,
+    ):
         """
         创建模型属性
         """
@@ -949,7 +927,8 @@ class ModelManage(object):
         from apps.cmdb.display_field import ExcludeFieldsCache
 
         updated_attrs = ModelManage.parse_attrs(result[0].get("attrs", "[]"))
-        ExcludeFieldsCache.update_on_model_change(model_id)
+        if refresh_cache:
+            ExcludeFieldsCache.update_on_model_change(model_id)
 
         attrs = updated_attrs
 
@@ -973,6 +952,7 @@ class ModelManage(object):
             inst_id=model_info["_id"],
             model_object=OPERATOR_MODEL,
             scenario=MODEL_MANAGEMENT_CHANGE,
+            operation_event_id=operation_event_id,
         )
 
         return attr
@@ -994,10 +974,7 @@ class ModelManage(object):
             if attr_info["attr_id"] not in {i["attr_id"] for i in attrs}:
                 raise BaseAppException("model attr not present")
 
-            current_attr = next(
-                (attr for attr in attrs if attr["attr_id"] == attr_info["attr_id"]),
-                None,
-            )
+            current_attr = next((attr for attr in attrs if attr["attr_id"] == attr_info["attr_id"]), None,)
             if not current_attr:
                 raise BaseAppException("model attr not present")
 
@@ -1014,19 +991,11 @@ class ModelManage(object):
 
             if current_attr.get("is_required") != attr_info.get("is_required"):
                 guard_attr_change_against_unique_rules(
-                    model_id,
-                    attr_info["attr_id"],
-                    attr_info,
-                    "update_required",
-                    username,
+                    model_id, attr_info["attr_id"], attr_info, "update_required", username,
                 )
             if current_attr.get("attr_type") != attr_info.get("attr_type"):
                 guard_attr_change_against_unique_rules(
-                    model_id,
-                    attr_info["attr_id"],
-                    attr_info,
-                    "update_type",
-                    username,
+                    model_id, attr_info["attr_id"], attr_info, "update_type", username,
                 )
 
             is_tag_attr = ModelManage._is_tag_attr(current_attr)
@@ -1141,8 +1110,7 @@ class ModelManage(object):
 
         except Exception as e:
             logger.error(
-                f"[update_enum_instances_display] 更新实例枚举 _display 字段失败: 模型={model_id}, 字段={attr_id}, 错误={e}",
-                exc_info=True,
+                f"[update_enum_instances_display] 更新实例枚举 _display 字段失败: 模型={model_id}, 字段={attr_id}, 错误={e}", exc_info=True,
             )
             # 不抛出异常，避免中断主流程
 
@@ -1180,15 +1148,11 @@ class ModelManage(object):
                         updated_count += 1
 
                 if updated_count > 0:
-                    logger.info(
-                        f"[rebuild_file_instances_display] 已回填 {updated_count} 个实例的 {display_field_id} 字段, "
-                        f"模型: {model_id}, 字段: {attr_id}"
-                    )
+                    logger.info(f"[rebuild_file_instances_display] 已回填 {updated_count} 个实例的 {display_field_id} 字段, " f"模型: {model_id}, 字段: {attr_id}")
 
         except Exception as e:
             logger.error(
-                f"[rebuild_file_instances_display] 回填文件 _display 字段失败: 模型={model_id}, 字段={attr_id}, 错误={e}",
-                exc_info=True,
+                f"[rebuild_file_instances_display] 回填文件 _display 字段失败: 模型={model_id}, 字段={attr_id}, 错误={e}", exc_info=True,
             )
             # 不抛出异常，避免中断主流程
 
@@ -1201,11 +1165,7 @@ class ModelManage(object):
         """
         ModelManage._guard_protected_model_attr(attr_id, "删除")
         guard_attr_change_against_unique_rules(
-            model_id,
-            attr_id,
-            None,
-            "delete",
-            username,
+            model_id, attr_id, None, "delete", username,
         )
         with GraphClient() as ag:
             model_query = {"field": "model_id", "type": "str=", "value": model_id}
@@ -1225,14 +1185,7 @@ class ModelManage(object):
                     break
 
             new_attrs = [attr for attr in attrs if attr["attr_id"] not in fields_to_remove]
-            result = ag.set_entity_properties(
-                MODEL,
-                [model_info["_id"]],
-                dict(attrs=json.dumps(new_attrs)),
-                {},
-                [],
-                False,
-            )
+            result = ag.set_entity_properties(MODEL, [model_info["_id"]], dict(attrs=json.dumps(new_attrs)), {}, [], False,)
 
             # 模型属性删除后，要删除对应模型实例的属性(包括 _display 字段)
             model_params = [{"field": "model_id", "type": "str=", "value": model_id}]
@@ -1288,21 +1241,12 @@ class ModelManage(object):
                 name = f"{name_prefix}/{item['name']}"
             else:
                 name = item["name"]
-            result.append(
-                dict(
-                    id=item["id"],
-                    name=name,
-                    is_default=False,
-                    type="str",
-                )
-            )
+            result.append(dict(id=item["id"], name=name, is_default=False, type="str",))
             if item["subGroups"]:
                 ModelManage.get_organization_option(item["subGroups"], result, name)
 
     @staticmethod
-    def get_cached_organization_options(
-        system_mgmt_client_provider: Callable[[], SystemMgmt],
-    ) -> list[dict]:
+    def get_cached_organization_options(system_mgmt_client_provider: Callable[[], SystemMgmt],) -> list[dict]:
         option = cache.get(MODEL_ATTR_ORGANIZATION_OPTION_CACHE_KEY)
         if option is not None:
             return ModelManage._clone_options(option)
@@ -1311,16 +1255,12 @@ class ModelManage(object):
         option = []
         ModelManage.get_organization_option(groups, option)
         cache.set(
-            MODEL_ATTR_ORGANIZATION_OPTION_CACHE_KEY,
-            option,
-            timeout=MODEL_ATTR_OPTION_CACHE_TTL,
+            MODEL_ATTR_ORGANIZATION_OPTION_CACHE_KEY, option, timeout=MODEL_ATTR_OPTION_CACHE_TTL,
         )
         return ModelManage._clone_options(option)
 
     @staticmethod
-    def get_cached_user_options(
-        system_mgmt_client_provider: Callable[[], SystemMgmt],
-    ) -> list[dict]:
+    def get_cached_user_options(system_mgmt_client_provider: Callable[[], SystemMgmt],) -> list[dict]:
         option = cache.get(MODEL_ATTR_USER_OPTION_CACHE_KEY)
         if option is not None:
             return ModelManage._clone_options(option)
@@ -1338,9 +1278,7 @@ class ModelManage(object):
             for user in users["users"]
         ]
         cache.set(
-            MODEL_ATTR_USER_OPTION_CACHE_KEY,
-            option,
-            timeout=MODEL_ATTR_OPTION_CACHE_TTL,
+            MODEL_ATTR_USER_OPTION_CACHE_KEY, option, timeout=MODEL_ATTR_OPTION_CACHE_TTL,
         )
         return ModelManage._clone_options(option)
 
@@ -1404,24 +1342,16 @@ class ModelManage(object):
     @staticmethod
     def create_model_unique_rule(model_id: str, data: dict[str, Any], username: str = "admin"):
         create_unique_rule(
-            model_id,
-            UniqueRulePayload(field_ids=list(data.get("field_ids") or [])),
-            username,
+            model_id, UniqueRulePayload(field_ids=list(data.get("field_ids") or [])), username,
         )
         return ModelManage.get_model_unique_rules(model_id)
 
     @staticmethod
     def update_model_unique_rule(
-        model_id: str,
-        rule_id: str,
-        data: dict[str, Any],
-        username: str = "admin",
+        model_id: str, rule_id: str, data: dict[str, Any], username: str = "admin",
     ):
         update_unique_rule(
-            model_id,
-            rule_id,
-            UniqueRulePayload(field_ids=list(data.get("field_ids") or [])),
-            username,
+            model_id, rule_id, UniqueRulePayload(field_ids=list(data.get("field_ids") or [])), username,
         )
         return ModelManage.get_model_unique_rules(model_id)
 
@@ -1435,17 +1365,10 @@ class ModelManage(object):
         """
         创建模型关联
         """
+        ModelManage.validate_model_association_mapping(data)
         with GraphClient() as ag:
             try:
-                edge = ag.create_edge(
-                    MODEL_ASSOCIATION,
-                    data["src_id"],
-                    MODEL,
-                    data["dst_id"],
-                    MODEL,
-                    data,
-                    "model_asst_id",
-                )
+                edge = ag.create_edge(MODEL_ASSOCIATION, data["src_id"], MODEL, data["dst_id"], MODEL, data, "model_asst_id",)
             except BaseAppException as e:
                 if e.message == "edge already exists":
                     raise BaseAppException("model association repetition")
@@ -1522,10 +1445,7 @@ class ModelManage(object):
 
     @staticmethod
     def save_model_auto_relation_rule(
-        model_id: str,
-        model_asst_id: str,
-        payload: dict[str, Any],
-        username: str = "admin",
+        model_id: str, model_asst_id: str, payload: dict[str, Any], username: str = "admin",
     ):
         association = ModelManage.model_association_info_search(model_asst_id)
         if not association:
@@ -1535,12 +1455,7 @@ class ModelManage(object):
 
         src_attrs = ModelManage._get_model_attrs_for_auto_rule(association["src_model_id"])
         dst_attrs = ModelManage._get_model_attrs_for_auto_rule(association["dst_model_id"])
-        validated_rule = validate_auto_relation_rule_payload(
-            association,
-            src_attrs,
-            dst_attrs,
-            payload,
-        )
+        validated_rule = validate_auto_relation_rule_payload(association, src_attrs, dst_attrs, payload,)
         current_rule_set = parse_auto_relation_rule_set(association.get(AUTO_RELATION_RULE_FIELD)) or AutoRelationRuleSet(version=2, rules=[])
         if any(rule.rule_id == validated_rule.rule_id for rule in current_rule_set.rules):
             raise BaseAppException("自动关联规则标识重复")
@@ -1557,10 +1472,7 @@ class ModelManage(object):
 
         with GraphClient() as ag:
             ag.set_edge_properties(
-                association["_id"],
-                {
-                    AUTO_RELATION_RULE_FIELD: dump_auto_relation_rule_set(persisted_rule_set),
-                },
+                association["_id"], {AUTO_RELATION_RULE_FIELD: dump_auto_relation_rule_set(persisted_rule_set)},
             )
 
         from apps.cmdb.services.auto_relation_reconcile import schedule_rule_auto_relation_full_sync
@@ -1571,11 +1483,7 @@ class ModelManage(object):
 
     @staticmethod
     def update_model_auto_relation_rule(
-        model_id: str,
-        model_asst_id: str,
-        rule_id: str,
-        payload: dict[str, Any],
-        username: str = "admin",
+        model_id: str, model_asst_id: str, rule_id: str, payload: dict[str, Any], username: str = "admin",
     ):
         association = ModelManage.model_association_info_search(model_asst_id)
         if not association:
@@ -1585,12 +1493,7 @@ class ModelManage(object):
 
         src_attrs = ModelManage._get_model_attrs_for_auto_rule(association["src_model_id"])
         dst_attrs = ModelManage._get_model_attrs_for_auto_rule(association["dst_model_id"])
-        validated_rule = validate_auto_relation_rule_payload(
-            association,
-            src_attrs,
-            dst_attrs,
-            {**payload, "rule_id": rule_id},
-        )
+        validated_rule = validate_auto_relation_rule_payload(association, src_attrs, dst_attrs, {**payload, "rule_id": rule_id},)
 
         current_rule_set = parse_auto_relation_rule_set(association.get(AUTO_RELATION_RULE_FIELD))
         if not current_rule_set:
@@ -1621,10 +1524,7 @@ class ModelManage(object):
 
         with GraphClient() as ag:
             ag.set_edge_properties(
-                association["_id"],
-                {
-                    AUTO_RELATION_RULE_FIELD: dump_auto_relation_rule_set(persisted_rule_set),
-                },
+                association["_id"], {AUTO_RELATION_RULE_FIELD: dump_auto_relation_rule_set(persisted_rule_set)},
             )
 
         from apps.cmdb.services.auto_relation_reconcile import schedule_rule_auto_relation_full_sync
@@ -1652,12 +1552,7 @@ class ModelManage(object):
         serialized_rule_set = dump_auto_relation_rule_set(AutoRelationRuleSet(version=2, rules=next_rules)) if next_rules else ""
 
         with GraphClient() as ag:
-            ag.set_edge_properties(
-                association["_id"],
-                {
-                    AUTO_RELATION_RULE_FIELD: serialized_rule_set,
-                },
-            )
+            ag.set_edge_properties(association["_id"], {AUTO_RELATION_RULE_FIELD: serialized_rule_set})
 
         from apps.cmdb.services.auto_relation_reconcile import schedule_rule_auto_relation_full_sync
 
@@ -1667,10 +1562,7 @@ class ModelManage(object):
 
     @staticmethod
     def replace_model_auto_relation_rule_set(
-        model_id: str,
-        model_asst_id: str,
-        payload: dict[str, Any],
-        username: str = "system",
+        model_id: str, model_asst_id: str, payload: dict[str, Any], username: str = "system",
     ):
         association = ModelManage.model_association_info_search(model_asst_id)
         if not association:
@@ -1680,12 +1572,7 @@ class ModelManage(object):
 
         src_attrs = ModelManage._get_model_attrs_for_auto_rule(association["src_model_id"])
         dst_attrs = ModelManage._get_model_attrs_for_auto_rule(association["dst_model_id"])
-        validated_rule_set = validate_auto_relation_rule_set_payload(
-            association,
-            src_attrs,
-            dst_attrs,
-            payload,
-        )
+        validated_rule_set = validate_auto_relation_rule_set_payload(association, src_attrs, dst_attrs, payload,)
 
         persisted_rule_set = AutoRelationRuleSet(
             version=int(validated_rule_set.version or 2),
@@ -1703,10 +1590,7 @@ class ModelManage(object):
 
         with GraphClient() as ag:
             ag.set_edge_properties(
-                association["_id"],
-                {
-                    AUTO_RELATION_RULE_FIELD: dump_auto_relation_rule_set(persisted_rule_set),
-                },
+                association["_id"], {AUTO_RELATION_RULE_FIELD: dump_auto_relation_rule_set(persisted_rule_set)},
             )
 
         from apps.cmdb.services.auto_relation_reconcile import schedule_rule_auto_relation_full_sync
@@ -1783,14 +1667,7 @@ class ModelManage(object):
 
                 payload = ModelManage._parse_auto_relation_rule_set_cell(raw_rule_set, context)
 
-                pending_items.append(
-                    {
-                        "context": context,
-                        "model_id": src_model_id,
-                        "model_asst_id": model_asst_id,
-                        "payload": payload,
-                    }
-                )
+                pending_items.append({"context": context, "model_id": src_model_id, "model_asst_id": model_asst_id, "payload": payload})
 
         for item in pending_items:
             try:
@@ -1798,21 +1675,13 @@ class ModelManage(object):
                     association = ModelManage.model_association_info_search(item["model_asst_id"])
                     if association and association.get(AUTO_RELATION_RULE_FIELD):
                         with GraphClient() as ag:
-                            ag.set_edge_properties(
-                                association["_id"],
-                                {
-                                    AUTO_RELATION_RULE_FIELD: "",
-                                },
-                            )
+                            ag.set_edge_properties(association["_id"], {AUTO_RELATION_RULE_FIELD: ""})
                         from apps.cmdb.services.auto_relation_reconcile import schedule_rule_auto_relation_full_sync
 
                         schedule_rule_auto_relation_full_sync([item["model_asst_id"]])
                 else:
                     ModelManage.replace_model_auto_relation_rule_set(
-                        item["model_id"],
-                        item["model_asst_id"],
-                        item["payload"],
-                        username="system",
+                        item["model_id"], item["model_asst_id"], item["payload"], username="system",
                     )
             except Exception as err:
                 raise BaseAppException(f"{item['context']} ({item['model_asst_id']}) 导入自动关联规则失败: {getattr(err, 'message', str(err))}")
@@ -1845,13 +1714,7 @@ class ModelManage(object):
         with GraphClient() as ag:
             models, _ = ag.query_entity(
                 MODEL,
-                [
-                    {
-                        "field": "classification_id",
-                        "type": "str=",
-                        "value": classification_id,
-                    }
-                ],
+                [{"field": "classification_id", "type": "str=", "value": classification_id}],
                 order="order_id",
                 order_type="desc",
                 page={"skip": 0, "limit": 1},
@@ -1886,12 +1749,7 @@ class ModelManage(object):
                 if "is_visible" in order_info:
                     props["is_visible"] = bool(order_info["is_visible"])
                 ag.set_entity_properties(
-                    MODEL,
-                    [model_info["_id"]],
-                    props,
-                    {},
-                    [],
-                    False,
+                    MODEL, [model_info["_id"]], props, {}, [], False,
                 )
         return True
 
@@ -1984,10 +1842,7 @@ class ModelManage(object):
             if selected_ids is not None and cls_id not in selected_classification_ids:
                 continue
             ws_classifications.append(
-                [
-                    classification.get("classification_id", ""),
-                    classification.get("classification_name", ""),
-                ]
+                [classification.get("classification_id", ""), classification.get("classification_name", ""),]
             )
 
         ws_models = workbook.create_sheet(title="models")
@@ -2014,12 +1869,7 @@ class ModelManage(object):
         models = [m for m in models if not m.get("is_custom_reporting")]
         for model in models:
             ws_models.append(
-                [
-                    model.get("model_id", ""),
-                    model.get("model_name", ""),
-                    model.get("icn", ""),
-                    model.get("classification_id", ""),
-                ]
+                [model.get("model_id", ""), model.get("model_name", ""), model.get("icn", ""), model.get("classification_id", ""),]
             )
 
         for model in models:
@@ -2066,10 +1916,7 @@ class ModelManage(object):
 
             attr_rows = apply_unique_rules_to_attr_export_rows(attr_rows, unique_rules)
             logger.info(
-                "[UniqueRule] attr export complete model_id=%s sheet_name=%s rule_count=%s",
-                model_id,
-                f"attr-{model_id}",
-                len(unique_rules),
+                "[UniqueRule] attr export complete model_id=%s sheet_name=%s rule_count=%s", model_id, f"attr-{model_id}", len(unique_rules),
             )
             for row in attr_rows:
                 ws_attr.append([row.get(header, "") for header in ATTR_HEADERS_EN])
@@ -2078,9 +1925,7 @@ class ModelManage(object):
             if associations:
                 if selected_ids is not None:
                     associations = [
-                        a for a in associations
-                        if a.get("src_model_id", "") in selected_ids
-                        and a.get("dst_model_id", "") in selected_ids
+                        a for a in associations if a.get("src_model_id", "") in selected_ids and a.get("dst_model_id", "") in selected_ids
                     ]
                 if associations:
                     ws_asso = workbook.create_sheet(title=f"asso-{model_id}")
@@ -2119,30 +1964,15 @@ class ModelManage(object):
                     continue
                 try:
                     rules = build_unique_rules_from_attr_rows(model_id, rows)
-                    exist_items, _ = ag.query_entity(
-                        INSTANCE,
-                        [{"field": "model_id", "type": "str=", "value": model_id}],
-                    )
-                    conflicts = validate_unique_rules_against_existing_instances(
-                        model_id,
-                        rules,
-                        exist_items,
-                    )
+                    exist_items, _ = ag.query_entity(INSTANCE, [{"field": "model_id", "type": "str=", "value": model_id}],)
+                    conflicts = validate_unique_rules_against_existing_instances(model_id, rules, exist_items,)
                     if conflicts:
                         raise BaseAppException(conflicts[0].message)
                     ag.set_entity_properties(
-                        MODEL,
-                        [model_info["_id"]],
-                        {"unique_rules": json.dumps([asdict(rule) for rule in rules], ensure_ascii=False)},
-                        {},
-                        [],
-                        False,
+                        MODEL, [model_info["_id"]], {"unique_rules": json.dumps([asdict(rule) for rule in rules], ensure_ascii=False)}, {}, [], False,
                     )
                     logger.info(
-                        "[UniqueRule] attr import success model_id=%s sheet_name=%s rule_count=%s",
-                        model_id,
-                        sheet_name,
-                        len(rules),
+                        "[UniqueRule] attr import success model_id=%s sheet_name=%s rule_count=%s", model_id, sheet_name, len(rules),
                     )
                 except Exception as err:
                     logger.warning(

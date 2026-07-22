@@ -13,14 +13,7 @@ def unique_crval_name(kind: str) -> str:
     return f"crval_{kind}_{uuid4().hex}"
 
 
-def create_token_task(
-    *,
-    mode="standard",
-    team=None,
-    identity_keys=None,
-    cleanup_strategy="none",
-    username="crval_factory",
-) -> TokenTask:
+def create_token_task(*, mode="standard", team=None, identity_keys=None, cleanup_strategy="none", username="crval_factory",) -> TokenTask:
     task = CustomReportingTask.objects.create(
         name=unique_crval_name("task"),
         team=[1] if team is None else list(team),
@@ -31,16 +24,12 @@ def create_token_task(
             "cleanup_strategy": cleanup_strategy,
         },
         is_enabled=True,
+        provision_operation_id=uuid4() if mode == "quick" else None,
         created_by=username,
         updated_by=username,
     )
     credential = CustomReportingCredential.objects.create(
-        task=task,
-        name=unique_crval_name("credential"),
-        credential_type="api_token",
-        credential_data={},
-        created_by=username,
-        updated_by=username,
+        task=task, name=unique_crval_name("credential"), credential_type="api_token", credential_data={}, created_by=username, updated_by=username,
     )
     raw_token = credential.issue_token(unique_crval_name("token"))
     return TokenTask(task=task, raw_token=raw_token)

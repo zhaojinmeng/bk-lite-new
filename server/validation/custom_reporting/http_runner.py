@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import ipaddress
 import json
 import os
@@ -789,6 +790,7 @@ class SafeHttpClient:
         *,
         payload: Mapping[str, Any] | None = None,
         ingest_token: str | None = None,
+        ingest_idempotency_key: str | None = None,
         expect_token_rejection: bool = False,
     ) -> dict[str, Any]:
         if not self.write_enabled:
@@ -805,6 +807,9 @@ class SafeHttpClient:
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {ingest_token}",
             }
+            if not ingest_idempotency_key:
+                raise SafetyError("ingest 缺少 Idempotency-Key")
+            headers["Idempotency-Key"] = ingest_idempotency_key
         try:
             response = self.transport.request(
                 method=method,
@@ -854,7 +859,8 @@ class SafeHttpClient:
         return self._request("DELETE", f"tasks/{task_id}/")
 
     def ingest(self, payload: Mapping[str, Any], token: str) -> dict[str, Any]:
-        return self._request("POST", "ingest/", payload=payload, ingest_token=token)
+        payload_hash = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
+        return self._request("POST", "ingest/", payload=payload, ingest_token=token, ingest_idempotency_key=f"crv-{payload_hash}",)
 
     def expect_ingest_token_rejected(self, token: str) -> None:
         data = self._request(
@@ -862,6 +868,7 @@ class SafeHttpClient:
             "ingest/",
             payload={"instances": [], "relations": []},
             ingest_token=token,
+            ingest_idempotency_key="crv-token-rejection-check",
             expect_token_rejection=True,
         )
         if data.get("token_rejected") is not True:
@@ -906,6 +913,7 @@ class ExecutionPlan:
     mode: str
     steps: tuple[PlanStep, ...]
     cleanup_order: tuple[str, ...]
+    validation_scenarios: tuple[Mapping[str, Any], ...]
 
     @property
     def resource_names(self) -> tuple[str, ...]:
@@ -930,6 +938,7 @@ class ExecutionPlan:
             ],
             "cleanup_order": list(self.cleanup_order),
             "resource_names": list(self.resource_names),
+            "validation_scenarios": [_redact(scenario, known_values) for scenario in self.validation_scenarios],
         }
 
 
@@ -1025,6 +1034,52 @@ def _association_contract(run_id: str, model_id: str) -> tuple[str, str]:
     return asst_id, f"{model_id}_{asst_id}_{model_id}"
 
 
+TASK16_SCENARIOS: tuple[tuple[str, str], ...] = (
+    ("create_task", "http_success"),
+    ("issue_token", "http_success"),
+    ("initial_ingest", "http_success"),
+    ("incremental_ingest", "http_success"),
+    ("relation_immediate", "http_success"),
+    ("relation_pending_backfill", "http_success"),
+    ("snapshot_cleanup_review", "state_backend"),
+    ("expire_cleanup_review", "state_backend"),
+    ("credential_rotate_reject_old_token", "http_success"),
+    ("credential_revoke_reject_revoked_token", "http_success"),
+    ("invalid_token", "http_negative"),
+    ("permission_denied", "http_negative"),
+    ("cross_team_scope", "http_negative"),
+    ("duplicate_identity", "http_negative"),
+    ("illegal_field", "http_negative"),
+    ("illegal_mapping", "http_negative"),
+    ("empty_snapshot_noop", "service_contract"),
+    ("empty_snapshot_requires_review", "service_contract"),
+    ("partial_merge_zero_relation_snapshot", "service_contract"),
+    ("zero_graph_id", "state_backend"),
+    ("broker_unavailable", "service_contract"),
+    ("graph_success_db_finalize_fail", "service_contract"),
+    ("db_desired_graph_fail", "service_contract"),
+    ("concurrent_approve_single_owner", "service_contract"),
+    ("lease_takeover", "service_contract"),
+    ("stale_owner_finalize", "service_contract"),
+    ("poison_pending_dead_letter", "service_contract"),
+    ("pending_recovery", "service_contract"),
+    ("over_budget", "service_contract"),
+    ("checkpoint_resume", "service_contract"),
+)
+
+
+def _task16_validation_scenarios(mode: str) -> tuple[Mapping[str, Any], ...]:
+    return tuple(
+        {
+            "name": name,
+            "mode": mode,
+            "evidence": evidence,
+            "destructive_cleanup": False,
+        }
+        for name, evidence in TASK16_SCENARIOS
+    )
+
+
 def build_execution_plan(
     mode: str,
     run_id: str,
@@ -1074,6 +1129,7 @@ def build_execution_plan(
         mode,
         tuple(steps),
         ("task", "association", "model_verification"),
+        _task16_validation_scenarios(mode),
     )
 
 

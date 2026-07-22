@@ -365,3 +365,24 @@ change_record=8、edge=3、instance=5、model=1，所有已记账 ORM/图资源�
 
 `xfail` 不计为修复：它们使用 `strict=True` 且只在观察到精确的
 `KnownProductDefect` 时生效；普通异常、环境错误、第三种行为或未来修复后的 XPASS 都会使门禁失败。
+
+## Task16：双模式 E2E 场景矩阵再验证（2026-07-22）
+
+Task16 将 HTTP runner 的计划输出扩展为完整 `validation_scenarios`，quick 与 standard 均显式列出
+30 项场景：成功主链、负向入口、状态快照和服务层故障注入。新增 TDD 回归
+`test_task16_plan_exposes_complete_e2e_and_fault_injection_matrix` 先红后绿，完整 runner 回归为
+`123 passed`。
+
+本轮可执行门禁：
+
+| 门禁 | 结果 |
+| --- | --- |
+| `validation/custom_reporting/tests` | `333 passed` |
+| `apps/cmdb_enterprise/tests` | `336 passed` |
+| runner quick dry-run | `dry_run=true`、`requests_sent=0`、含完整 `validation_scenarios` |
+| runner standard dry-run | `dry_run=true`、`requests_sent=0`、含完整 `validation_scenarios` |
+
+真实 HTTP 写入未在本轮 worktree 直接执行：环境探测显示
+`CRV_BASE_URL/CRV_ALLOWED_HOSTS/CRV_ORG_ID/CRV_SESSION_COOKIE/CRV_MANAGEMENT_API_SECRET/CRV_EXECUTE_CONFIRMED/CRV_ALLOW_WRITE`
+均未设置，且 `127.0.0.1:8011` 未监听；按 runner 三重执行门，不能安全伪造写入结果。详细证据见
+`05-task16-validation.md`。

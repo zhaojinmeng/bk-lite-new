@@ -76,6 +76,65 @@ def test_copy_model_ok_no_attributes(fake_graph, patch_side_effects, monkeypatch
     assert FieldGroup.objects.filter(model_id="host2", group_name="default").exists()
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize("invalid_mapping", [None, [], {}])
+def test_copy_model_rejects_legacy_association_without_mapping_instead_of_guessing(
+    fake_graph,
+    patch_side_effects,
+    monkeypatch,
+    invalid_mapping,
+):
+    monkeypatch.setattr(
+        f"{MODULE}.ModelManage.search_model_info",
+        lambda mid: {
+            "model_id": mid,
+            "model_name": "主机",
+            "classification_id": "net",
+            "group": [1],
+            "icn": "icon",
+            "attrs": "[]",
+            "_id": 1 if mid == "host" else 2,
+        },
+    )
+    monkeypatch.setattr(
+        f"{MODULE}.ClassificationManage.search_model_classification_info",
+        lambda cid: {"_id": 50},
+    )
+    legacy_association = {
+        "src_model_id": "host",
+        "dst_model_id": "target",
+        "asst_id": "connect",
+        "asst_name": "连接",
+    }
+    if invalid_mapping is not None:
+        legacy_association["mapping"] = invalid_mapping
+
+    def _create_entity(label, data, check, exist):
+        return {
+            "_id": 7,
+            "model_id": data["model_id"],
+            "model_name": data["model_name"],
+            "classification_id": data["classification_id"],
+        }
+
+    fake_graph(
+        MODULE,
+        query_entity=([], 0),
+        query_edge=[legacy_association],
+        create_entity=_create_entity,
+        create_edge={"_id": 1},
+    )
+
+    with pytest.raises(BaseAppException, match="mapping"):
+        ModelManage.copy_model(
+            "host",
+            "host2",
+            "新主机",
+            copy_attributes=False,
+            copy_relationships=True,
+        )
+
+
 # --------------------------------------------------------------------------
 # save_model_auto_relation_rule
 # --------------------------------------------------------------------------

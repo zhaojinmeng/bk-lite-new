@@ -1,3 +1,5 @@
+import uuid
+
 from apps.cmdb.constants.constants import (
     ENUM_SELECT_MODE_DEFAULT,
     INSTANCE,
@@ -1059,18 +1061,32 @@ class InstanceManage(object):
 
 
     @staticmethod
-    def check_asso_mapping(data: dict):
+    def check_asso_mapping(data: dict, expected_association: dict | None = None):
         """校验关联关系的约束"""
         asso_info = ModelManage.model_association_info_search(data["model_asst_id"])
         if not asso_info:
             raise BaseAppException("association not found!")
+        mapping = ModelManage.validate_model_association_mapping(asso_info)
+        if expected_association is not None:
+            ModelManage.validate_model_association_mapping(expected_association)
+            contract_fields = (
+                "model_asst_id",
+                "src_model_id",
+                "dst_model_id",
+                "mapping",
+            )
+            if any(
+                asso_info.get(field) != expected_association.get(field)
+                for field in contract_fields
+            ):
+                raise BaseAppException("关联定义已变化，请重新提交")
 
         # n:n关联不做校验
-        if asso_info["mapping"] == "n:n":
+        if mapping == "n:n":
             return
 
         # 1:n关联校验
-        elif asso_info["mapping"] == "1:n":
+        elif mapping == "1:n":
             # 检查目标实例是否已经存在关联
             with GraphClient() as ag:
                 # 作为源模型实例
@@ -1090,7 +1106,7 @@ class InstanceManage(object):
                 if dst_edge:
                     raise BaseAppException("destination instance already exists association!")
         # n:1关联校验
-        elif asso_info["mapping"] == "n:1":
+        elif mapping == "n:1":
             # 检查源实例是否已经存在关联
             with GraphClient() as ag:
                 src_query_data = [
@@ -1110,7 +1126,7 @@ class InstanceManage(object):
                     raise BaseAppException("source instance already exists association!")
 
         # 1:1关联校验
-        elif asso_info["mapping"] == "1:1":
+        elif mapping == "1:1":
             # 检查源和目标实例是否已经存在关联
             with GraphClient() as ag:
                 # 作为源模型实例
@@ -1147,15 +1163,26 @@ class InstanceManage(object):
                 if dst_edge:
                     raise BaseAppException("destination instance already exists association!")
         else:
-            raise BaseAppException("association mapping error! mapping={}".format(asso_info["mapping"]))
+            raise BaseAppException(f"association mapping error! mapping={mapping}")
 
 
     @staticmethod
-    def instance_association_create(data: dict, operator: str, scenario: str = RELATION_CHANGE):
+    def instance_association_create(
+        data: dict,
+        operator: str,
+        scenario: str = RELATION_CHANGE,
+        expected_association: dict | None = None,
+    ):
         """创建实例关联"""
 
         # 校验关联约束
-        InstanceManage.check_asso_mapping(data)
+        if expected_association is None:
+            InstanceManage.check_asso_mapping(data)
+        else:
+            InstanceManage.check_asso_mapping(
+                data,
+                expected_association=expected_association,
+            )
 
         with GraphClient() as ag:
             try:
@@ -1205,6 +1232,99 @@ class InstanceManage(object):
                 edge.get("_id"), operator, e,
             )
 
+        return edge
+
+
+    @staticmethod
+    def _association_operation_event_ids(
+        edge_id: int | str,
+        _type: str,
+        asso_info: dict,
+    ) -> dict:
+        endpoints = (
+            ("src", asso_info.get("src") or {}),
+            ("dst", asso_info.get("dst") or {}),
+        )
+        return {
+            role: uuid.uuid5(
+                uuid.NAMESPACE_URL,
+                f"cmdb:instance_association:{edge_id}:{_type}:{role}:{inst_info.get('_id')}",
+            )
+            for role, inst_info in endpoints
+            if inst_info.get("model_id")
+        }
+
+
+    @staticmethod
+    def _is_association_cardinality_conflict(error: BaseAppException) -> bool:
+        message = getattr(error, "message", str(error))
+        return message in {
+            "destination instance already exists association!",
+            "source instance already exists association!",
+        }
+
+
+    @staticmethod
+    def instance_association_ensure(
+        data: dict,
+        operator: str,
+        scenario: str = RELATION_CHANGE,
+        expected_association: dict | None = None,
+    ):
+        """端点绑定幂等创建实例关联，并补齐可重放的本地审计。"""
+
+        try:
+            if expected_association is None:
+                InstanceManage.check_asso_mapping(data)
+            else:
+                InstanceManage.check_asso_mapping(
+                    data,
+                    expected_association=expected_association,
+                )
+        except BaseAppException as error:
+            if not InstanceManage._is_association_cardinality_conflict(error):
+                raise
+            exact_edge_exists = InstanceManage.instance_association_exists(
+                src_inst_id=data["src_inst_id"],
+                dst_inst_id=data["dst_inst_id"],
+                model_asst_id=data["model_asst_id"],
+            )
+            if not exact_edge_exists:
+                raise
+
+        with GraphClient() as ag:
+            edge, _created = ag.ensure_auto_relation_edge(
+                INSTANCE_ASSOCIATION,
+                data["src_inst_id"],
+                INSTANCE,
+                data["dst_inst_id"],
+                INSTANCE,
+                data,
+                "model_asst_id",
+            )
+
+        asso_info = InstanceManage.instance_association_by_asso_id(edge["_id"])
+        src_info = asso_info.get("src") or {}
+        dst_info = asso_info.get("dst") or {}
+        message = (
+            f"创建模型关联关系. 原模型: {src_info.get('model_id', '')} "
+            f"原模型实例: {src_info.get('inst_name') or src_info.get('ip_addr', '')} "
+            f"目标模型ID: {dst_info.get('model_id', '')} 目标模型实例: "
+            f"{dst_info.get('inst_name') or dst_info.get('ip_addr', '')}"
+        )
+        create_change_record_by_asso(
+            INSTANCE_ASSOCIATION,
+            CREATE_INST_ASST,
+            asso_info,
+            message=message,
+            operator=operator,
+            scenario=scenario,
+            operation_event_ids=InstanceManage._association_operation_event_ids(
+                edge["_id"],
+                CREATE_INST_ASST,
+                asso_info,
+            ),
+        )
         return edge
 
 

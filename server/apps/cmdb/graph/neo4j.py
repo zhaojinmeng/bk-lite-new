@@ -8,6 +8,7 @@ from neo4j.graph import Path
 
 from apps.cmdb.constants.constants import INSTANCE, ModelConstraintKey
 from apps.cmdb.graph.format_type import FORMAT_TYPE_PARAMS, ParameterCollector
+from apps.cmdb.graph.validators import CQLValidator
 from apps.cmdb.services.unique_rule import raise_unique_rule_conflict_if_needed
 from apps.core.exceptions.base_app_exception import BaseAppException
 from apps.core.logger import cmdb_logger as logger
@@ -251,6 +252,42 @@ class Neo4jClient:
         ).single()
 
         return self.edge_to_dict(edge)
+
+    def ensure_auto_relation_edge(
+        self,
+        label: str,
+        a_id: int,
+        a_label: str,
+        b_id: int,
+        b_label: str,
+        properties: dict,
+        check_asst_key: str = "model_asst_id",
+    ):
+        """用单条 MERGE 原子确保自动关系边存在，保留普通 create_edge 语义。"""
+
+        validated_label = CQLValidator.validate_relation(label)
+        validated_a_label = CQLValidator.validate_label(a_label)
+        validated_b_label = CQLValidator.validate_label(b_label)
+        validated_check_key = CQLValidator.validate_field(check_asst_key)
+        validated_a_id = CQLValidator.validate_id(a_id)
+        validated_b_id = CQLValidator.validate_id(b_id)
+        if not validated_label:
+            raise BaseAppException("label is empty")
+        result = self.session.run(
+            f"MATCH (a:{validated_a_label}) WHERE ID(a) = $a_id "
+            f"WITH a MATCH (b:{validated_b_label}) WHERE ID(b) = $b_id "
+            f"MERGE (a)-[e:{validated_label} {{{validated_check_key}: $check_val}}]->(b) "
+            "ON CREATE SET e += $props RETURN e",
+            a_id=validated_a_id,
+            b_id=validated_b_id,
+            check_val=properties.get(check_asst_key),
+            props=properties,
+        )
+        record = result.single()
+        summary = result.consume()
+        if record is None:
+            raise BaseAppException("edge endpoints not found")
+        return self.edge_to_dict((record["e"],)), bool(summary.counters.relationships_created)
 
     def batch_create_entity(
         self,

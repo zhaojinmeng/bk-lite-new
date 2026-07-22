@@ -30,9 +30,12 @@ _TYPE_ACTION_MAP = {
 }
 
 
-def _build_mirror_payload(*, inst_id, model_id, _type, operator, scenario,
-                          message="", model_object="", before_data=None, after_data=None):
-    return {
+def _build_mirror_payload(
+    *, inst_id, model_id, _type, operator, scenario,
+    message="", model_object="", before_data=None, after_data=None,
+    operation_event_id=None,
+):
+    payload = {
         "username": operator or "system",
         "source_ip": "127.0.0.1",
         "app": "cmdb",
@@ -48,6 +51,9 @@ def _build_mirror_payload(*, inst_id, model_id, _type, operator, scenario,
             "source": "change_record",
         },
     }
+    if operation_event_id is not None:
+        payload["operation_event_id"] = str(operation_event_id)
+    return payload
 
 
 def _mirror_change_record(*, inst_id, model_id, _type, operator, scenario,
@@ -150,7 +156,15 @@ def create_custom_reporting_change_record(
     )
 
 
-def create_change_record_by_asso(label, _type, data, operator="", message="", scenario=RELATION_CHANGE):
+def create_change_record_by_asso(
+    label,
+    _type,
+    data,
+    operator="",
+    message="",
+    scenario=RELATION_CHANGE,
+    operation_event_ids: dict | None = None,
+):
     """创建关联关系变更记录"""
 
     change_data = {"operator": operator, "scenario": scenario}
@@ -160,26 +174,78 @@ def create_change_record_by_asso(label, _type, data, operator="", message="", sc
     else:
         change_data["before_data"] = data
 
+    endpoints = [
+        ("src", data["src"]),
+        ("dst", data["dst"]),
+    ]
+    if operation_event_ids:
+        created_records = []
+        with transaction.atomic():
+            for role, inst_info in endpoints:
+                if not inst_info.get("model_id"):
+                    continue
+                operation_event_id = operation_event_ids.get(role)
+                if not operation_event_id:
+                    raise ValueError(
+                        f"missing operation_event_id for association {role}"
+                    )
+                record, created = ChangeRecord.objects.get_or_create(
+                    operation_event_id=operation_event_id,
+                    defaults={
+                        "inst_id": inst_info["_id"],
+                        "model_id": inst_info["model_id"],
+                        "model_object": OPERATOR_INSTANCE,
+                        "message": message,
+                        "label": label,
+                        "type": _type,
+                        **change_data,
+                    },
+                )
+                if created:
+                    created_records.append(record)
+            _enqueue_relation_mirror_records(
+                created_records,
+                _type=_type,
+                operator=operator,
+                scenario=scenario,
+            )
+        return
+
     batch_change_data = [
-        ChangeRecord(inst_id=inst_info["_id"], model_id=inst_info["model_id"], model_object=OPERATOR_INSTANCE,
-                     message=message, label=label, type=_type,
-                     **change_data)
-        for inst_info in [data["src"], data["dst"]]
+        ChangeRecord(
+            inst_id=inst_info["_id"],
+            model_id=inst_info["model_id"],
+            model_object=OPERATOR_INSTANCE,
+            message=message,
+            label=label,
+            type=_type,
+            **change_data,
+        )
+        for _role, inst_info in endpoints
         if inst_info.get("model_id")
     ]
 
     ChangeRecord.objects.bulk_create(batch_change_data)
+    _enqueue_relation_mirror_records(
+        batch_change_data,
+        _type=_type,
+        operator=operator,
+        scenario=scenario,
+    )
+
+
+def _enqueue_relation_mirror_records(records, *, _type, operator, scenario):
     mirror_records = [
         {
-            "inst_id": inst_info["_id"],
-            "model_id": inst_info["model_id"],
-            "message": message,
-            "model_object": OPERATOR_INSTANCE,
-            "before_data": change_data.get("before_data"),
-            "after_data": change_data.get("after_data"),
+            "inst_id": record.inst_id,
+            "model_id": record.model_id,
+            "message": record.message,
+            "model_object": record.model_object,
+            "before_data": record.before_data,
+            "after_data": record.after_data,
+            "operation_event_id": record.operation_event_id,
         }
-        for inst_info in [data["src"], data["dst"]]
-        if inst_info.get("model_id")
+        for record in records
     ]
     if mirror_records:
         from apps.cmdb.services.change_record_mirror import ChangeRecordMirrorService, dispatch_change_record_mirror
@@ -189,6 +255,7 @@ def create_change_record_by_asso(label, _type, data, operator="", message="", sc
                 inst_id=rec["inst_id"], model_id=rec["model_id"], _type=_type, operator=operator,
                 scenario=scenario, message=rec["message"], model_object=rec["model_object"],
                 before_data=rec["before_data"], after_data=rec["after_data"],
+                operation_event_id=rec["operation_event_id"],
             )
             for rec in mirror_records
         ])

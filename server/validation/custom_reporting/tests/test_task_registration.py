@@ -1,11 +1,32 @@
-import pytest
+EXPECTED_CUSTOM_REPORTING_BEAT_TASKS = {
+    "custom_reporting_expire_cleanup": "apps.cmdb_enterprise.custom_reporting.tasks.custom_reporting_expire_cleanup",
+    "custom_reporting_recover_ingest_operations": (
+        "apps.cmdb_enterprise.custom_reporting.tasks.custom_reporting_recover_ingest_operations"
+    ),
+    "custom_reporting_process_ingest_outbox": (
+        "apps.cmdb_enterprise.custom_reporting.tasks.custom_reporting_process_ingest_outbox"
+    ),
+    "custom_reporting_process_pending_relations": (
+        "apps.cmdb_enterprise.custom_reporting.tasks.custom_reporting_process_pending_relations"
+    ),
+}
 
-from validation.custom_reporting.tests.test_runtime_contracts import KnownProductDefect
 
-EXPECTED_MISSING_EXPIRE_TASK = ["apps.cmdb_enterprise.custom_reporting.tasks.custom_reporting_expire_cleanup"]
+def test_custom_reporting_reconciler_beat_entries_are_present_and_bounded():
+    from apps.cmdb_enterprise.config import CELERY_BEAT_SCHEDULE
+
+    missing = sorted(set(EXPECTED_CUSTOM_REPORTING_BEAT_TASKS) - set(CELERY_BEAT_SCHEDULE))
+    assert missing == []
+
+    for name, task_path in EXPECTED_CUSTOM_REPORTING_BEAT_TASKS.items():
+        entry = CELERY_BEAT_SCHEDULE[name]
+        assert entry["task"] == task_path
+        assert entry.get("schedule") is not None
+        assert entry.get("options", {}).get("expires", 0) > 0
+        if name != "custom_reporting_expire_cleanup":
+            assert 0 < entry.get("kwargs", {}).get("batch_size", 0) <= 100
 
 
-@pytest.mark.xfail(strict=True, raises=KnownProductDefect, reason="CRV-F11")
 def test_every_enterprise_beat_task_is_registered():
     from apps.cmdb_enterprise.config import CELERY_BEAT_SCHEDULE
     from apps.core.celery import app
@@ -13,6 +34,4 @@ def test_every_enterprise_beat_task_is_registered():
     app.loader.import_default_modules()
     missing = sorted(item["task"] for item in CELERY_BEAT_SCHEDULE.values() if item["task"] not in app.tasks)
 
-    if missing == EXPECTED_MISSING_EXPIRE_TASK:
-        raise KnownProductDefect(f"CRV-F11: observed missing tasks {missing!r}")
     assert missing == []

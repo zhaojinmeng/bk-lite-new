@@ -7,6 +7,7 @@
 import importlib
 import io
 import json
+from unittest.mock import Mock
 
 import pytest
 from rest_framework import status
@@ -257,7 +258,16 @@ def test_update_ok(superuser, monkeypatch):
 def test_model_association_create_src_missing(superuser, monkeypatch):
     monkeypatch.setattr(f"{VIEWS}.ModelManage.search_model_info", lambda mid: {})
     response = ModelViewSet.as_view({"post": "model_association_create"})(
-        _req("post", superuser, data={"src_model_id": "a", "dst_model_id": "b", "asst_id": "c"})
+        _req(
+            "post",
+            superuser,
+            data={
+                "src_model_id": "a",
+                "dst_model_id": "b",
+                "asst_id": "c",
+                "mapping": "n:n",
+            },
+        )
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -269,9 +279,75 @@ def test_model_association_create_ok(superuser, monkeypatch):
     )
     monkeypatch.setattr(f"{VIEWS}.ModelManage.model_association_create", lambda **k: {"_id": 100})
     response = ModelViewSet.as_view({"post": "model_association_create"})(
-        _req("post", superuser, data={"src_model_id": "a", "dst_model_id": "b", "asst_id": "c"})
+        _req(
+            "post",
+            superuser,
+            data={
+                "src_model_id": "a",
+                "dst_model_id": "b",
+                "asst_id": "c",
+                "mapping": "n:n",
+            },
+        )
     )
     assert _body(response)["data"]["_id"] == 100
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "mapping_payload",
+    [{}, {"mapping": "2:2"}, {"mapping": []}, {"mapping": {}}],
+)
+def test_model_association_create_rejects_missing_or_invalid_mapping_before_service(
+    superuser,
+    monkeypatch,
+    mapping_payload,
+):
+    monkeypatch.setattr(
+        f"{VIEWS}.ModelManage.search_model_info",
+        lambda mid: {"model_id": mid, "group": [1], "_id": mid},
+    )
+    create_association = Mock(return_value={"_id": 100})
+    monkeypatch.setattr(
+        f"{VIEWS}.ModelManage.model_association_create",
+        create_association,
+    )
+    payload = {
+        "src_model_id": "a",
+        "dst_model_id": "b",
+        "asst_id": "c",
+        **mapping_payload,
+    }
+
+    response = ModelViewSet.as_view({"post": "model_association_create"})(
+        _req("post", superuser, data=payload)
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "mapping" in _body(response)["message"]
+    create_association.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "mapping_payload",
+    [{}, {"mapping": "2:2"}, {"mapping": []}, {"mapping": {}}],
+)
+def test_model_association_service_rejects_missing_or_invalid_mapping_without_graph_write(
+    fake_graph,
+    mapping_payload,
+):
+    graph = fake_graph(VIEWS.replace("views", "services"), create_edge={"_id": 100})
+
+    with pytest.raises(BaseAppException, match="mapping"):
+        ModelManage.model_association_create(
+            src_id=1,
+            dst_id=2,
+            model_asst_id="a_c_b",
+            **mapping_payload,
+        )
+
+    assert not any(call[0] == "create_edge" for call in graph.calls)
 
 
 # --------------------------------------------------------------------------

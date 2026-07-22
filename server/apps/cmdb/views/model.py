@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 
 from apps.cmdb.constants.constants import (
@@ -23,6 +23,13 @@ from apps.cmdb.views.mixins import CmdbPermissionMixin
 from apps.core.exceptions.base_app_exception import BaseAppException
 from apps.core.decorators.api_permission import HasPermission
 from apps.core.utils.web_utils import WebUtils
+
+
+class ModelAssociationMappingSerializer(serializers.Serializer):
+    mapping = serializers.ChoiceField(
+        choices=ModelManage.ASSOCIATION_MAPPINGS,
+        required=True,
+    )
 
 
 class ModelViewSet(CmdbPermissionMixin, viewsets.ViewSet):
@@ -267,6 +274,13 @@ class ModelViewSet(CmdbPermissionMixin, viewsets.ViewSet):
     @HasPermission("model_management-Add Model")
     @action(detail=False, methods=["post"], url_path="association")
     def model_association_create(self, request):
+        mapping_serializer = ModelAssociationMappingSerializer(data=request.data)
+        if not mapping_serializer.is_valid():
+            return WebUtils.response_error(
+                error_message=f"mapping 参数无效: {mapping_serializer.errors.get('mapping', [])}",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
         src_model_id = request.data["src_model_id"]
         dst_model_id = request.data["dst_model_id"]
 
@@ -615,11 +629,12 @@ class ModelViewSet(CmdbPermissionMixin, viewsets.ViewSet):
 
         result = ModelManage.delete_model_attr(model_id, attr_id, username=request.user.username)
 
-        # 把分组信息也更新了
-        field_group = FieldGroup.objects.filter(model_id=model_id, attr_orders__contains=attr_id).first()
-        if field_group:
+        # 把分组信息也更新了；JSONField contains 在 SQLite 等后端不支持，需保持跨库兼容。
+        for field_group in FieldGroup.objects.filter(model_id=model_id):
+            if attr_id not in (field_group.attr_orders or []):
+                continue
             field_group.attr_orders = [i for i in field_group.attr_orders if i != attr_id]
-            field_group.save()
+            field_group.save(update_fields=["attr_orders"])
 
         return WebUtils.response_success(result)
 

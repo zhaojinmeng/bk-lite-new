@@ -40,6 +40,7 @@ from apps.cmdb.utils.permission_util import CmdbRulesFormatUtil
 from apps.cmdb.views.mixins import CmdbPermissionMixin
 from apps.core.decorators.api_permission import HasPermission
 from apps.core.logger import cmdb_logger as logger
+from apps.core.utils.user_group import normalize_user_group_ids
 from apps.core.utils.web_utils import WebUtils
 from apps.rpc.node_mgmt import NodeMgmt
 from apps.system_mgmt.utils.group_utils import GroupUtils
@@ -70,7 +71,7 @@ class InstanceViewSet(CmdbPermissionMixin, viewsets.ViewSet):
     def _get_allowed_org_ids(request) -> list[int]:
         current_team = get_current_team_from_request(request)
         include_children = request.COOKIES.get("include_children") == "1"
-        user_group_ids = [i["id"] for i in request.user.group_list]
+        user_group_ids = normalize_user_group_ids(request.user.group_list)
 
         if getattr(request.user, "is_superuser", False):
             return GroupUtils.get_all_child_groups(current_team, include_self=True, group_list=None) if include_children else [

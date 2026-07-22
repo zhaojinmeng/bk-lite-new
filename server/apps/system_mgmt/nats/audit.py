@@ -1,4 +1,8 @@
 # flake8: noqa
+from time import sleep
+
+from django.db import IntegrityError, OperationalError, connection
+
 from .common import *  # noqa: F401,F403
 
 
@@ -27,8 +31,10 @@ def save_error_log(username, app, module, error_message, domain="domain.com"):
 
 
 @nats_client.register
-def save_operation_log(username, source_ip, app, action_type, summary="", domain="domain.com",
-                       target_type="", target_id="", detail=None):
+def save_operation_log(
+    username, source_ip, app, action_type, summary="", domain="domain.com",
+    target_type="", target_id="", detail=None, operation_event_id=None,
+):
     """
     保存操作日志
     :param username: 用户名
@@ -55,17 +61,32 @@ def save_operation_log(username, source_ip, app, action_type, summary="", domain
                 "message": f"Invalid action_type. Must be one of: {', '.join(valid_actions)}",
             }
 
-        OperationLog.objects.create(
-            username=username,
-            source_ip=source_ip,
-            app=app,
-            action_type=action_type,
-            summary=summary,
-            domain=domain,
-            target_type=target_type or "",
-            target_id=str(target_id or ""),
-            detail=detail or {},
-        )
+        defaults = {
+            "username": username,
+            "source_ip": source_ip,
+            "app": app,
+            "action_type": action_type,
+            "summary": summary,
+            "domain": domain,
+            "target_type": target_type or "",
+            "target_id": str(target_id or ""),
+            "detail": detail or {},
+        }
+        if operation_event_id is None:
+            OperationLog.objects.create(**defaults)
+        else:
+            for delay in (0, 0.005, 0.01, 0.02, 0.04, 0.08):
+                try:
+                    OperationLog.objects.get_or_create(operation_event_id=operation_event_id, defaults=defaults)
+                    break
+                except IntegrityError:
+                    if OperationLog.objects.filter(operation_event_id=operation_event_id).exists():
+                        break
+                    raise
+                except OperationalError:
+                    if connection.vendor != "sqlite" or delay == 0.08:
+                        raise
+                    sleep(delay)
         return {"result": True, "message": "Operation log saved successfully"}
     except Exception as e:
         logger.exception(f"Failed to save operation log: {e}")

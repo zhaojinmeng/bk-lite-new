@@ -469,15 +469,10 @@ class ExcludeFieldsCache:
         Returns:
             模型数据列表
         """
-        try:
-            with GraphClient() as ag:
-                models, _ = ag.query_entity(MODEL, [])
+        with GraphClient() as ag:
+            models, _ = ag.query_entity(MODEL, [])
 
-            return models
-
-        except Exception as e:
-            logger.error(f"[ExcludeFieldsCache] 从数据库加载模型失败: {e}", exc_info=True)
-            return []
+        return models
 
     @classmethod
     def _build_exclude_fields(cls, models: List[Dict[str, Any]]) -> List[str]:

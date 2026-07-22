@@ -1546,6 +1546,50 @@ def test_second_review_plan_contains_real_ingest_relation_sequence():
     }
 
 
+def test_task16_plan_exposes_complete_e2e_and_fault_injection_matrix():
+    expected = {
+        "create_task",
+        "issue_token",
+        "initial_ingest",
+        "incremental_ingest",
+        "relation_immediate",
+        "relation_pending_backfill",
+        "snapshot_cleanup_review",
+        "expire_cleanup_review",
+        "credential_rotate_reject_old_token",
+        "credential_revoke_reject_revoked_token",
+        "invalid_token",
+        "permission_denied",
+        "cross_team_scope",
+        "duplicate_identity",
+        "illegal_field",
+        "illegal_mapping",
+        "empty_snapshot_noop",
+        "empty_snapshot_requires_review",
+        "partial_merge_zero_relation_snapshot",
+        "zero_graph_id",
+        "broker_unavailable",
+        "graph_success_db_finalize_fail",
+        "db_desired_graph_fail",
+        "concurrent_approve_single_owner",
+        "lease_takeover",
+        "stale_owner_finalize",
+        "poison_pending_dead_letter",
+        "pending_recovery",
+        "over_budget",
+        "checkpoint_resume",
+    }
+
+    quick = build_execution_plan("quick", "crval_20260717T080000Z_review01")
+    standard = build_execution_plan("standard", "crval_20260717T080000Z_review01")
+
+    assert {scenario["name"] for scenario in quick.validation_scenarios} == expected
+    assert {scenario["name"] for scenario in standard.validation_scenarios} == expected
+    assert all(scenario["mode"] == "quick" for scenario in quick.validation_scenarios)
+    assert all(scenario["mode"] == "standard" for scenario in standard.validation_scenarios)
+    assert all(scenario["destructive_cleanup"] is False for scenario in quick.validation_scenarios)
+
+
 def test_second_review_runner_executes_relation_ingests_and_records_each_batch(tmp_path, monkeypatch):
     monkeypatch.setenv("CRV_ALLOW_WRITE", "1")
     run_id = "crval_20260717T080000Z_review01"

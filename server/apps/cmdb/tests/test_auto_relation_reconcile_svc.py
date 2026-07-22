@@ -64,6 +64,9 @@ class FakeGraph:
         self.created_edges.append((args, kwargs))
         return {}
 
+    def ensure_auto_relation_edge(self, *args, **kwargs):
+        return self.create_edge(*args, **kwargs), True
+
     def delete_edge(self, edge_id):
         self.deleted_edges.append(edge_id)
         return {}

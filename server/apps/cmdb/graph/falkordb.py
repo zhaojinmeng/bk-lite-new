@@ -579,6 +579,55 @@ class FalkorDBClient:
 
         return self.edge_to_dict(edge)
 
+    def ensure_auto_relation_edge(
+        self,
+        label: str,
+        a_id: int,
+        a_label: str,
+        b_id: int,
+        b_label: str,
+        properties: dict,
+        check_asst_key: str = "model_asst_id",
+    ):
+        """用单条 MERGE 原子确保自动关系边存在，保留普通 create_edge 语义。"""
+
+        validated_label = CQLValidator.validate_relation(label)
+        validated_a_label = CQLValidator.validate_label(a_label)
+        validated_b_label = CQLValidator.validate_label(b_label)
+        validated_check_key = CQLValidator.validate_field(check_asst_key)
+        validated_a_id = CQLValidator.validate_id(a_id)
+        validated_b_id = CQLValidator.validate_id(b_id)
+        if not validated_label:
+            raise BaseAppException("label is empty")
+
+        check_asst_val = properties.get(check_asst_key)
+        if self.ENABLE_PARAMETERIZATION:
+            params = {
+                "a_id": validated_a_id,
+                "b_id": validated_b_id,
+                "check_val": check_asst_val,
+                **self.format_properties_params(properties),
+            }
+            query = (
+                f"MATCH (a:{validated_a_label}) WHERE ID(a) = $a_id "
+                f"WITH a MATCH (b:{validated_b_label}) WHERE ID(b) = $b_id "
+                f"MERGE (a)-[e:{validated_label} {{{validated_check_key}: $check_val}}]->(b) "
+                "ON CREATE SET e += $props RETURN e"
+            )
+            result = self._execute_query(query, params=params)
+        else:
+            escaped_check_val = self.escape_cql_string(str(check_asst_val))
+            properties_str = self.format_properties(properties)
+            query = (
+                f"MATCH (a:{validated_a_label}) WHERE ID(a) = {validated_a_id} "
+                f"WITH a MATCH (b:{validated_b_label}) WHERE ID(b) = {validated_b_id} "
+                f"MERGE (a)-[e:{validated_label} {{{validated_check_key}: '{escaped_check_val}'}}]->(b) "
+                f"ON CREATE SET e += {properties_str} RETURN e"
+            )
+            result = self._execute_query(query)
+        created = bool(FormatDBResult(result).get_statistics().get("relationships_created"))
+        return self.edge_to_dict(result), created
+
     def batch_create_entity(
         self,
         label: str,

@@ -183,8 +183,19 @@ class SystemMgmt(object):
         """
         return self.client.run("save_error_log", username=username, app=app, module=module, error_message=error_message, domain=domain)
 
-    def save_operation_log(self, username, source_ip, app, action_type, summary="", domain="domain.com",
-                           target_type="", target_id="", detail=None):
+    def save_operation_log(
+        self,
+        username,
+        source_ip,
+        app,
+        action_type,
+        summary="",
+        domain="domain.com",
+        target_type="",
+        target_id="",
+        detail=None,
+        operation_event_id=None,
+    ):
         """
         保存操作日志
         :param username: 用户名
@@ -197,10 +208,20 @@ class SystemMgmt(object):
         :param target_id: 操作目标ID（可选）
         :param detail: 操作详情 JSON（可选，默认空字典）
         """
-        return self.client.run(
-            "save_operation_log", username=username, source_ip=source_ip, app=app, action_type=action_type,
-            summary=summary, domain=domain, target_type=target_type, target_id=target_id, detail=detail,
-        )
+        kwargs = {
+            "username": username,
+            "source_ip": source_ip,
+            "app": app,
+            "action_type": action_type,
+            "summary": summary,
+            "domain": domain,
+            "target_type": target_type,
+            "target_id": target_id,
+            "detail": detail,
+        }
+        if operation_event_id is not None:
+            kwargs["operation_event_id"] = operation_event_id
+        return self.client.run("save_operation_log", **kwargs)
 
     def search_channel_list(self, channel_type, teams, include_children):
         """

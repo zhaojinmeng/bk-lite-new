@@ -46,10 +46,10 @@ class CustomReportingExtension:
     def get_task(self, request, task_id) -> dict:
         raise BaseAppException(_NOT_ENABLED)
 
-    def create_task(self, request, payload) -> dict:
+    def create_task(self, request, payload, *, idempotency_key=None) -> dict:
         raise BaseAppException(_NOT_ENABLED)
 
-    def update_task(self, request, task_id, payload) -> dict:
+    def update_task(self, request, task_id, payload, *, idempotency_key=None, expected_version=None,) -> dict:
         raise BaseAppException(_NOT_ENABLED)
 
     def delete_task(self, request, task_id) -> None:
@@ -79,7 +79,7 @@ class CustomReportingExtension:
     def reject_cleanup_review(self, request, task_id, review_id) -> dict:
         raise BaseAppException(_NOT_ENABLED)
 
-    def ingest(self, request, token, payload) -> dict:
+    def ingest(self, request, token, payload, *, idempotency_key=None) -> dict:
         raise BaseAppException(_NOT_ENABLED)
 
 

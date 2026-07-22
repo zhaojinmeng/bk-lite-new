@@ -996,6 +996,66 @@ class TestExcludeFieldsCache:
         assert "organization" in ExcludeFieldsCache.get_exclude_fields()
         assert ExcludeFieldsCache.get_model_fields_mapping() == {"host": {"organization": ["organization"], "user": []}}
 
+    def test_load_models_graph_failure_propagates(self, monkeypatch):
+        from apps.cmdb.display_field import cache as cache_module
+        from apps.cmdb.display_field.cache import ExcludeFieldsCache
+
+        class BrokenGraph:
+            def __enter__(self):
+                raise RuntimeError("community graph unavailable")
+
+            def __exit__(self, *args):
+                return None
+
+        monkeypatch.setattr(cache_module, "GraphClient", BrokenGraph)
+
+        with pytest.raises(RuntimeError, match="community graph unavailable"):
+            ExcludeFieldsCache._load_models_from_db()
+
+    def test_refresh_graph_failure_returns_false_without_publishing_empty_globals(self, monkeypatch):
+        from django.core.cache import cache as dj_cache
+
+        from apps.cmdb.display_field import cache as cache_module
+        from apps.cmdb.display_field.cache import ExcludeFieldsCache
+
+        old_exclude = ["existing-exclude"]
+        old_mapping = {"existing-model": {"organization": ["organization"], "user": []}}
+        dj_cache.set(ExcludeFieldsCache.EXCLUDE_FIELDS_KEY, old_exclude)
+        dj_cache.set(ExcludeFieldsCache.MODEL_FIELDS_MAPPING_KEY, old_mapping)
+
+        class BrokenGraph:
+            def __enter__(self):
+                raise RuntimeError("community graph unavailable")
+
+            def __exit__(self, *args):
+                return None
+
+        monkeypatch.setattr(cache_module, "GraphClient", BrokenGraph)
+
+        assert ExcludeFieldsCache._refresh_all_caches() is False
+        assert dj_cache.get(ExcludeFieldsCache.EXCLUDE_FIELDS_KEY) == old_exclude
+        assert dj_cache.get(ExcludeFieldsCache.MODEL_FIELDS_MAPPING_KEY) == old_mapping
+
+    def test_lazy_miss_graph_failure_returns_default_without_caching_empty_snapshot(self, monkeypatch):
+        from django.core.cache import cache as dj_cache
+
+        from apps.cmdb.display_field import cache as cache_module
+        from apps.cmdb.display_field.cache import ExcludeFieldsCache
+
+        dj_cache.delete(ExcludeFieldsCache.EXCLUDE_FIELDS_KEY)
+
+        class BrokenGraph:
+            def __enter__(self):
+                raise RuntimeError("community graph unavailable")
+
+            def __exit__(self, *args):
+                return None
+
+        monkeypatch.setattr(cache_module, "GraphClient", BrokenGraph)
+
+        assert ExcludeFieldsCache.get_exclude_fields() == []
+        assert dj_cache.get(ExcludeFieldsCache.EXCLUDE_FIELDS_KEY) is None
+
     def test_initialize_all(self, monkeypatch):
         from apps.cmdb.display_field.cache import ExcludeFieldsCache
 

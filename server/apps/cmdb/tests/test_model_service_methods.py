@@ -53,7 +53,12 @@ def test_create_model(fake_graph, patch_side_effects, monkeypatch):
 @pytest.mark.django_db
 def test_model_association_create(fake_graph):
     fake_graph(MODULE, create_edge={"_id": 10, "model_asst_id": "a_b_c"})
-    edge = ModelManage.model_association_create(src_id=1, dst_id=2, model_asst_id="a_b_c")
+    edge = ModelManage.model_association_create(
+        src_id=1,
+        dst_id=2,
+        model_asst_id="a_b_c",
+        mapping="n:n",
+    )
     assert edge["_id"] == 10
 
 
@@ -64,7 +69,11 @@ def test_model_association_create_duplicate(fake_graph):
 
     fake_graph(MODULE, create_edge=_raise)
     with pytest.raises(BaseAppException) as exc:
-        ModelManage.model_association_create(src_id=1, dst_id=2)
+        ModelManage.model_association_create(
+            src_id=1,
+            dst_id=2,
+            mapping="n:n",
+        )
     assert "repetition" in exc.value.message
 
 
