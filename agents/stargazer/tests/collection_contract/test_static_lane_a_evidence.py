@@ -158,11 +158,7 @@ def test_阿里云逐emitted_case只比较自身模型并匹配静态Golden(case
 
     monkeypatch.setattr(base_utils.time, "time", lambda: 1_700_000_000.123)
     normalized = CollectionService(
-        {
-            "plugin_name": "aliyun_info",
-            "model_id": "aliyun",
-            "host": None,
-        }
+        {"plugin_name": "aliyun_info", "model_id": "aliyun", "host": None,}
     )._process_result(deepcopy(source))
     actual_prometheus = convert_to_prometheus_format(normalized)
     expected_prometheus = (evidence / "02_prometheus.txt").read_text(encoding="utf-8")

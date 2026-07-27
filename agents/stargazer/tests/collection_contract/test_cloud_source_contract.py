@@ -1043,12 +1043,7 @@ def test_阿里云RDS按官方PageNumber分页直到空页(engine, monkeypatch):
     ),
 )
 def test_阿里云Redis与SLB官方SDK边界覆盖单页空集缺可选字段和错误(
-    method_name,
-    client_attr,
-    sdk_method,
-    collection_path,
-    item,
-    monkeypatch,
+    method_name, client_attr, sdk_method, collection_path, item, monkeypatch,
 ):
     from plugins.inputs.aliyun import aliyun_info
 
@@ -1097,12 +1092,7 @@ def test_阿里云Redis与SLB官方SDK边界覆盖单页空集缺可选字段和
     ),
 )
 def test_阿里云Redis与SLB按官方PageNumber完整分页(
-    method_name,
-    client_attr,
-    sdk_method,
-    collection_path,
-    id_key,
-    monkeypatch,
+    method_name, client_attr, sdk_method, collection_path, id_key, monkeypatch,
 ):
     from plugins.inputs.aliyun import aliyun_info
 
@@ -1112,12 +1102,8 @@ def test_阿里云Redis与SLB按官方PageNumber完整分页(
     requested_pages = []
     responses = iter(
         [
-            _sdk_response(
-                {first: {second: [{id_key: "page-1"}]}, "TotalCount": 101}
-            ),
-            _sdk_response(
-                {first: {second: [{id_key: "page-2"}]}, "TotalCount": 101}
-            ),
+            _sdk_response({first: {second: [{id_key: "page-1"}]}, "TotalCount": 101}),
+            _sdk_response({first: {second: [{id_key: "page-2"}]}, "TotalCount": 101}),
             _sdk_response({first: {second: []}, "TotalCount": 101}),
         ]
     )
@@ -1305,7 +1291,9 @@ def test_阿里云Kafka分页场景由同一官方operation页面明确N_A():
     )
 
     assert operation["pagination"]["kind"] == "not_applicable"
-    assert operation["pagination"]["documentation_url"] == operation["documentation_url"]
+    assert (
+        operation["pagination"]["documentation_url"] == operation["documentation_url"]
+    )
     assert "no page number" in operation["pagination"]["reason"]
 
 
