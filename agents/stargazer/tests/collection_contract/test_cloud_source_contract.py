@@ -2516,6 +2516,125 @@ def test_华为云RDS与DCS按官方offset_limit完整翻页(
     assert requests == [(0, 2), (2, 2)]
 
 
+def test_华为云冻结SDK响应经真实父collector逐case匹配完整来源证据(monkeypatch):
+    cases = tuple(
+        case_id
+        for operation in HWCLOUD_SCENARIO_MATRIX["operations"]
+        for case_id in operation["case_ids"]
+    )
+    _patch_ecs_interfaces(monkeypatch)
+    _patch_eip_bandwidth(monkeypatch)
+
+    ecs = _ecs_server("ecs-001")
+    ecs["name"] = "ecs-contract"
+    monkeypatch.setattr(
+        cw_huaweicloud.EcsClient,
+        "list_servers_details",
+        lambda self, request: _HuaweiSdkResponse(
+            {"count": 1, "servers": [ecs]}
+        ),
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.EvsClient,
+        "list_volumes",
+        lambda self, request: _HuaweiSdkResponse(
+            {"count": 1, "volumes": [_evs_volume("evs-001")]}
+        ),
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.ObsClient,
+        "listBuckets",
+        lambda self: _obs_response({"buckets": [{"name": "obs-contract"}]}),
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.ObsClient,
+        "listObjects",
+        lambda self, bucket_name, marker=None, **kwargs: _obs_response(
+            {
+                "contents": [
+                    {"key": "one", "size": 1024, "storageClass": "STANDARD"}
+                ],
+                "isTruncated": False,
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.VpcClient,
+        "list_vpcs",
+        lambda self, request: _HuaweiSdkResponse(
+            {
+                "vpcs": [
+                    {
+                        "id": "vpc-001",
+                        "name": "vpc-contract",
+                        "description": "",
+                        "status": "OK",
+                        "cidr": "192.0.2.0/24",
+                    }
+                ]
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.VpcClient,
+        "list_subnets",
+        lambda self, request: _HuaweiSdkResponse(
+            {
+                "subnets": [
+                    {
+                        "id": "subnet-001",
+                        "name": "subnet-contract",
+                        "description": "",
+                        "status": "ACTIVE",
+                        "gateway_ip": "192.0.2.1",
+                        "cidr": "192.0.2.0/28",
+                        "vpc_id": "vpc-001",
+                    }
+                ]
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.EipClient,
+        "list_publicips",
+        lambda self, request: _HuaweiSdkResponse(
+            {"publicips": [_eip("eip-001")]}
+        ),
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.VpcClient,
+        "list_security_groups",
+        lambda self, request: _HuaweiSdkResponse(
+            {"security_groups": [_security_group("sg-001")]}
+        ),
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.ElbClient,
+        "list_load_balancers",
+        lambda self, request: _HuaweiSdkResponse(
+            {"loadbalancers": [_load_balancer("elb-001")]}
+        ),
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.RdsClient,
+        "list_instances",
+        lambda self, request: _HuaweiSdkResponse(
+            {"instances": [_rds_instance("rds-001")], "total_count": 1}
+        ),
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.DcsClient,
+        "list_instances",
+        lambda self, request: _HuaweiSdkResponse(
+            {"instances": [_dcs_instance("dcs-001")], "instance_num": 1}
+        ),
+    )
+
+    result = _hwcloud_manager().list_all_resources()
+
+    _assert_parent_replay_matches_case_evidence(result, cases)
+
+
 def test_FusionInsight与OceanStor六项case显式区分可执行合同和官方细目缺口():
     fusioninsight = PRIVATE_CLOUD_SCENARIO_MATRIX["fusioninsight"]
     oceanstor = PRIVATE_CLOUD_SCENARIO_MATRIX["oceanstor"]

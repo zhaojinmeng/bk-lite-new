@@ -1,1 +1,10 @@
-{"success":true,"result":{"hwcloud":[{"endpoint":"https://ecs.cn-south-1.example.invalid"}]}}
+{
+  "success": true,
+  "result": {
+    "hwcloud": [
+      {
+        "endpoint": "https://ecs.cn-south-1.example.invalid"
+      }
+    ]
+  }
+}

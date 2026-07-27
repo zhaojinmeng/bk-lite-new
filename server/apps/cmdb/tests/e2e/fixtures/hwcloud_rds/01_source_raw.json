@@ -1,1 +1,27 @@
-{"success":true,"result":{"hwcloud_rds":[{"resource_name":"rds-contract","resource_id":"rds-001","ip_addr":"192.0.2.30","public_ip":"","status":"ACTIVE","db_type":"Ha","engine":"MySQL","engine_version":"8.0","volume_type":"CLOUDSSD","volume_size":"100","vcpus":"4","memory_gb":"8","port":"3306","region":"cn-south-1","charge_type":"postPaid","create_time":"2026-01-02T03:04:05Z","vpc_id":"vpc-001","subnet_id":"subnet-001"}]}}
+{
+  "success": true,
+  "result": {
+    "hwcloud_rds": [
+      {
+        "resource_name": "rds-rds-001",
+        "resource_id": "rds-001",
+        "ip_addr": "192.0.2.30",
+        "public_ip": "",
+        "status": "ACTIVE",
+        "db_type": "Ha",
+        "engine": "MySQL",
+        "engine_version": "8.0",
+        "volume_type": "CLOUDSSD",
+        "volume_size": "100",
+        "vcpus": "4",
+        "memory_gb": "8",
+        "port": "3306",
+        "region": "cn-south-1",
+        "charge_type": "postPaid",
+        "create_time": "2026-01-02T03:04:05Z",
+        "vpc_id": "vpc-001",
+        "subnet_id": "subnet-001"
+      }
+    ]
+  }
+}

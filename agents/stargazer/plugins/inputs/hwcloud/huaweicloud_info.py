@@ -47,12 +47,16 @@ class HuaweiCloudManager:
             raise RuntimeError(res.get("message") if isinstance(res, dict) else "list_vms failed")
         ecs_list = []
         for item in res.get("data", []) or []:
+            inner_ips = item.get("inner_ip") or []
+            public_ips = item.get("public_ip") or []
             ecs_list.append(
                 {
                     "resource_name": item.get("resource_name") or item.get("name", ""),
                     "resource_id": item.get("resource_id") or item.get("id", ""),
-                    "ip_addr": item.get("ip_addr") or item.get("private_ip", ""),
-                    "public_ip": item.get("public_ip", ""),
+                    "ip_addr": item.get("ip_addr")
+                    or item.get("private_ip")
+                    or (inner_ips[0] if inner_ips else ""),
+                    "public_ip": public_ips[0] if public_ips else "",
                     "region": item.get("region") or self.region,
                     "zone": item.get("zone") or item.get("availability_zone", ""),
                     "vpc": item.get("vpc") or item.get("vpc_id", ""),
@@ -60,7 +64,11 @@ class HuaweiCloudManager:
                     "instance_type": item.get("instance_type") or item.get("flavor", ""),
                     "os_name": item.get("os_name") or item.get("image_name", ""),
                     "vcpus": str(item.get("vcpus", "")),
-                    "memory_mb": str(item.get("memory_mb") or item.get("ram", "")),
+                    "memory_mb": str(
+                        item.get("memory_mb")
+                        or item.get("ram")
+                        or item.get("memory", "")
+                    ),
                     "charge_type": item.get("charge_type", ""),
                     "create_time": item.get("create_time") or item.get("created", ""),
                     "expired_time": item.get("expired_time", ""),

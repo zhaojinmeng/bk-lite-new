@@ -1,1 +1,24 @@
-{"success":true,"result":{"hwcloud_ecs":[{"resource_name":"ecs-contract","resource_id":"ecs-001","ip_addr":"192.0.2.10","public_ip":"","region":"cn-south-1","zone":"cn-south-1a","vpc":"vpc-001","status":"RUNNING","instance_type":"s6.large.2","os_name":"EulerOS","vcpus":"2","memory_mb":"4096","charge_type":"POSTPAID_BY_HOUR","create_time":"2026-01-02 03:04:05","expired_time":""}]}}
+{
+  "success": true,
+  "result": {
+    "hwcloud_ecs": [
+      {
+        "resource_name": "ecs-contract",
+        "resource_id": "ecs-001",
+        "ip_addr": "192.0.2.10",
+        "public_ip": "",
+        "region": "cn-south-1",
+        "zone": "cn-south-1a",
+        "vpc": "vpc-001",
+        "status": "RUNNING",
+        "instance_type": "s6.large.2",
+        "os_name": "EulerOS",
+        "vcpus": "2",
+        "memory_mb": "4096",
+        "charge_type": "POSTPAID_BY_HOUR",
+        "create_time": "2026-01-02 11:04:05",
+        "expired_time": ""
+      }
+    ]
+  }
+}

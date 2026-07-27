@@ -1,1 +1,14 @@
-{"success":true,"result":{"hwcloud_obs":[{"resource_name":"obs-contract","resource_id":"obs-contract","bucket_type":"STANDARD","region":"cn-south-1","create_time":""}]}}
+{
+  "success": true,
+  "result": {
+    "hwcloud_obs": [
+      {
+        "resource_name": "obs-contract",
+        "resource_id": "obs-contract",
+        "bucket_type": "STANDARD",
+        "region": "cn-south-1",
+        "create_time": ""
+      }
+    ]
+  }
+}

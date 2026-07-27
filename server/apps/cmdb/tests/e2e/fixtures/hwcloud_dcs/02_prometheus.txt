@@ -1,3 +1,3 @@
 # HELP hwcloud_dcs_info Auto-generated help for hwcloud_dcs_info
 # TYPE hwcloud_dcs_info gauge
-hwcloud_dcs_info{bk_obj_id="hwcloud_dcs",cache_mode="ha",capacity_gb="0",charge_type="0",collect_status="success",create_time="2026-01-02T03:04:05Z",engine="Redis",engine_version="6.0",ip_addr="192.0.2.40",model_id="hwcloud_dcs",port="6379",region="cn-south-1",resource_id="dcs-001",resource_name="dcs-contract",status="RUNNING",subnet_id="subnet-001",vpc_id="vpc-001"} 1 1700000000123
+hwcloud_dcs_info{bk_obj_id="hwcloud_dcs",cache_mode="ha",capacity_gb="0",charge_type="0",collect_status="success",create_time="2026-01-02T03:04:05Z",engine="Redis",engine_version="6.0",ip_addr="192.0.2.40",model_id="hwcloud_dcs",port="6379",region="cn-south-1",resource_id="dcs-001",resource_name="dcs-dcs-001",status="RUNNING",subnet_id="subnet-001",vpc_id="vpc-001"} 1 1700000000123

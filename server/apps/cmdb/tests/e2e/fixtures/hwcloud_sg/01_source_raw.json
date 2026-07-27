@@ -1,1 +1,14 @@
-{"success":true,"result":{"hwcloud_sg":[{"resource_name":"sg-contract","resource_id":"sg-001","is_default":"False","region":"cn-south-1","vpc":"vpc-001"}]}}
+{
+  "success": true,
+  "result": {
+    "hwcloud_sg": [
+      {
+        "resource_name": "sg-sg-001",
+        "resource_id": "sg-001",
+        "is_default": "False",
+        "region": "cn-south-1",
+        "vpc": "vpc-001"
+      }
+    ]
+  }
+}

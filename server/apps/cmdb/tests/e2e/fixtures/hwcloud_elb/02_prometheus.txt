@@ -1,3 +1,3 @@
 # HELP hwcloud_elb_info Auto-generated help for hwcloud_elb_info
 # TYPE hwcloud_elb_info gauge
-hwcloud_elb_info{bk_obj_id="hwcloud_elb",charge_type="",collect_status="success",create_time="2026-01-02T03:04:05Z",ip_version="",ipv6_addr="",model_id="hwcloud_elb",region="cn-south-1",resource_id="elb-001",resource_name="elb-contract",status="True",vpc="vpc-001"} 1 1700000000123
+hwcloud_elb_info{bk_obj_id="hwcloud_elb",charge_type="",collect_status="success",create_time="2026-01-02T03:04:05Z",ip_version="IPV4",ipv6_addr="",model_id="hwcloud_elb",region="cn-south-1",resource_id="elb-001",resource_name="elb-elb-001",status="True",vpc="vpc-001"} 1 1700000000123

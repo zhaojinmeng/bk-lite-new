@@ -1,1 +1,17 @@
-{"success":true,"result":{"hwcloud_subnet":[{"resource_name":"subnet-contract","resource_id":"subnet-001","status":"AVAILABLE","cidr":"192.0.2.0/28","gateway":"192.0.2.1","zone":"","region":"cn-south-1","vpc":"vpc-001"}]}}
+{
+  "success": true,
+  "result": {
+    "hwcloud_subnet": [
+      {
+        "resource_name": "subnet-contract",
+        "resource_id": "subnet-001",
+        "status": "AVAILABLE",
+        "cidr": "192.0.2.0/28",
+        "gateway": "192.0.2.1",
+        "zone": "",
+        "region": "cn-south-1",
+        "vpc": "vpc-001"
+      }
+    ]
+  }
+}

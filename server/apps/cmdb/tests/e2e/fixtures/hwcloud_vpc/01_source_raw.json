@@ -1,1 +1,15 @@
-{"success":true,"result":{"hwcloud_vpc":[{"resource_name":"vpc-contract","resource_id":"vpc-001","status":"AVAILABLE","cidr":"192.0.2.0/24","is_default":false,"region":"cn-south-1"}]}}
+{
+  "success": true,
+  "result": {
+    "hwcloud_vpc": [
+      {
+        "resource_name": "vpc-contract",
+        "resource_id": "vpc-001",
+        "status": "AVAILABLE",
+        "cidr": "192.0.2.0/24",
+        "is_default": "False",
+        "region": "cn-south-1"
+      }
+    ]
+  }
+}

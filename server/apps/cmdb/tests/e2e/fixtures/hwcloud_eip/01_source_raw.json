@@ -1,1 +1,17 @@
-{"success":true,"result":{"hwcloud_eip":[{"resource_name":"eip-contract","resource_id":"eip-001","ip_addr":"192.0.2.20","status":"BIND","bandwidth":"5","charge_type":"POSTPAID_BY_HOUR","region":"cn-south-1","create_time":"2026-01-02 03:04:05"}]}}
+{
+  "success": true,
+  "result": {
+    "hwcloud_eip": [
+      {
+        "resource_name": "eip-eip-001",
+        "resource_id": "eip-001",
+        "ip_addr": "192.0.2.20",
+        "status": "BIND",
+        "bandwidth": "5",
+        "charge_type": "POSTPAID_BY_HOUR",
+        "region": "cn-south-1",
+        "create_time": "2026-01-02 03:04:05"
+      }
+    ]
+  }
+}
