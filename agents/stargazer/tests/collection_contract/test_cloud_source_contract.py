@@ -2302,7 +2302,7 @@ def _security_group(resource_id):
     }
 
 
-def test_华为云安全组五态在V1V2无分页且错误不伪装成功(monkeypatch):
+def test_华为云安全组五态且错误不伪装成功(monkeypatch):
     operation = next(
         item
         for item in HWCLOUD_SCENARIO_MATRIX["operations"]
@@ -2332,7 +2332,7 @@ def test_华为云安全组五态在V1V2无分页且错误不伪装成功(monkey
     assert manager.get_sg() == []
     assert manager.get_sg()[0]["resource_id"] == "sg-001"
     assert manager.get_sg() == []
-    assert operation["pagination"]["kind"] == "not_applicable"
+    assert operation["pagination"]["kind"] == "marker"
 
 
 def _load_balancer(resource_id):
