@@ -18,6 +18,9 @@ CONTRACT_MANIFEST_PATH = (
     / "e2e"
     / "contract_manifest.json"
 )
+REAL_COLLECTOR_EXECUTION_PATH = (
+    Path(__file__).resolve().parent / "test_real_collector_execution.py"
+)
 if str(STARGAZER_ROOT) not in sys.path:
     sys.path.insert(0, str(STARGAZER_ROOT))
 
@@ -274,6 +277,100 @@ def lane_a_coverage_failures() -> list[str]:
         for contract in sorted(covered - expected)
     )
     return failures
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "real_collector_binding(case_id): " "声明该pytest用例真实执行指定生产collector binding",
+    )
+
+
+def _selection_includes_real_collector(config) -> bool:
+    for argument in config.args:
+        selected_path = Path(str(argument).split("::", 1)[0])
+        if not selected_path.is_absolute():
+            selected_path = Path.cwd() / selected_path
+        selected_path = selected_path.resolve()
+        if (
+            selected_path == REAL_COLLECTOR_EXECUTION_PATH
+            or selected_path in REAL_COLLECTOR_EXECUTION_PATH.parents
+        ):
+            return True
+    return False
+
+
+def _real_collector_case_ids(items) -> list[str]:
+    case_ids = []
+    malformed = []
+    for item in items:
+        item_path = Path(str(getattr(item, "path", ""))).resolve()
+        if (
+            item_path != REAL_COLLECTOR_EXECUTION_PATH
+            and "test_real_collector_execution.py::" not in item.nodeid
+        ):
+            continue
+        markers = tuple(item.iter_markers(name="real_collector_binding"))
+        if len(markers) != 1 or len(markers[0].args) != 1:
+            malformed.append(item.nodeid)
+            continue
+        case_id = markers[0].args[0]
+        if not isinstance(case_id, str):
+            malformed.append(item.nodeid)
+            continue
+        case_ids.append(case_id)
+    if malformed:
+        raise pytest.UsageError(
+            "真实collector用例必须且只能声明一个real_collector_binding(case_id): "
+            + ", ".join(sorted(malformed))
+        )
+    return case_ids
+
+
+def pytest_collection_modifyitems(session, config, items):
+    if not _selection_includes_real_collector(config):
+        return
+
+    collected_case_ids = _real_collector_case_ids(items)
+    expected_by_case_id = {
+        binding.case_id: binding for binding in PRODUCTION_ADAPTER_BINDINGS
+    }
+    collected = set(collected_case_ids)
+    expected = set(expected_by_case_id)
+    duplicated = sorted(
+        case_id for case_id in collected if collected_case_ids.count(case_id) != 1
+    )
+    failures = [
+        *(f"{case_id}: 未收集真实collector执行用例" for case_id in sorted(expected - collected)),
+        *(
+            f"{case_id}: 未声明的真实collector执行用例"
+            for case_id in sorted(collected - expected)
+        ),
+        *(f"{case_id}: 真实collector执行用例重复收集" for case_id in duplicated),
+    ]
+
+    collected_contracts = {
+        contract
+        for case_id in collected & expected
+        for contract in expected_by_case_id[case_id].contracts
+    }
+    manifest_contracts = validation_contracts()
+    failures.extend(
+        f"{contract}: 未由已收集真实collector用例覆盖"
+        for contract in sorted(manifest_contracts - collected_contracts)
+    )
+    failures.extend(
+        f"{contract}: 已收集collector用例不属于当前生产manifest"
+        for contract in sorted(collected_contracts - manifest_contracts)
+    )
+    if len(expected) != 40 or len(manifest_contracts) != 79:
+        failures.append(
+            f"覆盖基线漂移: bindings={len(expected)}, contracts={len(manifest_contracts)}"
+        )
+    if failures:
+        raise pytest.UsageError(
+            "真实collector collection完整性合同失败:\n" + "\n".join(failures)
+        )
 
 
 @dataclass(frozen=True)

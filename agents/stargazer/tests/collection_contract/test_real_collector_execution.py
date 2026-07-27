@@ -7,11 +7,12 @@ from unittest.mock import Mock
 import pytest
 import semantics
 import yaml
-from conftest import PRODUCTION_ADAPTER_BINDINGS, validation_contracts
+from conftest import PRODUCTION_ADAPTER_BINDINGS
 from plugins import base_utils, script_executor
 from plugins.base_utils import convert_to_prometheus_format
 from service.collection_service import CollectionService
 from tasks.utils.nats_helper import convert_prometheus_to_influx
+
 
 def _collector_config(binding):
     plugin_config = yaml.safe_load(binding.plugin_path.read_text(encoding="utf-8"))
@@ -25,6 +26,17 @@ def _collector_config(binding):
 def _default_script(executor_config):
     default_script = executor_config["default_script"]
     return executor_config["scripts"][default_script]
+
+
+def _marked_binding_parameters(bindings):
+    return tuple(
+        pytest.param(
+            binding,
+            marks=pytest.mark.real_collector_binding(binding.case_id),
+            id=binding.case_id,
+        )
+        for binding in bindings
+    )
 
 
 def _assert_real_result_reaches_publish(binding, result, expected_source_models):
@@ -69,6 +81,8 @@ def _assert_real_result_reaches_publish(binding, result, expected_source_models)
         ]
         assert len(matches) == 1
         assert matches[0].timestamp_ns == sample.timestamp_ms * 1_000_000
+
+
 GENERIC_SSH_BINDINGS = tuple(
     binding
     for binding in PRODUCTION_ADAPTER_BINDINGS
@@ -77,9 +91,7 @@ GENERIC_SSH_BINDINGS = tuple(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "binding", GENERIC_SSH_BINDINGS, ids=lambda binding: binding.case_id
-)
+@pytest.mark.parametrize("binding", _marked_binding_parameters(GENERIC_SSH_BINDINGS))
 async def test_通用SSH生产collector在NATS外边界执行并发布(binding, monkeypatch):
     executor_config, collector_class = _collector_config(binding)
 
@@ -121,6 +133,7 @@ async def test_通用SSH生产collector在NATS外边界执行并发布(binding, 
 
 
 @pytest.mark.asyncio
+@pytest.mark.real_collector_binding("host-host")
 async def test_HostInfo生产collector拆分主机与进程并发布(monkeypatch):
     binding = next(
         item
@@ -168,7 +181,7 @@ PHYSICAL_SERVER_BINDINGS = tuple(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "binding", PHYSICAL_SERVER_BINDINGS, ids=lambda binding: binding.case_id
+    "binding", _marked_binding_parameters(PHYSICAL_SERVER_BINDINGS)
 )
 async def test_PhyscialServerInfo生产collector拆分全部子对象并发布(binding, monkeypatch):
     executor_config, collector_class = _collector_config(binding)
@@ -211,6 +224,7 @@ gpu_memory=24
     )
 
 
+@pytest.mark.real_collector_binding("cloud-qcloud")
 def test_QCloud父collector执行全部资源方法并发布(monkeypatch):
     from plugins.inputs.qcloud import qcloud_info
 
@@ -257,6 +271,7 @@ def test_QCloud父collector执行全部资源方法并发布(monkeypatch):
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 
+@pytest.mark.real_collector_binding("cloud-aliyun_account")
 def test_Aliyun父collector在官方SDK空响应边界执行全部资源并发布(monkeypatch):
     from plugins.inputs.aliyun import aliyun_info
 
@@ -325,6 +340,7 @@ def test_Aliyun父collector在官方SDK空响应边界执行全部资源并发�
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 
+@pytest.mark.real_collector_binding("cloud-hwcloud")
 def test_HuaweiCloud父collector执行全部资源方法并发布(monkeypatch):
     from common.cmp.cloud_apis.resource_apis import cw_huaweicloud
     from common.cmp.driver import CMPDriver
@@ -411,6 +427,7 @@ def test_HuaweiCloud父collector执行全部资源方法并发布(monkeypatch):
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 
+@pytest.mark.real_collector_binding("cloud-fusioninsight")
 def test_FusionInsight父collector在HTTP边界执行全部资源并发布(monkeypatch):
     from plugins.inputs.fusioninsight import fusioninsight_info
 
@@ -463,6 +480,7 @@ def test_FusionInsight父collector在HTTP边界执行全部资源并发布(monke
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 
+@pytest.mark.real_collector_binding("cloud-storage")
 def test_OceanStor父collector在HTTP边界执行全部资源并发布(monkeypatch):
     from plugins.inputs.oceanstor import oceanstor_info
 
@@ -508,6 +526,7 @@ def test_OceanStor父collector在HTTP边界执行全部资源并发布(monkeypat
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 
+@pytest.mark.real_collector_binding("protocol-mysql")
 def test_Mysql生产collector在PyMySQL边界执行并发布(monkeypatch):
     from plugins.inputs.mysql import mysql_info
 
@@ -560,9 +579,7 @@ POSTGRESQL_BINDINGS = tuple(
 )
 
 
-@pytest.mark.parametrize(
-    "binding", POSTGRESQL_BINDINGS, ids=lambda binding: binding.case_id
-)
+@pytest.mark.parametrize("binding", _marked_binding_parameters(POSTGRESQL_BINDINGS))
 def test_Postgresql生产collector在Psycopg边界执行并发布(binding, monkeypatch):
     from plugins.inputs.postgresql import postgresql_info
 
@@ -610,6 +627,7 @@ def test_Postgresql生产collector在Psycopg边界执行并发布(binding, monke
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 
+@pytest.mark.real_collector_binding("protocol-oracle")
 def test_Oracle生产collector在OracleDB边界执行并发布(monkeypatch):
     from plugins.inputs.oracle import oracle_info
 
@@ -673,6 +691,7 @@ def test_Oracle生产collector在OracleDB边界执行并发布(monkeypatch):
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 
+@pytest.mark.real_collector_binding("protocol-mssql")
 def test_MSSQL生产collector在PyODBC边界执行并发布(monkeypatch):
     from plugins.inputs.mssql import mssql_info
 
@@ -734,6 +753,7 @@ def test_MSSQL生产collector在PyODBC边界执行并发布(monkeypatch):
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 
+@pytest.mark.real_collector_binding("protocol-influxdb")
 def test_InfluxDB生产collector在HTTP边界执行并发布(monkeypatch):
     from plugins.inputs.influxdb import influxdb_info
 
@@ -778,6 +798,7 @@ def test_InfluxDB生产collector在HTTP边界执行并发布(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.real_collector_binding("ip-ip")
 async def test_IP生产collector在ICMP边界执行并发布(monkeypatch):
     import subprocess
 
@@ -807,6 +828,7 @@ async def test_IP生产collector在ICMP边界执行并发布(monkeypatch):
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 
+@pytest.mark.real_collector_binding("snmp-network")
 def test_SNMP生产collector在CommandGenerator边界执行并发布(monkeypatch):
     from plugins.inputs.network import snmp_facts
 
@@ -870,6 +892,7 @@ def test_SNMP生产collector在CommandGenerator边界执行并发布(monkeypatch
     )
 
 
+@pytest.mark.real_collector_binding("vm-vmware_vc")
 def test_VMware生产collector在SmartConnect边界执行并发布(monkeypatch):
     from plugins.inputs.vmware_vc import vmware_info
 
@@ -906,14 +929,3 @@ def test_VMware生产collector在SmartConnect边界执行并发布(monkeypatch):
     _assert_real_result_reaches_publish(
         binding, result, binding.execution_source_model_ids
     )
-
-
-def test_全部validation_contracts由静态真实collector参数集合覆盖():
-    collected_contracts = {
-        contract
-        for binding in PRODUCTION_ADAPTER_BINDINGS
-        for contract in binding.contracts
-    }
-
-    assert len(collected_contracts) == 79
-    assert collected_contracts == validation_contracts()
