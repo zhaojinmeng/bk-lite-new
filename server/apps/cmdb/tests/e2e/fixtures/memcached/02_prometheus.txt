@@ -1,0 +1,5 @@
+# HELP memcached_info Auto-generated help for memcached_info
+# TYPE memcached_info gauge
+memcached_info{bk_inst_name="memcached.example.invalid-memcached-11211",bk_obj_id="memcached",cachesize="64",collect_status="success",host="memcached.example.invalid",install_path=".",ip_addr="192.0.2.22",maxconn="",model_id="memcached",port="11211",user_name="memcache",version=""} 1 1700000000123
+memcached_info{bk_inst_name="memcached.example.invalid-memcached-empty",bk_obj_id="memcached",cachesize="",collect_status="success",host="memcached.example.invalid",install_path="/usr/bin",ip_addr="192.0.2.22",maxconn="",model_id="memcached",port="",user_name="root",version=""} 1 1700000000123
+memcached_info{bk_inst_name="memcached.example.invalid-memcached-empty",bk_obj_id="memcached",cachesize="",collect_status="success",host="memcached.example.invalid",install_path=".",ip_addr="192.0.2.22",maxconn="",model_id="memcached",port="",user_name="",version=""} 1 1700000000123

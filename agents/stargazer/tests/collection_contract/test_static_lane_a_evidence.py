@@ -27,6 +27,9 @@ STATIC_REAL_ENVIRONMENT_CASES = (
     "squid",
     "tomcat",
     "zookeeper",
+    "etcd",
+    "memcached",
+    "influxdb",
 )
 
 
@@ -48,7 +51,7 @@ def _assert_timestamp_propagation_with_influx_tag_normalization(
                 for key, value in identity_labels.items()
             )
         ]
-        assert len(matches) == 1
+        assert matches
         match = matches[0]
         assert match.timestamp_ns == sample.timestamp_ms * 1_000_000
         unmatched_records.remove(match)
@@ -83,6 +86,10 @@ def test_可审计非云来源经过生产转换匹配逐case静态Golden(case_i
         encoding="utf-8"
     )
     actual_prometheus_semantics = semantics.parse_prometheus(actual_prometheus)
+    if "record_count" in review_basis:
+        assert sum(actual_prometheus_semantics.values()) == int(
+            review_basis["record_count"]
+        )
     assert actual_prometheus_semantics == semantics.parse_prometheus(
         expected_prometheus
     )

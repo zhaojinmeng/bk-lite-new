@@ -1,0 +1,4 @@
+{"success":true,"result":{"memcached":[
+{"bk_inst_name":"memcached.example.invalid-memcached-11211","ip_addr":"192.0.2.22","bk_obj_id":"memcached","port":"11211","version":"","maxconn":"","cachesize":"64","user_name":"memcache","install_path":"."},
+{"bk_inst_name":"memcached.example.invalid-memcached-empty","ip_addr":"192.0.2.22","bk_obj_id":"memcached","port":"","version":"","maxconn":"","cachesize":"","user_name":"root","install_path":"/usr/bin"},
+{"bk_inst_name":"memcached.example.invalid-memcached-empty","ip_addr":"192.0.2.22","bk_obj_id":"memcached","port":"","version":"","maxconn":"","cachesize":"","user_name":"","install_path":"."}]}}

@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["success","result"],"properties":{"success":{"const":true},"result":{"type":"object","required":["influxdb"],"properties":{"influxdb":{"type":"array","minItems":1,"maxItems":1,"items":{"type":"object","required":["version","ip_addr","port","https_enabled"]}}}}}}

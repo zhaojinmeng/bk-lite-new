@@ -1,0 +1,3 @@
+# HELP influxdb_info Auto-generated help for influxdb_info
+# TYPE influxdb_info gauge
+influxdb_info{bk_obj_id="influxdb",collect_status="success",host="influxdb.example.invalid",https_enabled="false",ip_addr="127.0.0.1",model_id="influxdb",port="18086",version=""} 1 1700000000123
