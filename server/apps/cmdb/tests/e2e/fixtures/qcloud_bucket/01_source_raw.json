@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_bucket": [
+      {
+        "resource_name": "bucket-contract",
+        "resource_id": "bucket-contract",
+        "region": "ap-shanghai"
+      }
+    ]
+  }
+}

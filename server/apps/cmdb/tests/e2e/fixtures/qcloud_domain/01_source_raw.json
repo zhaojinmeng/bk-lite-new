@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_domain": [
+      {
+        "resource_name": "example.invalid",
+        "resource_id": "domain-001",
+        "tld": "com",
+        "status": "正常",
+        "expired_time": "2027-01-01"
+      }
+    ]
+  }
+}

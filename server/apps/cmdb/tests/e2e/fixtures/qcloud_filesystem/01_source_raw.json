@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_filesystem": [
+      {
+        "resource_name": "cfs-contract",
+        "resource_id": "cfs-001",
+        "region": "ap-shanghai",
+        "protocol": "NFS",
+        "size_gib": 100
+      }
+    ]
+  }
+}

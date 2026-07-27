@@ -1,0 +1,1 @@
+qcloud_domain_info,agent_id=agent-contract,bk_obj_id=qcloud_domain,collect_status=success,collect_type=discovery,config_type=production-contract,expired_time=2027-01-01,instance_id=cmdb-qcloud,instance_type=qcloud,model_id=qcloud_domain,resource_id=domain-001,resource_name=example.invalid,status=正常,tld=com gauge=1i 1700000000123000000

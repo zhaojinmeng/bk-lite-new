@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_rocketmq": [
+      {
+        "resource_name": "rocketmq-contract",
+        "resource_id": "rocketmq-001",
+        "region": "ap-shanghai",
+        "status": 1,
+        "topic_num": 10
+      }
+    ]
+  }
+}

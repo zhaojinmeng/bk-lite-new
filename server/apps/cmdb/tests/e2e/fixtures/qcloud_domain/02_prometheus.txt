@@ -1,0 +1,3 @@
+# HELP qcloud_domain_info Auto-generated help for qcloud_domain_info
+# TYPE qcloud_domain_info gauge
+qcloud_domain_info{bk_obj_id="qcloud_domain",collect_status="success",expired_time="2027-01-01",model_id="qcloud_domain",resource_id="domain-001",resource_name="example.invalid",status="正常",tld="com"} 1 1700000000123

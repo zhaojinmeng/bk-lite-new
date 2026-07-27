@@ -1,0 +1,3 @@
+# HELP qcloud_bucket_info Auto-generated help for qcloud_bucket_info
+# TYPE qcloud_bucket_info gauge
+qcloud_bucket_info{bk_obj_id="qcloud_bucket",collect_status="success",model_id="qcloud_bucket",region="ap-shanghai",resource_id="bucket-contract",resource_name="bucket-contract"} 1 1700000000123

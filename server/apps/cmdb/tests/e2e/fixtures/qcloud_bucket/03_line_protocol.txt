@@ -1,0 +1,1 @@
+qcloud_bucket_info,agent_id=agent-contract,bk_obj_id=qcloud_bucket,collect_status=success,collect_type=discovery,config_type=production-contract,instance_id=cmdb-qcloud,instance_type=qcloud,model_id=qcloud_bucket,region=ap-shanghai,resource_id=bucket-contract,resource_name=bucket-contract gauge=1i 1700000000123000000
