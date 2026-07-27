@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import subprocess
+from itertools import chain, repeat
 from pathlib import Path
 
 import pytest
 
+from . import runner as smoke_runner
 from .runner import (
     CollectionChainSmokeRunner,
     OwnershipLedger,
@@ -12,6 +14,20 @@ from .runner import (
     SmokeSettings,
     SmokeTimeoutError,
 )
+
+
+@pytest.fixture(autouse=True)
+def offline_runtime_boundaries(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        CollectionChainSmokeRunner,
+        "_probe_pipeline_once",
+        lambda *_: True,
+    )
+    monkeypatch.setattr(
+        smoke_runner,
+        "bounded_command_output",
+        lambda *_args, **_kwargs: "diagnostic output",
+    )
 
 
 def enabled_env(**overrides: str) -> dict[str, str]:
@@ -27,7 +43,7 @@ def test_smoke_requires_explicit_opt_in() -> None:
     ("name", "value"),
     [
         ("CMDB_SMOKE_NATS_URL", "nats://10.0.0.8:4222"),
-        ("CMDB_SMOKE_VM_URL", "https://vm.example.com"),
+        ("CMDB_SMOKE_VM_URL", "http://vm.example.com"),
         ("CMDB_SMOKE_FALKOR_URL", "redis://production-db:6379"),
     ],
 )
@@ -65,6 +81,8 @@ def test_runner_times_out_and_still_cleans_up(tmp_path: Path) -> None:
 
     def execute(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
         commands.append(command)
+        if command[:3] == ["docker", "network", "inspect"]:
+            return subprocess.CompletedProcess(command, 1, "", "not found")
         if command[-3:] == ["ps", "--format", "json"]:
             return subprocess.CompletedProcess(command, 0, "[]", "")
         return subprocess.CompletedProcess(command, 0, "", "")
@@ -79,16 +97,16 @@ def test_runner_times_out_and_still_cleans_up(tmp_path: Path) -> None:
     runner = CollectionChainSmokeRunner(
         settings,
         execute=execute,
-        monotonic=iter([0.0, 2.0]).__next__,
+        monotonic=iter(chain([0.0, 2.0, 3.0, 4.0], repeat(100.0))).__next__,
         wait=lambda _: None,
     )
 
     with pytest.raises(SmokeTimeoutError, match="健康"):
         runner.run(lambda _: None)
 
-    assert any("logs" in command for command in commands)
-    assert commands[-1][-4:-1] == ["down", "--remove-orphans", "--timeout"]
-    assert "-v" not in commands[-1]
+    down = next(command for command in commands if "down" in command)
+    assert down[-4:-1] == ["down", "--remove-orphans", "--timeout"]
+    assert "-v" not in down
     assert list(tmp_path.glob("cmdb-a1b2c3d4/*.log"))
 
 
@@ -97,6 +115,8 @@ def test_workload_failure_preserves_evidence_and_cleans_exact_project(tmp_path: 
 
     def execute(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
         commands.append(command)
+        if command[:3] == ["docker", "network", "inspect"]:
+            return subprocess.CompletedProcess(command, 1, "", "not found")
         if command[-3:] == ["ps", "--format", "json"]:
             return subprocess.CompletedProcess(
                 command,
@@ -122,7 +142,7 @@ def test_workload_failure_preserves_evidence_and_cleans_exact_project(tmp_path: 
     with pytest.raises(RuntimeError, match="boom"):
         runner.run(lambda _: (_ for _ in ()).throw(RuntimeError("boom")))
 
-    down = commands[-1]
+    down = next(command for command in commands if "down" in command)
     assert settings.compose_project in down
     assert down[-4:-1] == ["down", "--remove-orphans", "--timeout"]
     assert "diagnostic output" in next(tmp_path.glob("cmdb-a1b2c3d4/*.log")).read_text()
@@ -133,6 +153,8 @@ def test_compose_commands_never_use_wide_prune_or_down_volumes(tmp_path: Path) -
 
     def execute(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
         commands.append(command)
+        if command[:3] == ["docker", "network", "inspect"]:
+            return subprocess.CompletedProcess(command, 1, "", "not found")
         if command[-3:] == ["ps", "--format", "json"]:
             return subprocess.CompletedProcess(
                 command,
@@ -163,6 +185,8 @@ def test_runner_only_removes_ledger_resources_owned_by_current_run(tmp_path: Pat
     removed: list[tuple[str, str]] = []
 
     def execute(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+        if command[:3] == ["docker", "network", "inspect"]:
+            return subprocess.CompletedProcess(command, 1, "", "not found")
         if command[-3:] == ["ps", "--format", "json"]:
             return subprocess.CompletedProcess(
                 command,
@@ -206,6 +230,8 @@ def test_log_capture_failure_cannot_prevent_compose_cleanup(tmp_path: Path) -> N
 
     def execute(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
         commands.append(command)
+        if command[:3] == ["docker", "network", "inspect"]:
+            return subprocess.CompletedProcess(command, 1, "", "not found")
         if command[-3:] == ["ps", "--format", "json"]:
             return subprocess.CompletedProcess(
                 command,
@@ -227,12 +253,21 @@ def test_log_capture_failure_cannot_prevent_compose_cleanup(tmp_path: Path) -> N
         artifact_root=tmp_path,
     )
 
-    with pytest.raises(RuntimeError, match="boom"):
-        CollectionChainSmokeRunner(settings, execute=execute).run(
+    with pytest.raises(ExceptionGroup) as captured:
+        CollectionChainSmokeRunner(
+            settings,
+            execute=execute,
+            log_capture=lambda *_: (_ for _ in ()).throw(
+                subprocess.TimeoutExpired(["docker", "compose", "logs"], 1)
+            ),
+        ).run(
             lambda _: (_ for _ in ()).throw(RuntimeError("boom"))
         )
 
-    assert commands[-1][-4:-1] == ["down", "--remove-orphans", "--timeout"]
+    assert isinstance(captured.value.exceptions[0], RuntimeError)
+    assert isinstance(captured.value.exceptions[1], smoke_runner.SmokeCleanupError)
+    down = next(command for command in commands if "down" in command)
+    assert down[-4:-1] == ["down", "--remove-orphans", "--timeout"]
     assert next(tmp_path.glob("cmdb-a1b2c3d4/cleanup-errors.log")).is_file()
 
 
