@@ -1,0 +1,3 @@
+# HELP nginx_info Auto-generated help for nginx_info
+# TYPE nginx_info gauge
+nginx_info{bk_inst_name="nginx.example.invalid-nginx-80",bk_obj_id="nginx",collect_status="success",config_path="/etc/nginx/nginx.conf",host="nginx.example.invalid",ip_addr="192.0.2.22",listen_port="80",log_path="/var/log/nginx/error.log",model_id="nginx",nginx_path="/usr/sbin/nginx",version="1.18.0"} 1 1700000000123

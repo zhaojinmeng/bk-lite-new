@@ -1,0 +1,3 @@
+# HELP tomcat_info Auto-generated help for tomcat_info
+# TYPE tomcat_info gauge
+tomcat_info{bk_obj_id="tomcat",catalina_path="/usr/share/tomcat9/bin/catalina.sh",collect_status="success",host="tomcat.example.invalid",inst_name="tomcat.example.invalid-tomcat-8080",ip_addr="192.0.2.23",java_version="11.0.31",log_path="/usr/share/tomcat9/logs/catalina.out",max_perm_size="",model_id="tomcat",obj_id="tomcat",permsize="",port="8080",version="9.0.58 (Ubuntu)",xms="",xmx=""} 1 1700000000123

@@ -1,0 +1,3 @@
+# HELP squid_info Auto-generated help for squid_info
+# TYPE squid_info gauge
+squid_info{access_log="directives",bk_inst_name="squid.example.invalid-squid-instead.",bk_obj_id="squid",cache_dir="lines",collect_status="success",config_file_path="/etc/squid/squid.conf",error_log="/var/log/squid/cache.log",host="squid.example.invalid",install_path=".",ip_addr="192.0.2.23",model_id="squid",port="instead.",version="",visible_hostname="is"} 1 1700000000123

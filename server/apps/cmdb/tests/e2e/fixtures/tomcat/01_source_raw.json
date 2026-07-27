@@ -1,0 +1,1 @@
+{"success":true,"result":{"tomcat":[{"inst_name":"tomcat.example.invalid-tomcat-8080","obj_id":"tomcat","ip_addr":"192.0.2.23","port":"8080","catalina_path":"/usr/share/tomcat9/bin/catalina.sh","version":"9.0.58 (Ubuntu)","xms":"","xmx":"","max_perm_size":"","permsize":"","log_path":"/usr/share/tomcat9/logs/catalina.out","java_version":"11.0.31"}]}}

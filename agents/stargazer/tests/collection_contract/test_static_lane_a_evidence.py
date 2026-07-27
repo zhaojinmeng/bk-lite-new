@@ -22,6 +22,11 @@ STATIC_REAL_ENVIRONMENT_CASES = (
     "haproxy",
     "kafka",
     "minio",
+    "nginx",
+    "rabbitmq",
+    "squid",
+    "tomcat",
+    "zookeeper",
 )
 
 

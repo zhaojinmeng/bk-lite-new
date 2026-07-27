@@ -1,0 +1,1 @@
+{"success":true,"result":{"squid":[{"bk_inst_name":"squid.example.invalid-squid-instead.","bk_obj_id":"squid","ip_addr":"192.0.2.23","port":"instead.","install_path":".","version":"","config_file_path":"/etc/squid/squid.conf","cache_dir":"lines","access_log":"directives","error_log":"/var/log/squid/cache.log","visible_hostname":"is"}]}}

@@ -1,0 +1,5 @@
+{
+  "source_type":"sanitized_real_environment","vendor":"apache_zookeeper","service":"not_applicable","api_operation":"not_applicable","api_or_sdk_version":"not_applicable","documentation_url":"not_applicable","read_at":"2026-07-08T06:43:21Z",
+  "sanitization":"源自 agents/stargazer/tests/fixtures/collect/zookeeper.json（提交 73f9b17c9）；保留 ZooKeeper 3.4.13/Java 11.0.31 真实字段，将地址和实例名脱敏。",
+  "review_basis":{"source_commit":"73f9b17c9","scalar_labels":"逐项核对 16 个业务标量；server 空字符串在 Prometheus 保留。","none_or_nested_exclusion":"源记录没有 None、列表或字典业务字段。","derived_labels":"人工核对 bk_obj_id/model_id/collect_status/host。","common_tags":"人工核对五个发布公共 tag。","timestamp":"1700000000123 毫秒转换为 1700000000123000000 纳秒。"}
+}
