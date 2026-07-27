@@ -1,0 +1,1 @@
+consul_info,agent_id=agent-contract,bk_obj_id=consul,collect_status=success,collect_type=discovery,config_type=production-contract,host=consul.example.invalid,inst_name=consul.example.invalid-consul-8500,install_path=/usr/bin,instance_id=cmdb-consul,instance_type=consul,ip_addr=192.0.2.22,model_id=consul,port=8500,role=Leader,version=2.0.1 gauge=1i 1700000000123000000

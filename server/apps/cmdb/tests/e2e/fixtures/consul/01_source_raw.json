@@ -1,0 +1,1 @@
+{"success":true,"result":{"consul":[{"inst_name":"consul.example.invalid-consul-8500","bk_obj_id":"consul","ip_addr":"192.0.2.22","port":"8500","install_path":"/usr/bin","version":"2.0.1","data_dir":"","conf_path":"","role":"Leader"}]}}

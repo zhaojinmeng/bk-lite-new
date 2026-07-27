@@ -1,0 +1,3 @@
+# HELP haproxy_info Auto-generated help for haproxy_info
+# TYPE haproxy_info gauge
+haproxy_info{bk_inst_name="haproxy.example.invalid-haproxy-80&8404",bk_obj_id="haproxy",collect_status="success",conf_file="/etc/haproxy/haproxy.cfg",defaults_maxconn="",defaults_mode="http",defaults_retries="",global_group_name="",global_maxconn="",global_pidfile="",global_user_name="",host="haproxy.example.invalid",install_path="haproxy",ip_addr="192.0.2.23",model_id="haproxy",port="80&8404",version="2.4.30"} 1 1700000000123

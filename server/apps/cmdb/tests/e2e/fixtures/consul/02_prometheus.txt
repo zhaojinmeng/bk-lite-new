@@ -1,0 +1,3 @@
+# HELP consul_info Auto-generated help for consul_info
+# TYPE consul_info gauge
+consul_info{bk_obj_id="consul",collect_status="success",conf_path="",data_dir="",host="consul.example.invalid",inst_name="consul.example.invalid-consul-8500",install_path="/usr/bin",ip_addr="192.0.2.22",model_id="consul",port="8500",role="Leader",version="2.0.1"} 1 1700000000123

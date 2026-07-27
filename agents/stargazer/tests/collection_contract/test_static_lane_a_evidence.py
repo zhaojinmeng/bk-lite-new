@@ -18,17 +18,21 @@ STATIC_REAL_ENVIRONMENT_CASES = (
     "redis",
     "activemq",
     "apache",
+    "consul",
+    "haproxy",
+    "kafka",
+    "minio",
 )
 
 
-def _assert_timestamp_propagation_with_empty_tag_elision(
+def _assert_timestamp_propagation_with_influx_tag_normalization(
     prometheus_semantics, line_protocol_semantics
 ):
-    """InfluxDB Point 不编码空 tag；其余记录身份必须保持毫秒到纳秒传播。"""
+    """InfluxDB Point 不编码空 tag 并裁剪尾随空格；其余身份必须传播。"""
     unmatched_records = list(line_protocol_semantics.elements())
     for sample in prometheus_semantics.elements():
         identity_labels = {
-            key: value for key, value in sample.labels if value != ""
+            key: value.rstrip() for key, value in sample.labels if value != ""
         }
         matches = [
             record
@@ -102,7 +106,7 @@ def test_可审计非云来源经过生产转换匹配逐case静态Golden(case_i
     assert actual_line_protocol_semantics == semantics.parse_line_protocol(
         expected_line_protocol
     )
-    _assert_timestamp_propagation_with_empty_tag_elision(
+    _assert_timestamp_propagation_with_influx_tag_normalization(
         actual_prometheus_semantics,
         actual_line_protocol_semantics,
     )
