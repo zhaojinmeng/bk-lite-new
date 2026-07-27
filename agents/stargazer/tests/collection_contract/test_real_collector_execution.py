@@ -13,9 +13,6 @@ from plugins.base_utils import convert_to_prometheus_format
 from service.collection_service import CollectionService
 from tasks.utils.nats_helper import convert_prometheus_to_influx
 
-EXECUTED_BINDING_KEYS = set()
-
-
 def _collector_config(binding):
     plugin_config = yaml.safe_load(binding.plugin_path.read_text(encoding="utf-8"))
     default_executor = plugin_config["default_executor"]
@@ -33,6 +30,12 @@ def _default_script(executor_config):
 def _assert_real_result_reaches_publish(binding, result, expected_source_models):
     assert result["success"] is True
     assert set(result["result"]) == set(expected_source_models)
+    executed_contracts = {
+        (binding.task_type, binding.supported_model_id, emitted_model_id)
+        for emitted_model_id in binding.emitted_model_ids
+        if binding.source_model_id(emitted_model_id) in result["result"]
+    }
+    assert executed_contracts == binding.contracts
 
     service = CollectionService(
         {
@@ -66,9 +69,6 @@ def _assert_real_result_reaches_publish(binding, result, expected_source_models)
         ]
         assert len(matches) == 1
         assert matches[0].timestamp_ns == sample.timestamp_ms * 1_000_000
-    EXECUTED_BINDING_KEYS.add((binding.task_type, binding.supported_model_id))
-
-
 GENERIC_SSH_BINDINGS = tuple(
     binding
     for binding in PRODUCTION_ADAPTER_BINDINGS
@@ -908,16 +908,12 @@ def test_VMware生产collector在SmartConnect边界执行并发布(monkeypatch):
     )
 
 
-def test_全部validation_contracts已由本次真实collector调用登记():
-    bindings_by_key = {
-        (binding.task_type, binding.supported_model_id): binding
+def test_全部validation_contracts由静态真实collector参数集合覆盖():
+    collected_contracts = {
+        contract
         for binding in PRODUCTION_ADAPTER_BINDINGS
+        for contract in binding.contracts
     }
-    assert EXECUTED_BINDING_KEYS == set(bindings_by_key)
 
-    executed_contracts = set()
-    for binding_key in EXECUTED_BINDING_KEYS:
-        executed_contracts.update(bindings_by_key[binding_key].contracts)
-
-    assert len(executed_contracts) == 79
-    assert executed_contracts == validation_contracts()
+    assert len(collected_contracts) == 79
+    assert collected_contracts == validation_contracts()
