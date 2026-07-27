@@ -2,7 +2,16 @@ import json
 
 import pytest
 
-from apps.cmdb.tests.e2e.contract_loader import REQUIRED, Evidence, EvidenceValidationError, audit_manifest_evidence, load_evidence
+from apps.cmdb.tests.e2e.contract_loader import (
+    LANE_A_REQUIRED,
+    REQUIRED,
+    Evidence,
+    EvidenceValidationError,
+    audit_lane_a_evidence,
+    audit_manifest_evidence,
+    load_evidence,
+    load_lane_a_evidence,
+)
 from apps.cmdb.tests.e2e.contract_manifest import ContractEntry, ContractManifest, load_manifest
 
 
@@ -56,6 +65,41 @@ def test_from_paths_按brief接口从目录名推导case_id(tmp_path):
     evidence = Evidence.from_paths(fixture_dir, schema_dir, required=REQUIRED)
 
     assert evidence.case_id == "factory_case"
+
+
+def test_LaneA证据只要求来源与两种独立Golden(tmp_path):
+    evidence = load_lane_a_evidence("lane_a_case", root=tmp_path)
+
+    assert evidence.required == LANE_A_REQUIRED
+    assert evidence.missing_files == [
+        "00_provenance.json",
+        "01_source_raw.json",
+        "02_prometheus.txt",
+        "03_line_protocol.txt",
+        "source.schema.json",
+    ]
+    assert "04_vm_response.json" not in evidence.missing_files
+    assert "05_expected_cmdb.json" not in evidence.missing_files
+
+
+def test_LaneA审计逐三元组汇总缺失制品():
+    audit = audit_lane_a_evidence(_single_production_manifest("missing_lane_a"))
+
+    assert len(audit.validation) == 1
+    item = audit.validation[0]
+    assert item.contract_id == (
+        "cloud",
+        "contract_example",
+        "contract_example",
+    )
+    assert item.status == "missing_evidence"
+    assert item.missing_files == (
+        "00_provenance.json",
+        "01_source_raw.json",
+        "02_prometheus.txt",
+        "03_line_protocol.txt",
+        "source.schema.json",
+    )
 
 
 def test_完整证据包通过_schema_溯源和敏感信息校验(complete_evidence):

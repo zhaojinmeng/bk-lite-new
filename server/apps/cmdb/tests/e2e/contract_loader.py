@@ -22,11 +22,18 @@ REQUIRED = (
     "04_vm_response.json",
     "05_expected_cmdb.json",
 )
+LANE_A_REQUIRED = (
+    "00_provenance.json",
+    "01_source_raw.json",
+    "02_prometheus.txt",
+    "03_line_protocol.txt",
+)
 REQUIRED_SCHEMAS = (
     "source.schema.json",
     "vm.schema.json",
     "cmdb.schema.json",
 )
+LANE_A_REQUIRED_SCHEMAS = ("source.schema.json",)
 PROVENANCE_FIELDS = (
     "source_type",
     "vendor",
@@ -86,17 +93,36 @@ class Evidence:
     fixture_dir: Path
     schema_dir: Path
     required: tuple[str, ...] = REQUIRED
+    required_schemas: tuple[str, ...] = REQUIRED_SCHEMAS
 
     @classmethod
-    def from_paths(cls, fixture_dir: Path, schema_dir: Path, *, required: tuple[str, ...] = REQUIRED, case_id: str | None = None,) -> "Evidence":
-        return cls(case_id=case_id or fixture_dir.name, fixture_dir=fixture_dir, schema_dir=schema_dir, required=required,)
+    def from_paths(
+        cls,
+        fixture_dir: Path,
+        schema_dir: Path,
+        *,
+        required: tuple[str, ...] = REQUIRED,
+        required_schemas: tuple[str, ...] = REQUIRED_SCHEMAS,
+        case_id: str | None = None,
+    ) -> "Evidence":
+        return cls(
+            case_id=case_id or fixture_dir.name,
+            fixture_dir=fixture_dir,
+            schema_dir=schema_dir,
+            required=required,
+            required_schemas=required_schemas,
+        )
 
     @property
     def missing_files(self) -> list[str]:
-        return [filename for filename in (*self.required, *REQUIRED_SCHEMAS) if not self.path_for(filename).is_file()]
+        return [
+            filename
+            for filename in (*self.required, *self.required_schemas)
+            if not self.path_for(filename).is_file()
+        ]
 
     def path_for(self, filename: str) -> Path:
-        root = self.schema_dir if filename in REQUIRED_SCHEMAS else self.fixture_dir
+        root = self.schema_dir if filename in self.required_schemas else self.fixture_dir
         return root / filename
 
     def read_json(self, filename: str) -> Any:
@@ -115,6 +141,8 @@ class Evidence:
         self.validate_complete()
         errors = []
         for document_name, schema_name in _SCHEMA_TARGETS:
+            if schema_name not in self.required_schemas:
+                continue
             document = self.read_json(document_name)
             schema = self.read_json(schema_name)
             try:
@@ -210,6 +238,19 @@ def load_evidence(case_id: str, root: Path | str | None = None) -> Evidence:
     return Evidence.from_paths(evidence_root / "fixtures" / case_id, evidence_root / "schemas" / case_id, required=REQUIRED, case_id=case_id,)
 
 
+def load_lane_a_evidence(
+    case_id: str, root: Path | str | None = None
+) -> Evidence:
+    evidence_root = E2E_ROOT if root is None else Path(root)
+    return Evidence.from_paths(
+        evidence_root / "fixtures" / case_id,
+        evidence_root / "schemas" / case_id,
+        required=LANE_A_REQUIRED,
+        required_schemas=LANE_A_REQUIRED_SCHEMAS,
+        case_id=case_id,
+    )
+
+
 def audit_manifest_evidence(
     manifest: ContractManifest | None = None, *, root: Path | str | None = None, archive_declaration: Path | str | None = None,
 ) -> ManifestEvidenceAudit:
@@ -230,8 +271,34 @@ def audit_manifest_evidence(
     return ManifestEvidenceAudit(validation=validation, non_production=non_production)
 
 
-def _audit_validation_entry(entry: ContractEntry, evidence_root: Path) -> ValidationEvidenceAudit:
-    evidence = load_evidence(entry.case_id, root=evidence_root)
+def audit_lane_a_evidence(
+    manifest: ContractManifest | None = None,
+    *,
+    root: Path | str | None = None,
+) -> ManifestEvidenceAudit:
+    """逐三元组审计 Task 5 的来源、Prometheus 和 Line Protocol 证据。
+
+    Lane A 不要求也不接受用伪造的 VM/CMDB 文件填满 Task 6 的制品。
+    """
+
+    manifest = manifest or load_manifest()
+    evidence_root = E2E_ROOT if root is None else Path(root)
+    validation = tuple(
+        _audit_validation_entry(
+            entry, evidence_root, evidence_loader=load_lane_a_evidence
+        )
+        for entry in manifest.validation_entries
+    )
+    return ManifestEvidenceAudit(validation=validation, non_production=())
+
+
+def _audit_validation_entry(
+    entry: ContractEntry,
+    evidence_root: Path,
+    *,
+    evidence_loader=load_evidence,
+) -> ValidationEvidenceAudit:
+    evidence = evidence_loader(entry.case_id, root=evidence_root)
     missing_files = tuple(evidence.missing_files)
     validation_errors = []
     if not missing_files:
