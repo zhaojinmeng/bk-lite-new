@@ -14,5 +14,6 @@
     "derived_labels": "人工核对 bk_obj_id/model_id/collect_status/host。",
     "common_tags": "独立核对 instance_id=cmdb-protocol-postgresql 及其余公共 tag。",
     "timestamp": "1700000000123 毫秒转换为 1700000000123000000 纳秒。"
-  }
+  },
+  "source_kind": "docker_real"
 }

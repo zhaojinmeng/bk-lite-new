@@ -30,6 +30,7 @@ def complete_evidence(tmp_path):
     documents = {
         "00_provenance.json": {
             "source_type": "sanitized_real_environment",
+            "source_kind": "boundary_mock",
             "vendor": "not_applicable",
             "service": "not_applicable",
             "api_operation": "not_applicable",

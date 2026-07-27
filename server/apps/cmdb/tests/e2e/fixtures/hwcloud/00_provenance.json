@@ -1,1 +1,24 @@
-{"source_type":"official_cloud_api_documentation","vendor":"hwcloud","service":"platform","api_operation":"parent_account_context","api_or_sdk_version":"Huawei Cloud API Request Signing Guide 2026-02-09","documentation_url":"https://support.huaweicloud.com/intl/en-us/devg-apisign/api-sign-provide-start.html","read_at":"2026-07-27T00:00:00+08:00","sanitization":"父账户上下文使用保留测试Endpoint、Region和Project ID，不含账号或凭据。","evidence_boundary":"HuaweiCloudManager从父采集参数构造的平台记录；该记录不来自列表API。","scenario_matrix":"agents/stargazer/tests/collection_contract/hwcloud_operation_scenarios.json","source_model_id":"hwcloud","emitted_case_id":"hwcloud","review_basis":{"official_response_fields":true,"scalar_labels":true,"none_or_nested_exclusion":true,"derived_labels":true,"common_tags":true,"timestamp":true,"record_count":1}}
+{
+  "source_type": "official_cloud_api_documentation",
+  "vendor": "hwcloud",
+  "service": "platform",
+  "api_operation": "parent_account_context",
+  "api_or_sdk_version": "Huawei Cloud API Request Signing Guide 2026-02-09",
+  "documentation_url": "https://support.huaweicloud.com/intl/en-us/devg-apisign/api-sign-provide-start.html",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "sanitization": "父账户上下文使用保留测试Endpoint、Region和Project ID，不含账号或凭据。",
+  "evidence_boundary": "HuaweiCloudManager从父采集参数构造的平台记录；该记录不来自列表API。",
+  "scenario_matrix": "agents/stargazer/tests/collection_contract/hwcloud_operation_scenarios.json",
+  "source_model_id": "hwcloud",
+  "emitted_case_id": "hwcloud",
+  "review_basis": {
+    "official_response_fields": true,
+    "scalar_labels": true,
+    "none_or_nested_exclusion": true,
+    "derived_labels": true,
+    "common_tags": true,
+    "timestamp": true,
+    "record_count": 1
+  },
+  "source_kind": "official_sdk_mock"
+}

@@ -14,5 +14,6 @@
     "derived_labels": "人工核对 bk_obj_id/model_id/collect_status/host 四个标准化标签。",
     "common_tags": "人工核对 agent_id/instance_id/instance_type/collect_type/config_type 五个发布公共 tag。",
     "timestamp": "固定 1700000000123 毫秒；Line Protocol 必须为 1700000000123000000 纳秒。"
-  }
+  },
+  "source_kind": "docker_real"
 }

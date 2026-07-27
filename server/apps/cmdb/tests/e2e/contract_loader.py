@@ -36,6 +36,7 @@ REQUIRED_SCHEMAS = (
 LANE_A_REQUIRED_SCHEMAS = ("source.schema.json",)
 PROVENANCE_FIELDS = (
     "source_type",
+    "source_kind",
     "vendor",
     "service",
     "api_operation",
@@ -49,6 +50,12 @@ SOURCE_TYPE_OFFICIAL_CLOUD_API_DOCUMENTATION = "official_cloud_api_documentation
 SOURCE_TYPES = {
     SOURCE_TYPE_SANITIZED_REAL_ENVIRONMENT,
     SOURCE_TYPE_OFFICIAL_CLOUD_API_DOCUMENTATION,
+}
+SOURCE_KINDS = {
+    "docker_real",
+    "official_sdk_mock",
+    "boundary_mock",
+    "private_api_mock",
 }
 _NOT_APPLICABLE = "not_applicable"
 _REAL_ENVIRONMENT_NOT_APPLICABLE_FIELDS = (
@@ -224,6 +231,24 @@ class ManifestEvidenceAudit:
             "non_production": [asdict(item) for item in self.non_production],
         }
 
+    def ready_by_source_kind(
+        self, *, root: Path | str | None = None
+    ) -> dict[str, tuple[str, ...]]:
+        """按证据来源分栏，且只统计已通过全部 Lane A 门禁的 case。"""
+
+        evidence_root = E2E_ROOT if root is None else Path(root)
+        grouped: dict[str, list[str]] = {kind: [] for kind in sorted(SOURCE_KINDS)}
+        for item in self.validation:
+            if item.status != "ready":
+                continue
+            provenance = load_lane_a_evidence(
+                item.case_id, root=evidence_root
+            ).read_json("00_provenance.json")
+            grouped[provenance["source_kind"]].append(item.case_id)
+        return {
+            kind: tuple(sorted(case_ids)) for kind, case_ids in grouped.items()
+        }
+
 
 def load_evidence(case_id: str, root: Path | str | None = None) -> Evidence:
     evidence_root = E2E_ROOT if root is None else Path(root)
@@ -299,8 +324,24 @@ def _format_validation_error(error: jsonschema.ValidationError) -> str:
 
 def _validate_provenance_source(case_id: str, provenance: dict[str, str]) -> None:
     source_type = provenance["source_type"]
+    source_kind = provenance["source_kind"]
     if source_type not in SOURCE_TYPES:
         raise EvidenceValidationError(f"{case_id}: source_type 必须是受控值: {', '.join(sorted(SOURCE_TYPES))}")
+    if source_kind not in SOURCE_KINDS:
+        raise EvidenceValidationError(
+            f"{case_id}: source_kind 必须是受控值: {', '.join(sorted(SOURCE_KINDS))}"
+        )
+    compatible_kinds = {
+        SOURCE_TYPE_SANITIZED_REAL_ENVIRONMENT: {"docker_real", "boundary_mock"},
+        SOURCE_TYPE_OFFICIAL_CLOUD_API_DOCUMENTATION: {
+            "official_sdk_mock",
+            "private_api_mock",
+        },
+    }
+    if source_kind not in compatible_kinds[source_type]:
+        raise EvidenceValidationError(
+            f"{case_id}: source_type={source_type} 与 source_kind={source_kind} 不兼容"
+        )
     if source_type == SOURCE_TYPE_SANITIZED_REAL_ENVIRONMENT:
         invalid = [field for field in _REAL_ENVIRONMENT_NOT_APPLICABLE_FIELDS if provenance[field] != _NOT_APPLICABLE]
         if invalid:

@@ -1,5 +1,20 @@
 {
-  "source_type":"sanitized_real_environment","vendor":"memcached_community","service":"not_applicable","api_operation":"not_applicable","api_or_sdk_version":"not_applicable","documentation_url":"not_applicable","read_at":"2026-07-08T06:28:31Z",
-  "sanitization":"源自 agents/stargazer/tests/fixtures/collect/memcached.json（提交 73f9b17c9）；保留三条真实脚本输出并将地址/实例名脱敏；空端口记录不删除。",
-  "review_basis":{"source_commit":"73f9b17c9","record_count":"3","scalar_labels":"逐条核对 3 条记录各 9 个业务标量；空 port/version/maxconn/cachesize/user_name 保留在 Prometheus。","none_or_nested_exclusion":"三条源记录均无 None、列表或字典业务字段。","derived_labels":"每条独立核对 model_id/collect_status/host，源 bk_inst_name/bk_obj_id 保持。","common_tags":"三条均核对五个发布公共 tag。","timestamp":"三条均由 1700000000123 毫秒转换为 1700000000123000000 纳秒。"}
+  "source_type": "sanitized_real_environment",
+  "vendor": "memcached_community",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-08T06:28:31Z",
+  "sanitization": "源自 agents/stargazer/tests/fixtures/collect/memcached.json（提交 73f9b17c9）；保留三条真实脚本输出并将地址/实例名脱敏；空端口记录不删除。",
+  "review_basis": {
+    "source_commit": "73f9b17c9",
+    "record_count": "3",
+    "scalar_labels": "逐条核对 3 条记录各 9 个业务标量；空 port/version/maxconn/cachesize/user_name 保留在 Prometheus。",
+    "none_or_nested_exclusion": "三条源记录均无 None、列表或字典业务字段。",
+    "derived_labels": "每条独立核对 model_id/collect_status/host，源 bk_inst_name/bk_obj_id 保持。",
+    "common_tags": "三条均核对五个发布公共 tag。",
+    "timestamp": "三条均由 1700000000123 毫秒转换为 1700000000123000000 纳秒。"
+  },
+  "source_kind": "docker_real"
 }

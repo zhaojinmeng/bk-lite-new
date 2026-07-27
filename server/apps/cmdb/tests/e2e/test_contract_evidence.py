@@ -17,6 +17,16 @@ from apps.cmdb.tests.e2e.contract_manifest import ContractEntry, ContractManifes
 def _update_provenance(complete_evidence, **changes):
     provenance_path = complete_evidence.root / "fixtures" / complete_evidence.case_id / "00_provenance.json"
     provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    if (
+        changes.get("source_type") == "official_cloud_api_documentation"
+        and "source_kind" not in changes
+    ):
+        changes["source_kind"] = "official_sdk_mock"
+    elif (
+        changes.get("source_type") == "sanitized_real_environment"
+        and "source_kind" not in changes
+    ):
+        changes["source_kind"] = "boundary_mock"
     provenance.update(changes)
     provenance_path.write_text(json.dumps(provenance), encoding="utf-8")
 
@@ -131,6 +141,62 @@ def test_provenance_缺键明确失败(complete_evidence):
 
     with pytest.raises(EvidenceValidationError, match="sanitization"):
         evidence.validate_provenance()
+
+
+@pytest.mark.parametrize(
+    ("source_type", "source_kind"),
+    [
+        ("sanitized_real_environment", "docker_real"),
+        ("sanitized_real_environment", "boundary_mock"),
+        ("official_cloud_api_documentation", "official_sdk_mock"),
+        ("official_cloud_api_documentation", "private_api_mock"),
+    ],
+)
+def test_provenance_来源类型和来源分栏采用受控兼容组合(
+    complete_evidence, source_type, source_kind
+):
+    changes = {"source_type": source_type, "source_kind": source_kind}
+    if source_type == "official_cloud_api_documentation":
+        changes.update(
+            vendor="qcloud",
+            service="compute",
+            api_operation="DescribeResources",
+            api_or_sdk_version="v1",
+            documentation_url="https://cloud.tencent.com/document/api/213/15753",
+        )
+    _update_provenance(complete_evidence, **changes)
+
+    load_evidence(
+        complete_evidence.case_id, root=complete_evidence.root
+    ).validate_provenance()
+
+
+@pytest.mark.parametrize(
+    ("source_type", "source_kind"),
+    [
+        ("sanitized_real_environment", "official_sdk_mock"),
+        ("official_cloud_api_documentation", "docker_real"),
+        ("sanitized_real_environment", "unknown"),
+    ],
+)
+def test_provenance_拒绝未声明或不兼容的来源分栏(
+    complete_evidence, source_type, source_kind
+):
+    changes = {"source_type": source_type, "source_kind": source_kind}
+    if source_type == "official_cloud_api_documentation":
+        changes.update(
+            vendor="qcloud",
+            service="compute",
+            api_operation="DescribeResources",
+            api_or_sdk_version="v1",
+            documentation_url="https://cloud.tencent.com/document/api/213/15753",
+        )
+    _update_provenance(complete_evidence, **changes)
+
+    with pytest.raises(EvidenceValidationError, match="source_kind"):
+        load_evidence(
+            complete_evidence.case_id, root=complete_evidence.root
+        ).validate_provenance()
 
 
 @pytest.mark.parametrize(

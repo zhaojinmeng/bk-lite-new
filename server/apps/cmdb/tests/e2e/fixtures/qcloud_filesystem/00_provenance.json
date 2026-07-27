@@ -19,5 +19,6 @@
     "common_tags": true,
     "timestamp": true,
     "record_count": 1
-  }
+  },
+  "source_kind": "official_sdk_mock"
 }

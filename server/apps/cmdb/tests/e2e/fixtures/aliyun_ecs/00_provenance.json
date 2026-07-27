@@ -1,1 +1,24 @@
-{"source_type":"official_cloud_api_documentation","vendor":"aliyun","service":"ecs","api_operation":"DescribeInstances","api_or_sdk_version":"2014-05-26","documentation_url":"https://help.aliyun.com/en/ecs/developer-reference/api-ecs-2014-05-26-describeinstances","read_at":"2026-07-27T00:00:00+08:00","sanitization":"官方响应字段人工最小化，所有标识为保留测试值，不含账号或凭据。","evidence_boundary":"官方SDK响应经真实Aliyun父collector格式化后的Stargazer原始结果","scenario_matrix":"agents/stargazer/tests/collection_contract/aliyun_operation_scenarios.json","source_model_id":"aliyun_ecs","emitted_case_id":"aliyun_ecs","review_basis":{"official_response_fields":true,"scalar_labels":true,"none_or_nested_exclusion":true,"derived_labels":true,"common_tags":true,"timestamp":true,"record_count":1}}
+{
+  "source_type": "official_cloud_api_documentation",
+  "vendor": "aliyun",
+  "service": "ecs",
+  "api_operation": "DescribeInstances",
+  "api_or_sdk_version": "2014-05-26",
+  "documentation_url": "https://help.aliyun.com/en/ecs/developer-reference/api-ecs-2014-05-26-describeinstances",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "sanitization": "官方响应字段人工最小化，所有标识为保留测试值，不含账号或凭据。",
+  "evidence_boundary": "官方SDK响应经真实Aliyun父collector格式化后的Stargazer原始结果",
+  "scenario_matrix": "agents/stargazer/tests/collection_contract/aliyun_operation_scenarios.json",
+  "source_model_id": "aliyun_ecs",
+  "emitted_case_id": "aliyun_ecs",
+  "review_basis": {
+    "official_response_fields": true,
+    "scalar_labels": true,
+    "none_or_nested_exclusion": true,
+    "derived_labels": true,
+    "common_tags": true,
+    "timestamp": true,
+    "record_count": 1
+  },
+  "source_kind": "official_sdk_mock"
+}
