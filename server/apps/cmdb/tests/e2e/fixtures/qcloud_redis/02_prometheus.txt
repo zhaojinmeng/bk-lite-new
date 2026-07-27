@@ -1,0 +1,3 @@
+# HELP qcloud_redis_info Auto-generated help for qcloud_redis_info
+# TYPE qcloud_redis_info gauge
+qcloud_redis_info{bk_obj_id="qcloud_redis",collect_status="success",memory_mb="1024",model_id="qcloud_redis",port="6379",region="ap-shanghai",resource_id="crs-001",resource_name="redis-contract"} 1 1700000000123

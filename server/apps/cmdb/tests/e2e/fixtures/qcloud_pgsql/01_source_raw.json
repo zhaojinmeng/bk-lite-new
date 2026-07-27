@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_pgsql": [
+      {
+        "resource_name": "pgsql-contract",
+        "resource_id": "postgres-001",
+        "region": "ap-shanghai",
+        "cpu": 2,
+        "memory_mb": 4096,
+        "volume_mb": 20480
+      }
+    ]
+  }
+}

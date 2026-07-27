@@ -12,10 +12,10 @@
     "result": {
       "type": "object",
       "required": [
-        "qcloud_cvm"
+        "qcloud_mongodb"
       ],
       "properties": {
-        "qcloud_cvm": {
+        "qcloud_mongodb": {
           "type": "array",
           "minItems": 1,
           "items": {

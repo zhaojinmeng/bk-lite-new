@@ -1,0 +1,1 @@
+qcloud_mongodb_info,agent_id=agent-contract,bk_obj_id=qcloud_mongodb,collect_status=success,collect_type=discovery,config_type=production-contract,instance_id=cmdb-qcloud,instance_type=qcloud,memory_mb=4096,model_id=qcloud_mongodb,port=27017,region=ap-shanghai,resource_id=cmgo-001,resource_name=mongo-contract gauge=1i 1700000000123000000

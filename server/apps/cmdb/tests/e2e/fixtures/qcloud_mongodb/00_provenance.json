@@ -1,0 +1,23 @@
+{
+  "source_type": "official_cloud_api_documentation",
+  "vendor": "qcloud",
+  "service": "mongodb",
+  "api_operation": "DescribeDBInstances",
+  "api_or_sdk_version": "2018-04-08",
+  "documentation_url": "https://cloud.tencent.com/document/product/240/35769",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "sanitization": "官方响应字段人工最小化；ID、IP、名称使用文档/保留测试值；不含账号或凭据。",
+  "evidence_boundary": "官方 SDK/HTTP 响应经真实 TencentCloudManager 映射后的 Stargazer 插件原始结果",
+  "scenario_matrix": "agents/stargazer/tests/collection_contract/qcloud_operation_scenarios.json",
+  "source_model_id": "qcloud_mongodb",
+  "emitted_case_id": "qcloud_mongodb",
+  "review_basis": {
+    "official_response_fields": true,
+    "scalar_labels": true,
+    "none_or_nested_exclusion": true,
+    "derived_labels": true,
+    "common_tags": true,
+    "timestamp": true,
+    "record_count": 1
+  }
+}

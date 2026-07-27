@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_mongodb": [
+      {
+        "resource_name": "mongo-contract",
+        "resource_id": "cmgo-001",
+        "region": "ap-shanghai",
+        "port": 27017,
+        "memory_mb": 4096
+      }
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+qcloud_mysql_info,agent_id=agent-contract,bk_obj_id=qcloud_mysql,collect_status=success,collect_type=discovery,config_type=production-contract,instance_id=cmdb-qcloud,instance_type=qcloud,memory_mb=4096,model_id=qcloud_mysql,region=ap-shanghai,resource_id=cdb-001,resource_name=mysql-contract,status=运行中 gauge=1i 1700000000123000000

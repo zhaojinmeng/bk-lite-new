@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_pulsar_cluster": [
+      {
+        "resource_name": "pulsar-contract",
+        "resource_id": "pulsar-001",
+        "region": "ap-shanghai",
+        "status": "正常",
+        "max_topic_num": 1000
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_mysql": [
+      {
+        "resource_name": "mysql-contract",
+        "resource_id": "cdb-001",
+        "region": "ap-shanghai",
+        "status": "运行中",
+        "memory_mb": 4096
+      }
+    ]
+  }
+}
