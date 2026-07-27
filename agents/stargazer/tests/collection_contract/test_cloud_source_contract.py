@@ -1445,6 +1445,44 @@ def test_华为云十一项operation显式声明五态与官方来源():
             assert pagination["documentation_url"] == operation["documentation_url"]
 
 
+@pytest.mark.parametrize(
+    ("operation", "case_id"),
+    [
+        (operation, case_id)
+        for operation in HWCLOUD_SCENARIO_MATRIX["operations"]
+        for case_id in operation["case_ids"]
+    ],
+    ids=lambda value: value if isinstance(value, str) else None,
+)
+def test_华为云逐case_provenance与operation矩阵严格一致(operation, case_id):
+    evidence = QCLOUD_EVIDENCE_ROOT / case_id
+    provenance = json.loads(
+        (evidence / "00_provenance.json").read_text(encoding="utf-8")
+    )
+    source = json.loads((evidence / "01_source_raw.json").read_text(encoding="utf-8"))
+
+    assert {
+        key: provenance[key]
+        for key in (
+            "vendor",
+            "service",
+            "api_operation",
+            "api_or_sdk_version",
+            "documentation_url",
+            "read_at",
+        )
+    } == {
+        "vendor": HWCLOUD_SCENARIO_MATRIX["vendor"],
+        "service": operation["service"],
+        "api_operation": operation["api_operation"],
+        "api_or_sdk_version": operation["api_or_sdk_version"],
+        "documentation_url": operation["documentation_url"],
+        "read_at": HWCLOUD_SCENARIO_MATRIX["read_at"],
+    }
+    assert provenance["emitted_case_id"] == case_id
+    assert set(source["result"]) == {provenance["source_model_id"]}
+
+
 def test_华为云平台对象来自父账户上下文且可选endpoint保持空值():
     operation = next(
         item

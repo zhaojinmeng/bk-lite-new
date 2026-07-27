@@ -1,0 +1,3 @@
+# HELP hwcloud_sg_info Auto-generated help for hwcloud_sg_info
+# TYPE hwcloud_sg_info gauge
+hwcloud_sg_info{bk_obj_id="hwcloud_sg",collect_status="success",is_default="False",model_id="hwcloud_sg",region="cn-south-1",resource_id="sg-001",resource_name="sg-contract",vpc="vpc-001"} 1 1700000000123

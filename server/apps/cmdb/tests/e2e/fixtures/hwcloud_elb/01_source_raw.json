@@ -1,0 +1,1 @@
+{"success":true,"result":{"hwcloud_elb":[{"resource_name":"elb-contract","resource_id":"elb-001","status":"True","ip_version":"","ipv6_addr":"","charge_type":"","region":"cn-south-1","create_time":"2026-01-02T03:04:05Z","vpc":"vpc-001"}]}}

@@ -1,0 +1,1 @@
+{"success":true,"result":{"hwcloud_dcs":[{"resource_name":"dcs-contract","resource_id":"dcs-001","ip_addr":"192.0.2.40","port":"6379","status":"RUNNING","engine":"Redis","engine_version":"6.0","capacity_gb":"0","cache_mode":"ha","charge_type":"0","region":"cn-south-1","create_time":"2026-01-02T03:04:05Z","vpc_id":"vpc-001","subnet_id":"subnet-001"}]}}

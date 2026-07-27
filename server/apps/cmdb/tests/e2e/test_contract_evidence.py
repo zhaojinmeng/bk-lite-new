@@ -338,3 +338,15 @@ def test_aliyun八个三元组LaneA_evidence全部ready():
 
     assert len(aliyun_items) == 8
     assert all(item.status == "ready" for item in aliyun_items)
+
+
+def test_hwcloud十一个三元组LaneA_evidence全部ready():
+    audit = audit_lane_a_evidence(load_manifest())
+    hwcloud_items = [
+        item
+        for item in audit.validation
+        if item.contract_id[0:2] == ("cloud", "hwcloud")
+    ]
+
+    assert len(hwcloud_items) == 11
+    assert all(item.status == "ready" for item in hwcloud_items)
