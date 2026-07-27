@@ -6,5 +6,13 @@
   "api_or_sdk_version": "not_applicable",
   "documentation_url": "not_applicable",
   "read_at": "2026-07-04T16:43:33Z",
-  "sanitization": "源自 agents/stargazer/tests/fixtures/collect/mysql.json（提交 ee2987167）；保留真实 MySQL 8.0.46 采集字段，将容器 UUID、server UUID 和容器日志文件名替换为 contract 占位值。"
+  "sanitization": "源自 agents/stargazer/tests/fixtures/collect/mysql.json（提交 ee2987167）；保留真实 MySQL 8.0.46 采集字段，将容器 UUID、server UUID 和容器日志文件名替换为 contract 占位值。",
+  "review_basis": {
+    "source_commit": "ee2987167",
+    "scalar_labels": "逐项核对 01_source_raw 中每个非 None 标量均成为字符串 label；False 明确保留为 False。",
+    "none_exclusion": "master_host/master_port/master_user/master_uuid/slave_io_running/slave_sql_running 为 None，必须从 Prometheus 与 Line Protocol 排除。",
+    "derived_labels": "人工核对 bk_obj_id/model_id/collect_status/host 四个标准化标签。",
+    "common_tags": "人工核对 agent_id/instance_id/instance_type/collect_type/config_type 五个发布公共 tag。",
+    "timestamp": "固定 1700000000123 毫秒；Line Protocol 必须为 1700000000123000000 纳秒。"
+  }
 }
