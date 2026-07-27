@@ -1,0 +1,3 @@
+# HELP hbase_info Auto-generated help for hbase_info
+# TYPE hbase_info gauge
+hbase_info{bk_obj_id="hbase",cluster_distributed="false",collect_status="success",host="hbase.example.invalid",inst_name="hbase.example.invalid",ip_addr="192.0.2.70",model_id="hbase",port="16000",version="2.5.8"} 1 1700000000123

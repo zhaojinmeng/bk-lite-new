@@ -1,0 +1,3 @@
+# HELP network_system_info Auto-generated help for network_system_info
+# TYPE network_system_info gauge
+network_system_info{bk_obj_id="network_system",collect_status="success",inst_name="network.example.invalid",ip_addr="192.0.2.76",model_id="network_system",port="161",sysdescr="Contract SNMP device",sysname="network.example.invalid",sysobjectid="1.3.6.1.4.1.8072.3.2.10"} 1 1700000000123

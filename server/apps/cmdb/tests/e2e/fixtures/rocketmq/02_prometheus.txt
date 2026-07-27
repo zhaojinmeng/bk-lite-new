@@ -1,0 +1,3 @@
+# HELP rocketmq_info Auto-generated help for rocketmq_info
+# TYPE rocketmq_info gauge
+rocketmq_info{bk_obj_id="rocketmq",broker_id="0",broker_name="broker-contract",collect_status="success",host="rocketmq.example.invalid",inst_name="rocketmq.example.invalid",ip_addr="192.0.2.73",model_id="rocketmq",port="10911",version="5.1.4"} 1 1700000000123

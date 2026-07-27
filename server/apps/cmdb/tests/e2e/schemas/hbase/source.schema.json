@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "success",
+    "result"
+  ],
+  "properties": {
+    "success": {
+      "const": true
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "hbase"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "hbase": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "inst_name",
+              "ip_addr",
+              "port",
+              "version",
+              "cluster_distributed"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

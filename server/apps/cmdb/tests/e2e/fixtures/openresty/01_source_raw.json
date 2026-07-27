@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "openresty": [
+      {
+        "inst_name": "openresty.example.invalid",
+        "ip_addr": "192.0.2.72",
+        "listen_port": "80",
+        "version": "1.21.4.2",
+        "openresty_path": "/usr/local/openresty/nginx/sbin/nginx"
+      }
+    ]
+  }
+}

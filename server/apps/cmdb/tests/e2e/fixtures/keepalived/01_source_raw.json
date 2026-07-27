@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "result": {
+    "keepalived": [
+      {
+        "inst_name": "keepalived.example.invalid",
+        "ip_addr": "192.0.2.71",
+        "version": "2.2.7",
+        "priority": "100",
+        "state": "MASTER",
+        "virtual_router_id": "51"
+      }
+    ]
+  }
+}

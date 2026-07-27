@@ -1,0 +1,3 @@
+# HELP spark_info Auto-generated help for spark_info
+# TYPE spark_info gauge
+spark_info{bk_obj_id="spark",collect_status="success",host="spark.example.invalid",inst_name="spark.example.invalid",ip_addr="192.0.2.74",model_id="spark",port="7077",version="3.5.1",webui_port="8080"} 1 1700000000123

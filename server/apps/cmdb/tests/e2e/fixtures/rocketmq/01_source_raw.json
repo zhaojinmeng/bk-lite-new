@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "result": {
+    "rocketmq": [
+      {
+        "inst_name": "rocketmq.example.invalid",
+        "ip_addr": "192.0.2.73",
+        "port": "10911",
+        "version": "5.1.4",
+        "broker_id": "0",
+        "broker_name": "broker-contract"
+      }
+    ]
+  }
+}

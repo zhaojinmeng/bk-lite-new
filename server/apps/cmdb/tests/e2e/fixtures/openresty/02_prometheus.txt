@@ -1,0 +1,3 @@
+# HELP openresty_info Auto-generated help for openresty_info
+# TYPE openresty_info gauge
+openresty_info{bk_obj_id="openresty",collect_status="success",host="openresty.example.invalid",inst_name="openresty.example.invalid",ip_addr="192.0.2.72",listen_port="80",model_id="openresty",openresty_path="/usr/local/openresty/nginx/sbin/nginx",version="1.21.4.2"} 1 1700000000123

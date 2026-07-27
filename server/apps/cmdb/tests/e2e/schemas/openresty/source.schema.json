@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "success",
+    "result"
+  ],
+  "properties": {
+    "success": {
+      "const": true
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "openresty"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "openresty": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "inst_name",
+              "ip_addr",
+              "listen_port",
+              "version",
+              "openresty_path"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,35 @@
+{
+  "source_type": "sanitized_real_environment",
+  "source_kind": "boundary_mock",
+  "vendor": "not_applicable",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-27T06:55:00Z",
+  "sanitization": "仅使用 RFC 5737 地址和 example.invalid 保留域名；无真实凭据",
+  "source_model_id": "keepalived",
+  "emitted_case_id": "keepalived",
+  "docker_attempt": {
+    "kind": "collector_cli",
+    "command": "tests.collect_fixtures.cli keepalived",
+    "result": "Ubuntu container 925ded884273 reached SSH install; install command exit=1; container removed"
+  },
+  "mock_boundary": "最外层命令/协议返回；真实 collector/formatter/publish 转换继续运行",
+  "scenario_contract": [
+    "normal_non_empty",
+    "empty",
+    "missing_optional",
+    "multi_record",
+    "protocol_error"
+  ],
+  "review_basis": {
+    "source_commit": "25cf2f4b2",
+    "scalar_labels": "静态记录逐字段复核",
+    "none_or_nested_exclusion": "无 None 或嵌套业务字段",
+    "derived_labels": "bk_obj_id/model_id/collect_status/host 由真实 formatter 添加",
+    "common_tags": "发布公共 tags 使用 production-contract 固定值",
+    "timestamp": "固定为 1700000000123 毫秒",
+    "record_count": 1
+  }
+}

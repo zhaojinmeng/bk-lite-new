@@ -1,0 +1,36 @@
+{
+  "source_type": "sanitized_real_environment",
+  "source_kind": "boundary_mock",
+  "vendor": "not_applicable",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-27T06:55:00Z",
+  "sanitization": "仅使用 RFC 5737 地址和 example.invalid 保留域名；无真实凭据",
+  "source_model_id": "mssql",
+  "emitted_case_id": "mssql",
+  "docker_attempt": {
+    "kind": "service_and_collector",
+    "command": "MSSQL 2022 amd64 image + MSSQLInfo",
+    "result": "service ready under emulation; production collector failed because host lacks ODBC Driver 17; container removed",
+    "image_digest": "mcr.microsoft.com/mssql/server@sha256:c1aa8afe9b06eab64c9774a4802dcd032205d1be785b1fd51e1c0151e7586b74"
+  },
+  "mock_boundary": "最外层命令/协议返回；真实 collector/formatter/publish 转换继续运行",
+  "scenario_contract": [
+    "normal_non_empty",
+    "empty",
+    "missing_optional",
+    "multi_record",
+    "protocol_error"
+  ],
+  "review_basis": {
+    "source_commit": "25cf2f4b2",
+    "scalar_labels": "静态记录逐字段复核",
+    "none_or_nested_exclusion": "无 None 或嵌套业务字段",
+    "derived_labels": "bk_obj_id/model_id/collect_status/host 由真实 formatter 添加",
+    "common_tags": "发布公共 tags 使用 production-contract 固定值",
+    "timestamp": "固定为 1700000000123 毫秒",
+    "record_count": 1
+  }
+}

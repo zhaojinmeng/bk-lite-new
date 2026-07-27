@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "hbase": [
+      {
+        "inst_name": "hbase.example.invalid",
+        "ip_addr": "192.0.2.70",
+        "port": "16000",
+        "version": "2.5.8",
+        "cluster_distributed": "false"
+      }
+    ]
+  }
+}

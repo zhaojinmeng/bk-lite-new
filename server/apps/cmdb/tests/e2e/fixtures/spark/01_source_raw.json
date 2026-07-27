@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "spark": [
+      {
+        "inst_name": "spark.example.invalid",
+        "ip_addr": "192.0.2.74",
+        "port": "7077",
+        "version": "3.5.1",
+        "webui_port": "8080"
+      }
+    ]
+  }
+}

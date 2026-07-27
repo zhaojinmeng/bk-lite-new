@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "success",
+    "result"
+  ],
+  "properties": {
+    "success": {
+      "const": true
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "mssql"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mssql": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "inst_name",
+              "ip_addr",
+              "port",
+              "version",
+              "max_conn",
+              "max_mem_mb",
+              "order_rule",
+              "fill_factor",
+              "boot_account"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
