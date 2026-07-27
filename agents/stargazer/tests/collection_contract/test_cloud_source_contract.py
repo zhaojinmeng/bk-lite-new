@@ -26,6 +26,7 @@ if str(STARGAZER_ROOT) not in sys.path:
 from aliyunsdkcore.request import CommonRequest  # noqa: E402
 from common.cmp.cloud_apis.constant import CloudType  # noqa: E402
 from common.cmp.cloud_apis.resource_apis import cw_huaweicloud  # noqa: E402
+from plugins.inputs.aliyun import aliyun_info  # noqa: E402
 from plugins.inputs.aliyun.aliyun_info import Aliyun  # noqa: E402
 from plugins.inputs.hwcloud.huaweicloud_info import HuaweiCloudManager  # noqa: E402
 from plugins.inputs.qcloud import qcloud_info  # noqa: E402
@@ -111,6 +112,32 @@ def _qcloud_manager(monkeypatch, call_json):
 
 def _qcloud_cvm(instance):
     return {"Response": {"TotalCount": 1, "InstanceSet": [instance]}}
+
+
+def _assert_parent_replay_matches_case_evidence(parent_result, case_ids):
+    """逐模型投影父采集结果，并精确核对证据声明的全部字段和值。"""
+
+    assert parent_result["success"] is True
+    for case_id in case_ids:
+        evidence = QCLOUD_EVIDENCE_ROOT / case_id
+        provenance = json.loads(
+            (evidence / "00_provenance.json").read_text(encoding="utf-8")
+        )
+        expected_source = json.loads(
+            (evidence / "01_source_raw.json").read_text(encoding="utf-8")
+        )
+        source_model_id = provenance["source_model_id"]
+        assert provenance["emitted_case_id"] == case_id
+        assert set(expected_source["result"]) == {source_model_id}
+
+        actual_items = parent_result["result"][source_model_id]
+        expected_items = expected_source["result"][source_model_id]
+        assert len(actual_items) == len(expected_items)
+        projected_items = []
+        for actual, expected in zip(actual_items, expected_items):
+            assert set(expected) <= set(actual)
+            projected_items.append({key: actual[key] for key in expected})
+        assert projected_items == expected_items
 
 
 def test_腾讯云十四项operation显式声明五态与官方来源():
@@ -660,6 +687,182 @@ def test_腾讯云RocketMQ文档化不支持地域错误只跳过该地域(monke
     manager = _qcloud_manager(monkeypatch, Mock(side_effect=sdk_error))
 
     assert manager.get_qcloud_rocketmq() == []
+
+
+def test_腾讯云冻结SDK响应经真实父collector逐case匹配来源证据(monkeypatch):
+    cases = tuple(item["case_id"] for item in QCLOUD_SCENARIO_MATRIX["operations"])
+    raw_by_action = {
+        "DescribeInstances": (
+            "InstanceSet",
+            {
+                "InstanceName": "cvm-contract",
+                "InstanceId": "ins-001",
+                "InstanceState": "RUNNING",
+                "Memory": 4,
+            },
+        ),
+        "DescribeRocketMQClusters": (
+            "ClusterList",
+            {
+                "Info": {
+                    "ClusterName": "rocketmq-contract",
+                    "ClusterId": "rocketmq-001",
+                    "ZoneId": "zone-contract",
+                },
+                "Status": 1,
+                "Config": {"MaxTopicNum": 10},
+            },
+        ),
+        "DescribeDBInstances": (
+            None,
+            None,
+        ),
+        "DescribeClusters": (
+            "ClusterSet",
+            {
+                "ClusterName": "pulsar-contract",
+                "ClusterId": "pulsar-001",
+                "Status": 1,
+                "MaxTopicNum": 1000,
+            },
+        ),
+        "DescribeQueueDetail": (
+            "QueueSet",
+            {"QueueName": "queue-contract", "QueueId": "queue-001", "Qps": 5000},
+        ),
+        "DescribeTopicDetail": (
+            "TopicSet",
+            {"TopicName": "topic-contract", "TopicId": "topic-001", "Qps": 5000},
+        ),
+        "DescribeLoadBalancers": (
+            "LoadBalancerSet",
+            {
+                "LoadBalancerName": "clb-contract",
+                "LoadBalancerId": "lb-001",
+                "LoadBalancerVips": ["203.0.113.10"],
+                "Status": 1,
+            },
+        ),
+        "DescribeAddresses": (
+            "AddressSet",
+            {
+                "AddressName": "eip-contract",
+                "AddressId": "eip-001",
+                "AddressIp": "203.0.113.11",
+                "AddressStatus": "BIND",
+            },
+        ),
+        "DescribeCfsFileSystems": (
+            "FileSystems",
+            {
+                "FsName": "cfs-contract",
+                "FileSystemId": "cfs-001",
+                "Protocol": "NFS",
+                "Capacity": 100,
+            },
+        ),
+        "DescribeDomainNameList": (
+            "DomainSet",
+            {
+                "DomainName": "example.invalid",
+                "DomainId": "domain-001",
+                "CodeTld": "com",
+                "BuyStatus": "ok",
+                "ExpirationDate": "2027-01-01",
+            },
+        ),
+    }
+    database_actions = iter(
+        (
+            (
+                "Items",
+                {
+                    "InstanceName": "mysql-contract",
+                    "InstanceId": "cdb-001",
+                    "Status": 1,
+                    "Memory": 4096,
+                },
+            ),
+            (
+                "InstanceSet",
+                {
+                    "InstanceName": "redis-contract",
+                    "InstanceId": "crs-001",
+                    "RegionId": "ap-shanghai",
+                    "Port": 6379,
+                    "Size": 1024,
+                },
+            ),
+            (
+                "InstanceDetails",
+                {
+                    "InstanceName": "mongo-contract",
+                    "InstanceId": "cmgo-001",
+                    "Region": "ap-shanghai",
+                    "Vport": 27017,
+                    "Memory": 4096,
+                },
+            ),
+            (
+                "DBInstanceSet",
+                {
+                    "DBInstanceName": "pgsql-contract",
+                    "DBInstanceId": "postgres-001",
+                    "Region": "ap-shanghai",
+                    "DBInstanceCpu": 2,
+                    "DBInstanceMemory": 4,
+                    "DBInstanceStorage": 20,
+                },
+            ),
+        )
+    )
+
+    database_responses = {}
+    for client_name in ("cdb", "redis", "mongodb", "postgres"):
+        database_responses[client_name] = next(database_actions)
+
+    action_counts = {}
+
+    def sdk_boundary(self, action, params):
+        if params.get("Offset", 0):
+            collection = raw_by_action.get(action, ("ClusterList", None))[0]
+            return {"Response": {collection: []}}
+        if action == "DescribeDBInstances":
+            key = ("cdb", "mongodb", "postgres")[
+                action_counts.get(action, 0)
+            ]
+            collection, item = database_responses[key]
+        elif action == "DescribeInstances" and action_counts.get(action, 0):
+            collection, item = database_responses["redis"]
+        else:
+            collection, item = raw_by_action[action]
+        action_counts[action] = action_counts.get(action, 0) + 1
+        response = {collection: [item], "TotalCount": 1}
+        return {"Response": response}
+
+    def cos_boundary(self):
+        return {
+            "Buckets": {
+                "Bucket": [
+                    {"Name": "bucket-contract", "Location": "ap-shanghai"}
+                ]
+            }
+        }
+
+    monkeypatch.setattr(qcloud_info.CommonClient, "call_json", sdk_boundary)
+    monkeypatch.setattr(qcloud_info.CosS3Client, "list_buckets", cos_boundary)
+    monkeypatch.setitem(
+        qcloud_info.product_available_region_list_map, "cmq", ["ap-shanghai"]
+    )
+    manager = TencentCloudManager(
+        {"secret_id": "contract-id", "secret_key": "contract-key"}
+    )
+    manager.__dict__["available_region_list"] = ["ap-shanghai"]
+    manager.__dict__["zone_id_zone_map"] = {"zone-contract": "ap-shanghai-1"}
+
+    result = manager.list_all_resources()
+
+    _assert_parent_replay_matches_case_evidence(result, cases)
 
 
 def _aliyun_instance(instance_id):

@@ -397,7 +397,9 @@ class TencentCloudManager:
                         "resource_id": instance.get("InstanceId"),
                         "ip_addr": instance.get("WanIp"),
                         "vpc": instance.get("VpcId"),
-                        "region": redis_region_map.get(instance.get("RegionId")),  # 地域
+                        "region": redis_region_map.get(
+                            instance.get("RegionId"), region
+                        ),  # 地域
                         "zone": self.zone_id_zone_map.get(instance.get("ZoneId")),
                         "port": instance.get("Port"),
                         "wan_address": instance.get("WanAddress"),  # 外网地址
