@@ -985,6 +985,251 @@ def test_阿里云RDS按官方PageNumber分页直到空页(engine, monkeypatch):
     assert requested_pages == [1, 2, 3]
 
 
+@pytest.mark.parametrize(
+    ("method_name", "client_attr", "sdk_method", "collection_path", "item"),
+    (
+        (
+            "list_redis",
+            "kvs_client",
+            "describe_instances_with_options",
+            ("Instances", "KVStoreInstance"),
+            {"InstanceId": "redis-001", "InstanceName": "redis-contract"},
+        ),
+        (
+            "list_clb",
+            "slb_client",
+            "describe_load_balancers_with_options",
+            ("LoadBalancers", "LoadBalancer"),
+            {"LoadBalancerId": "lb-001", "LoadBalancerName": "clb-contract"},
+        ),
+    ),
+)
+def test_阿里云Redis与SLB官方SDK边界覆盖单页空集缺可选字段和错误(
+    method_name,
+    client_attr,
+    sdk_method,
+    collection_path,
+    item,
+    monkeypatch,
+):
+    from plugins.inputs.aliyun import aliyun_info
+
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+    collector = _aliyun_without_init()
+    first, second = collection_path
+    responses = [
+        _sdk_response({first: {second: [item]}, "TotalCount": 1}),
+    ]
+    if method_name == "list_redis":
+        responses.append(_sdk_response({first: {second: []}, "TotalCount": 1}))
+    responses.append(_sdk_response({first: {second: []}, "TotalCount": 0}))
+    responses.append(_sdk_response({first: {second: [item]}, "TotalCount": 1}))
+    if method_name == "list_redis":
+        responses.append(_sdk_response({first: {second: []}, "TotalCount": 1}))
+    responses.append(RuntimeError("InvalidAccessKeyId.NotFound"))
+    sdk_call = Mock(side_effect=responses)
+    setattr(collector, client_attr, SimpleNamespace(**{sdk_method: sdk_call}))
+
+    id_key = "InstanceId" if method_name == "list_redis" else "LoadBalancerId"
+    assert getattr(collector, method_name)()["data"][0][id_key] == item[id_key]
+    assert getattr(collector, method_name)() == {"result": True, "data": []}
+    assert getattr(collector, method_name)()["data"][0][id_key] == item[id_key]
+    error = getattr(collector, method_name)()
+    assert error["result"] is False
+    assert "InvalidAccessKeyId.NotFound" in error["message"]
+
+
+@pytest.mark.parametrize(
+    ("method_name", "client_attr", "sdk_method", "collection_path", "id_key"),
+    (
+        (
+            "list_redis",
+            "kvs_client",
+            "describe_instances_with_options",
+            ("Instances", "KVStoreInstance"),
+            "InstanceId",
+        ),
+        (
+            "list_clb",
+            "slb_client",
+            "describe_load_balancers_with_options",
+            ("LoadBalancers", "LoadBalancer"),
+            "LoadBalancerId",
+        ),
+    ),
+)
+def test_阿里云Redis与SLB按官方PageNumber完整分页(
+    method_name,
+    client_attr,
+    sdk_method,
+    collection_path,
+    id_key,
+    monkeypatch,
+):
+    from plugins.inputs.aliyun import aliyun_info
+
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+    collector = _aliyun_without_init()
+    first, second = collection_path
+    requested_pages = []
+    responses = iter(
+        [
+            _sdk_response(
+                {first: {second: [{id_key: "page-1"}]}, "TotalCount": 101}
+            ),
+            _sdk_response(
+                {first: {second: [{id_key: "page-2"}]}, "TotalCount": 101}
+            ),
+            _sdk_response({first: {second: []}, "TotalCount": 101}),
+        ]
+    )
+
+    def sdk_boundary(request, runtime):
+        requested_pages.append(request.page_number)
+        return next(responses)
+
+    sdk_call = Mock(side_effect=sdk_boundary)
+    setattr(collector, client_attr, SimpleNamespace(**{sdk_method: sdk_call}))
+
+    result = getattr(collector, method_name)()
+
+    assert [item[id_key] for item in result["data"]] == ["page-1", "page-2"]
+    if method_name == "list_redis":
+        assert requested_pages == [1, 2, 3]
+    else:
+        assert requested_pages == [1, 2]
+
+
+def _mongodb_item(instance_id, instance_type):
+    return {
+        "DBInstanceId": instance_id,
+        "DBInstanceDescription": f"{instance_type}-contract",
+        "DBInstanceType": instance_type,
+    }
+
+
+def test_阿里云DDS父operation逐一查询官方三类实例并覆盖单页空集缺字段(monkeypatch):
+    from plugins.inputs.aliyun import aliyun_info
+
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+    collector = _aliyun_without_init()
+    calls = []
+    responses = iter(
+        [
+            _sdk_response(
+                {
+                    "DBInstances": {
+                        "DBInstance": [_mongodb_item("dds-sharding", "sharding")]
+                    }
+                }
+            ),
+            _sdk_response({"DBInstances": {"DBInstance": []}}),
+            _sdk_response(
+                {
+                    "DBInstances": {
+                        "DBInstance": [_mongodb_item("dds-replicate", "replicate")]
+                    }
+                }
+            ),
+            _sdk_response({"DBInstances": {"DBInstance": []}}),
+            _sdk_response(
+                {
+                    "DBInstances": {
+                        "DBInstance": [_mongodb_item("dds-serverless", "serverless")]
+                    }
+                }
+            ),
+            _sdk_response({"DBInstances": {"DBInstance": []}}),
+        ]
+    )
+
+    def sdk_boundary(request, runtime):
+        calls.append((request.dbinstance_type, request.page_number))
+        return next(responses)
+
+    collector.dds_client = SimpleNamespace(
+        describe_dbinstances_with_options=Mock(side_effect=sdk_boundary)
+    )
+
+    result = collector.list_mongodb()
+
+    assert [item["DBInstanceId"] for item in result["data"]] == [
+        "dds-sharding",
+        "dds-replicate",
+        "dds-serverless",
+    ]
+    assert calls == [
+        ("sharding", 1),
+        ("sharding", 2),
+        ("replicate", 1),
+        ("replicate", 2),
+        ("serverless", 1),
+        ("serverless", 2),
+    ]
+
+
+def test_阿里云DDS空集和文档化错误不伪装成功(monkeypatch):
+    from plugins.inputs.aliyun import aliyun_info
+
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+    collector = _aliyun_without_init()
+    collector.dds_client = SimpleNamespace(
+        describe_dbinstances_with_options=Mock(
+            side_effect=[
+                _sdk_response({"DBInstances": {"DBInstance": []}}),
+                _sdk_response({"DBInstances": {"DBInstance": []}}),
+                _sdk_response({"DBInstances": {"DBInstance": []}}),
+            ]
+        )
+    )
+    assert collector.list_mongodb() == {"result": True, "data": []}
+
+    collector.dds_client = SimpleNamespace(
+        describe_dbinstances_with_options=Mock(
+            side_effect=RuntimeError("InvalidAccessKeyId.NotFound")
+        )
+    )
+    error = collector.list_mongodb()
+    assert error["result"] is False
+    assert "InvalidAccessKeyId.NotFound" in error["message"]
+
+
+def test_阿里云Kafka_GetInstanceList覆盖单页空集缺可选字段和错误(monkeypatch):
+    from plugins.inputs.aliyun import aliyun_info
+
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+    collector = _aliyun_without_init()
+    item = {"InstanceId": "kafka-001", "Name": "kafka-contract"}
+    sdk_call = Mock(
+        side_effect=[
+            _sdk_response({"InstanceList": {"InstanceVO": [item]}}),
+            _sdk_response({"InstanceList": {"InstanceVO": []}}),
+            _sdk_response({"InstanceList": {"InstanceVO": [item]}}),
+            RuntimeError("InvalidAccessKeyId.NotFound"),
+        ]
+    )
+    collector.kafka_client = SimpleNamespace(get_instance_list_with_options=sdk_call)
+
+    assert collector.list_kafka()["data"][0]["InstanceId"] == "kafka-001"
+    assert collector.list_kafka() == {"result": True, "data": []}
+    assert collector.list_kafka()["data"][0]["InstanceId"] == "kafka-001"
+    error = collector.list_kafka()
+    assert error["result"] is False
+    assert "InvalidAccessKeyId.NotFound" in error["message"]
+
+
+def test_阿里云Kafka分页场景由同一官方operation页面明确N_A():
+    operation = next(
+        item
+        for item in ALIYUN_SCENARIO_MATRIX["operations"]
+        if item["case_ids"] == ["aliyun_kafka_inst"]
+    )
+
+    assert operation["pagination"]["kind"] == "not_applicable"
+    assert operation["pagination"]["documentation_url"] == operation["documentation_url"]
+    assert "no page number" in operation["pagination"]["reason"]
+
+
 def test_华为云SDK空集保持稳定(monkeypatch):
     class FakeSdkResponse:
         status_code = 200
