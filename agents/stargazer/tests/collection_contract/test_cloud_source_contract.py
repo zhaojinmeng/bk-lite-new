@@ -12,6 +12,7 @@
 import json
 import socket
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, call
@@ -1642,3 +1643,400 @@ def test_华为云VPC与Subnet五态在V1V2无分页且错误不伪装成功(
     assert getattr(manager, method_name)()[0]["resource_id"] == item["id"]
     assert getattr(manager, method_name)() == []
     assert operation["pagination"]["kind"] == "not_applicable"
+
+
+def _obs_response(body):
+    return {"body": body}
+
+
+def test_华为云OBS单页空桶缺可选字段和错误均保持明确(monkeypatch):
+    bucket = {"name": "obs-contract"}
+    manager = _hwcloud_manager()
+    buckets_call = Mock(
+        side_effect=[
+            _obs_response({"buckets": [bucket]}),
+            _obs_response({"buckets": []}),
+            _obs_response({"buckets": [bucket]}),
+            RuntimeError("Obs.0000"),
+        ]
+    )
+    objects_call = Mock(
+        side_effect=[
+            _obs_response(
+                {
+                    "contents": [
+                        {"key": "one", "size": 1024, "storageClass": "STANDARD"}
+                    ],
+                    "isTruncated": False,
+                }
+            ),
+            _obs_response(
+                {
+                    "contents": [{"key": "one", "size": 0}],
+                    "isTruncated": False,
+                }
+            ),
+        ]
+    )
+    monkeypatch.setattr(cw_huaweicloud.ObsClient, "listBuckets", buckets_call)
+    monkeypatch.setattr(cw_huaweicloud.ObsClient, "listObjects", objects_call)
+
+    assert manager.get_obs()[0]["resource_id"] == "obs-contract"
+    assert manager.get_obs() == []
+    assert manager.get_obs()[0]["resource_id"] == "obs-contract"
+    assert manager.get_obs() == []
+
+
+def test_华为云OBS按官方marker完整读取桶内对象(monkeypatch):
+    monkeypatch.setattr(
+        cw_huaweicloud.ObsClient,
+        "listBuckets",
+        Mock(return_value=_obs_response({"buckets": [{"name": "obs-contract"}]})),
+    )
+    object_requests = []
+    pages = [
+        _obs_response(
+            {
+                "contents": [
+                    {"key": "one", "size": 1024, "storageClass": "STANDARD"}
+                ],
+                "isTruncated": True,
+                "nextMarker": "one",
+            }
+        ),
+        _obs_response(
+            {
+                "contents": [
+                    {"key": "two", "size": 2048, "storageClass": "WARM"}
+                ],
+                "isTruncated": False,
+            }
+        ),
+    ]
+
+    def list_objects(self, bucket_name, prefix=None, marker=None, **kwargs):
+        object_requests.append((bucket_name, marker))
+        return pages[len(object_requests) - 1]
+
+    monkeypatch.setattr(cw_huaweicloud.ObsClient, "listObjects", list_objects)
+
+    result = _hwcloud_manager().get_obs()
+
+    assert result[0]["resource_id"] == "obs-contract"
+    assert object_requests == [("obs-contract", None), ("obs-contract", "one")]
+
+
+def _eip(resource_id):
+    return {
+        "id": resource_id,
+        "name": f"eip-{resource_id}",
+        "description": "",
+        "status": "ACTIVE",
+        "public_ip_address": "192.0.2.20",
+        "create_time": datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+        "bandwidth_id": f"bandwidth-{resource_id}",
+        "bandwidth_size": 5,
+        "port_id": "",
+    }
+
+
+def _patch_eip_bandwidth(monkeypatch):
+    monkeypatch.setattr(
+        cw_huaweicloud.EipClient,
+        "show_bandwidth",
+        lambda self, request: _HuaweiSdkResponse(
+            {"bandwidth": {"charge_mode": "traffic"}}
+        ),
+    )
+
+
+def test_华为云EIP单页空集缺可选字段和错误保持明确(monkeypatch):
+    _patch_eip_bandwidth(monkeypatch)
+    item = _eip("eip-001")
+    item.pop("description")
+    responses = [
+        _HuaweiSdkResponse({"publicips": [item]}),
+        _HuaweiSdkResponse({"publicips": []}),
+        _HuaweiSdkResponse({"publicips": [item]}),
+        RuntimeError("VPC.0101"),
+    ]
+
+    def list_publicips(self, request):
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(
+        cw_huaweicloud.EipClient, "list_publicips", list_publicips
+    )
+    manager = _hwcloud_manager()
+
+    assert manager.get_eip()[0]["resource_id"] == "eip-001"
+    assert manager.get_eip() == []
+    assert manager.get_eip()[0]["resource_id"] == "eip-001"
+    assert manager.get_eip() == []
+
+
+def test_华为云EIP按官方marker完整翻页(monkeypatch):
+    _patch_eip_bandwidth(monkeypatch)
+    requests = []
+    pages = [
+        {"publicips": [_eip("eip-001"), _eip("eip-002")]},
+        {"publicips": [_eip("eip-003")]},
+    ]
+
+    def list_publicips(self, request):
+        requests.append((getattr(request, "marker", None), request.limit))
+        return _HuaweiSdkResponse(pages[len(requests) - 1])
+
+    monkeypatch.setattr(
+        cw_huaweicloud.EipClient, "list_publicips", list_publicips
+    )
+
+    result = _hwcloud_manager()._driver().list_eips(limit=2)
+
+    assert [item["resource_id"] for item in result["data"]] == [
+        "eip-001",
+        "eip-002",
+        "eip-003",
+    ]
+    assert requests == [(None, 2), ("eip-002", 2)]
+
+
+def _security_group(resource_id):
+    return {
+        "id": resource_id,
+        "name": f"sg-{resource_id}",
+        "description": "",
+        "vpc_id": "vpc-001",
+    }
+
+
+def test_华为云安全组五态在V1V2无分页且错误不伪装成功(monkeypatch):
+    operation = next(
+        item
+        for item in HWCLOUD_SCENARIO_MATRIX["operations"]
+        if item["case_ids"] == ["hwcloud_sg"]
+    )
+    item = _security_group("sg-001")
+    item.pop("description")
+    responses = [
+        _HuaweiSdkResponse({"security_groups": [item]}),
+        _HuaweiSdkResponse({"security_groups": []}),
+        _HuaweiSdkResponse({"security_groups": [item]}),
+        RuntimeError("VPC.0101"),
+    ]
+
+    def list_security_groups(self, request):
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(
+        cw_huaweicloud.VpcClient,
+        "list_security_groups",
+        list_security_groups,
+    )
+    manager = _hwcloud_manager()
+
+    assert manager.get_sg()[0]["resource_id"] == "sg-001"
+    assert manager.get_sg() == []
+    assert manager.get_sg()[0]["resource_id"] == "sg-001"
+    assert manager.get_sg() == []
+    assert operation["pagination"]["kind"] == "not_applicable"
+
+
+def _load_balancer(resource_id):
+    return {
+        "id": resource_id,
+        "name": f"elb-{resource_id}",
+        "vpc_id": "vpc-001",
+        "provisioning_status": "ACTIVE",
+        "created_at": "2026-01-02T03:04:05Z",
+    }
+
+
+def test_华为云ELB单页空集缺可选字段和错误保持明确(monkeypatch):
+    item = _load_balancer("elb-001")
+    responses = [
+        _HuaweiSdkResponse({"loadbalancers": [item]}),
+        _HuaweiSdkResponse({"loadbalancers": []}),
+        _HuaweiSdkResponse({"loadbalancers": [item]}),
+        RuntimeError("ELB.0101"),
+    ]
+
+    def list_load_balancers(self, request):
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(
+        cw_huaweicloud.ElbClient,
+        "list_load_balancers",
+        list_load_balancers,
+    )
+    manager = _hwcloud_manager()
+
+    assert manager.get_elb()[0]["resource_id"] == "elb-001"
+    assert manager.get_elb() == []
+    assert manager.get_elb()[0]["resource_id"] == "elb-001"
+    assert manager.get_elb() == []
+
+
+def test_华为云ELB按官方marker完整翻页(monkeypatch):
+    requests = []
+    pages = [
+        {"loadbalancers": [_load_balancer("elb-001"), _load_balancer("elb-002")]},
+        {"loadbalancers": [_load_balancer("elb-003")]},
+    ]
+
+    def list_load_balancers(self, request):
+        requests.append((getattr(request, "marker", None), request.limit))
+        return _HuaweiSdkResponse(pages[len(requests) - 1])
+
+    monkeypatch.setattr(
+        cw_huaweicloud.ElbClient,
+        "list_load_balancers",
+        list_load_balancers,
+    )
+
+    result = _hwcloud_manager()._driver().list_load_balancers(limit=2)
+
+    assert [item["resource_id"] for item in result["data"]] == [
+        "elb-001",
+        "elb-002",
+        "elb-003",
+    ]
+    assert requests == [(None, 2), ("elb-002", 2)]
+
+
+def _rds_instance(resource_id):
+    return {
+        "id": resource_id,
+        "name": f"rds-{resource_id}",
+        "status": "ACTIVE",
+        "type": "Ha",
+        "datastore": {"type": "MySQL", "version": "8.0"},
+        "volume": {"type": "CLOUDSSD", "size": 100},
+        "private_ips": ["192.0.2.30"],
+        "public_ips": [],
+        "cpu": "4",
+        "mem": "8",
+        "port": 3306,
+        "created": "2026-01-02T03:04:05Z",
+        "charge_info": {"charge_mode": "postPaid"},
+        "vpc_id": "vpc-001",
+        "subnet_id": "subnet-001",
+    }
+
+
+def _dcs_instance(resource_id):
+    return {
+        "instance_id": resource_id,
+        "name": f"dcs-{resource_id}",
+        "status": "RUNNING",
+        "engine": "Redis",
+        "engine_version": "6.0",
+        "capacity": 0,
+        "ip": "192.0.2.40",
+        "port": 6379,
+        "charging_mode": 0,
+        "created_at": "2026-01-02T03:04:05Z",
+        "cache_mode": "ha",
+        "vpc_id": "vpc-001",
+        "subnet_id": "subnet-001",
+    }
+
+
+@pytest.mark.parametrize(
+    ("method_name", "sdk_class", "item_factory", "total_field", "expected_id"),
+    (
+        (
+            "get_rds",
+            cw_huaweicloud.RdsClient,
+            _rds_instance,
+            "total_count",
+            "rds-001",
+        ),
+        (
+            "get_dcs",
+            cw_huaweicloud.DcsClient,
+            _dcs_instance,
+            "instance_num",
+            "dcs-001",
+        ),
+    ),
+)
+def test_华为云RDS与DCS单页空集缺可选字段和错误保持明确(
+    method_name, sdk_class, item_factory, total_field, expected_id, monkeypatch
+):
+    item = item_factory(expected_id)
+    responses = [
+        _HuaweiSdkResponse({"instances": [item], total_field: 1}),
+        _HuaweiSdkResponse({"instances": [], total_field: 0}),
+        _HuaweiSdkResponse({"instances": [item], total_field: 1}),
+        RuntimeError("APIGW.0101"),
+    ]
+
+    def list_instances(self, request):
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(sdk_class, "list_instances", list_instances)
+    manager = _hwcloud_manager()
+
+    assert getattr(manager, method_name)()[0]["resource_id"] == expected_id
+    assert getattr(manager, method_name)() == []
+    assert getattr(manager, method_name)()[0]["resource_id"] == expected_id
+    assert getattr(manager, method_name)() == []
+
+
+@pytest.mark.parametrize(
+    ("driver_method", "sdk_class", "item_factory", "total_field", "ids"),
+    (
+        (
+            "list_rds",
+            cw_huaweicloud.RdsClient,
+            _rds_instance,
+            "total_count",
+            ("rds-001", "rds-002", "rds-003"),
+        ),
+        (
+            "list_dcs",
+            cw_huaweicloud.DcsClient,
+            _dcs_instance,
+            "instance_num",
+            ("dcs-001", "dcs-002", "dcs-003"),
+        ),
+    ),
+)
+def test_华为云RDS与DCS按官方offset_limit完整翻页(
+    driver_method, sdk_class, item_factory, total_field, ids, monkeypatch
+):
+    requests = []
+    pages = [
+        {
+            "instances": [item_factory(ids[0]), item_factory(ids[1])],
+            total_field: 3,
+        },
+        {"instances": [item_factory(ids[2])], total_field: 3},
+    ]
+
+    def list_instances(self, request):
+        requests.append(
+            (getattr(request, "offset", None), getattr(request, "limit", None))
+        )
+        return _HuaweiSdkResponse(pages[len(requests) - 1])
+
+    monkeypatch.setattr(sdk_class, "list_instances", list_instances)
+
+    result = getattr(_hwcloud_manager()._driver(), driver_method)(limit=2)
+
+    id_key = "instance_id" if driver_method == "list_dcs" else "id"
+    assert [item[id_key] for item in result["data"]] == list(ids)
+    assert requests == [(0, 2), (2, 2)]
