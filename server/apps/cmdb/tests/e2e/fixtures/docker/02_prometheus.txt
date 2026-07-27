@@ -1,0 +1,3 @@
+# HELP docker_info Auto-generated help for docker_info
+# TYPE docker_info gauge
+docker_info{bk_obj_id="docker",collect_status="success",command="sleep 300",container_id="1f5b1b6af7aa",created="2026-07-27T06:37:04.674723001Z",host="docker.example.invalid",image="alpine:3.18",inst_name="docker.example.invalid",ip_addr="192.0.2.50",model_id="docker",mounts="[]",networks="",port="",ports=""} 1 1700000000123

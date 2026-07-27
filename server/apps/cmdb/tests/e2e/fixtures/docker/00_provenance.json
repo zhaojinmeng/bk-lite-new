@@ -1,0 +1,37 @@
+{
+  "source_type": "sanitized_real_environment",
+  "source_kind": "docker_real",
+  "vendor": "not_applicable",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-27T06:37:04Z",
+  "sanitization": "将宿主地址替换为 RFC 5737 地址并将实例名替换为保留域名；容器 ID 为已删除的临时容器",
+  "source_model_id": "docker",
+  "emitted_case_id": "docker",
+  "source_fixture": "agents/stargazer/tests/fixtures/collect/docker.json",
+  "source_commit": "23c8124ed",
+  "image": "alpine:3.18",
+  "image_digest": "alpine@sha256:de0eb0b3f2a47ba1eb89389859a9bd88b28e82f5826b6969ad604979713c2d4f",
+  "container_meta": {
+    "runtime": "Docker 28.0.1",
+    "architecture": "arm64",
+    "network_mode": "bridge",
+    "removed_after_capture": true
+  },
+  "review_basis": {
+    "source_commit": "23c8124ed",
+    "scalar_labels": "逐字段核对生产脚本输出的标量字段",
+    "none_or_nested_exclusion": "无 None；嵌套结构由脚本序列化为字符串",
+    "derived_labels": "bk_obj_id/model_id/collect_status/host 由真实 formatter 添加",
+    "common_tags": "发布公共 tags 使用 production-contract 固定值",
+    "raw_output": "生产 docker_default_discover.sh 对临时 Alpine 容器产生一条非空 JSON",
+    "sanitization": "仅宿主 IP 与 inst_name 被替换",
+    "formatter": "运行真实 CollectionService._process_result",
+    "prometheus": "静态 Golden 由逐字段人工复核",
+    "line_protocol": "静态 Golden 由 Prometheus 语义独立复核",
+    "timestamp": "固定为 1700000000123 毫秒",
+    "record_count": 1
+  }
+}

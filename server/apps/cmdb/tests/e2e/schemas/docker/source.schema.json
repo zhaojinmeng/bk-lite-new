@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["success", "result"],
+  "properties": {
+    "success": {"const": true},
+    "result": {
+      "type": "object",
+      "required": ["docker"],
+      "additionalProperties": false,
+      "properties": {
+        "docker": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["inst_name", "container_id", "image", "created", "command"],
+            "properties": {
+              "inst_name": {"const": "docker.example.invalid"},
+              "container_id": {"type": "string", "minLength": 12},
+              "image": {"const": "alpine:3.18"},
+              "created": {"type": "string"},
+              "command": {"const": "sleep 300"}
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,4 +1,8 @@
 {
+  "docker": {
+    "fixture": "docker.json",
+    "source_commit": "23c8124ed"
+  },
   "es": {
     "fixture": "elasticsearch.json",
     "source_commit": "73f9b17c9",

@@ -1,0 +1,32 @@
+{
+  "model_id": "docker",
+  "captured_at": "2026-07-27T06:37:04Z",
+  "image": "alpine:3.18",
+  "image_digest": "alpine@sha256:de0eb0b3f2a47ba1eb89389859a9bd88b28e82f5826b6969ad604979713c2d4f",
+  "container_meta": {
+    "container_id": "1f5b1b6af7aa",
+    "image": "alpine:3.18",
+    "image_id": "sha256:de2b9975f8fd4ab0d5ea39f52592791fadff62c0592a6e7db5640dc0d6469a01",
+    "architecture": "arm64",
+    "network_mode": "bridge"
+  },
+  "collector": "plugins/inputs/docker/docker_default_discover.sh",
+  "raw_stdout": [
+    {
+      "inst_name": "docker.example.invalid",
+      "container_id": "1f5b1b6af7aa",
+      "ip_addr": "192.0.2.50",
+      "port": "",
+      "image": "alpine:3.18",
+      "created": "2026-07-27T06:37:04.674723001Z",
+      "command": "sleep 300",
+      "ports": "",
+      "mounts": "[]",
+      "networks": ""
+    }
+  ],
+  "sanitization": {
+    "inst_name": "10.10.40.189_1f5b1b6af7aa -> docker.example.invalid",
+    "ip_addr": "10.10.40.189 -> 192.0.2.50"
+  }
+}

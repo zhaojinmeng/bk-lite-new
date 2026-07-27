@@ -14,6 +14,7 @@ EVIDENCE_ROOT = (
 )
 
 STATIC_REAL_ENVIRONMENT_CASES = (
+    "docker",
     "mongodb",
     "redis",
     "activemq",

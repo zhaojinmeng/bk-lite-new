@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "result": {
+    "docker": [
+      {
+        "inst_name": "docker.example.invalid",
+        "container_id": "1f5b1b6af7aa",
+        "ip_addr": "192.0.2.50",
+        "port": "",
+        "image": "alpine:3.18",
+        "created": "2026-07-27T06:37:04.674723001Z",
+        "command": "sleep 300",
+        "ports": "",
+        "mounts": "[]",
+        "networks": ""
+      }
+    ]
+  }
+}
