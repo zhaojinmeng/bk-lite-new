@@ -1,6 +1,7 @@
 import json
 import sys
 from copy import deepcopy
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,17 @@ if str(STARGAZER_ROOT) not in sys.path:
     sys.path.insert(0, str(STARGAZER_ROOT))
 
 FIXED_TIMESTAMP_MS = 1_700_000_000_123
+
+
+@dataclass
+class _RealCollectorExecutionState:
+    case_id: str
+    confirmed_case_id: str | None = None
+
+
+_REAL_COLLECTOR_EXECUTION_STATE = ContextVar(
+    "real_collector_execution_state", default=None
+)
 
 
 @dataclass(frozen=True)
@@ -286,6 +298,35 @@ def pytest_configure(config):
     )
 
 
+def confirm_real_collector_execution(case_id: str) -> None:
+    state = _REAL_COLLECTOR_EXECUTION_STATE.get()
+    assert state is not None, "真实collector执行确认只能用于marked用例"
+    assert (
+        case_id == state.case_id
+    ), f"{state.case_id}: 真实collector执行确认binding不匹配: {case_id}"
+    state.confirmed_case_id = case_id
+
+
+@pytest.fixture(autouse=True)
+def _guard_real_collector_execution(request):
+    marker = request.node.get_closest_marker("real_collector_binding")
+    if marker is None:
+        yield
+        return
+
+    assert len(marker.args) == 1 and isinstance(marker.args[0], str)
+    case_id = marker.args[0]
+    state = _RealCollectorExecutionState(case_id)
+    state_token = _REAL_COLLECTOR_EXECUTION_STATE.set(state)
+    try:
+        yield
+    finally:
+        _REAL_COLLECTOR_EXECUTION_STATE.reset(state_token)
+    assert (
+        state.confirmed_case_id == case_id
+    ), f"{case_id}: marked用例未确认真实collector结果已到达发布边界"
+
+
 def _selection_includes_real_collector(config) -> bool:
     for argument in config.args:
         selected_path = Path(str(argument).split("::", 1)[0])
@@ -327,11 +368,11 @@ def _real_collector_case_ids(items) -> list[str]:
     return case_ids
 
 
-def pytest_collection_modifyitems(session, config, items):
-    if not _selection_includes_real_collector(config):
+def pytest_collection_finish(session):
+    if not _selection_includes_real_collector(session.config):
         return
 
-    collected_case_ids = _real_collector_case_ids(items)
+    collected_case_ids = _real_collector_case_ids(session.items)
     expected_by_case_id = {
         binding.case_id: binding for binding in PRODUCTION_ADAPTER_BINDINGS
     }
@@ -368,9 +409,7 @@ def pytest_collection_modifyitems(session, config, items):
             f"覆盖基线漂移: bindings={len(expected)}, contracts={len(manifest_contracts)}"
         )
     if failures:
-        raise pytest.UsageError(
-            "真实collector collection完整性合同失败:\n" + "\n".join(failures)
-        )
+        session.shouldfail = "真实collector collection完整性合同失败:\n" + "\n".join(failures)
 
 
 @dataclass(frozen=True)

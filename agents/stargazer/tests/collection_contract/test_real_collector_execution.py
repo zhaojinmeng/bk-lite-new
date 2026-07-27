@@ -7,7 +7,7 @@ from unittest.mock import Mock
 import pytest
 import semantics
 import yaml
-from conftest import PRODUCTION_ADAPTER_BINDINGS
+from conftest import PRODUCTION_ADAPTER_BINDINGS, confirm_real_collector_execution
 from plugins import base_utils, script_executor
 from plugins.base_utils import convert_to_prometheus_format
 from service.collection_service import CollectionService
@@ -81,6 +81,7 @@ def _assert_real_result_reaches_publish(binding, result, expected_source_models)
         ]
         assert len(matches) == 1
         assert matches[0].timestamp_ns == sample.timestamp_ms * 1_000_000
+    confirm_real_collector_execution(binding.case_id)
 
 
 GENERIC_SSH_BINDINGS = tuple(
