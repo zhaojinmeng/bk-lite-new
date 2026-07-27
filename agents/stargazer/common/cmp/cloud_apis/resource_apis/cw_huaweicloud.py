@@ -725,27 +725,31 @@ class Huaweicloud(PublicCloudManage):
         ]
         request = set_optional_params_huawei(list_optional_params, kwargs, request)
 
-        @exception_handler
         def list_servers_details():
-            return self.get_client(EcsClient, EcsRegion).list_servers_details(request)
+            @exception_handler
+            def request_page():
+                return self.get_client(EcsClient, EcsRegion).list_servers_details(request)
 
-        response = list_servers_details
+            return request_page
+
+        response = list_servers_details()
         if not response["result"]:
             logger.error(response["message"])
             return fail("虚拟机列表获取失败")
         response = response["data"]
         count = response["count"]
-        page_num = count // page_size
-        servers_list = response["servers"]
+        servers_list = list(response["servers"])
         data = []
-        if page_num > 0:
-            for page in range(1, page_num + 1):
-                request.offset = page
-                response = list_servers_details
-                if not response["result"]:
-                    logger.error(response["message"])
-                    return fail("虚拟机列表获取失败")
-                servers_list += response["data"]["servers"]
+        while len(servers_list) < count:
+            request.offset = len(servers_list)
+            response = list_servers_details()
+            if not response["result"]:
+                logger.error(response["message"])
+                return fail("虚拟机列表获取失败")
+            page_servers = response["data"]["servers"]
+            if not page_servers:
+                break
+            servers_list.extend(page_servers)
         for server in servers_list:
             res = self.get_server_interfaces(server["id"])
             if not res["data"]:
@@ -1287,29 +1291,30 @@ class Huaweicloud(PublicCloudManage):
         ]
         request = set_optional_params_huawei(list_optional_params, kwargs, request)
 
-        @exception_handler
         def list_volumes():
-            return self.get_client(EvsClient, EvsRegion).list_volumes(request)
+            @exception_handler
+            def request_page():
+                return self.get_client(EvsClient, EvsRegion).list_volumes(request)
 
-        response = list_volumes
+            return request_page
+
+        response = list_volumes()
         if not response["result"]:
             logger.error(response["message"])
             return fail("获取磁盘列表失败")
         response = response["data"]
         count = response["count"]
-        page_num = count // page_size
-        if page_num == 0:
-            return success(
-                format_resource(CloudResourceType.DISK.value, response["volumes"], self.region_id, self.project_id)
-            )
-        volume_list = response["volumes"]
-        for page in range(1, page_num):
-            request.offset = page_num * page_size
-            response = list_volumes
+        volume_list = list(response["volumes"])
+        while len(volume_list) < count:
+            request.offset = len(volume_list)
+            response = list_volumes()
             if not response["result"]:
                 logger.error(response["message"])
                 return fail("获取磁盘列表失败")
-            volume_list += response["data"]["volumes"]
+            page_volumes = response["data"]["volumes"]
+            if not page_volumes:
+                break
+            volume_list.extend(page_volumes)
         return success(format_resource(CloudResourceType.DISK.value, volume_list, self.region_id, self.project_id))
 
     def get_disk_detail(self, resource_id, **kwargs):
