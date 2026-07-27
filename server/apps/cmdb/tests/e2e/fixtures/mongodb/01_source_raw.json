@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "result": {
+    "mongodb": [{
+      "inst_name": "mongodb.example.invalid-mongodb-27017",
+      "ip_addr": "192.0.2.23",
+      "obj_id": "mongodb",
+      "bin_path": "/usr/bin",
+      "mongo_path": "",
+      "port": "27017",
+      "version": "7.0.37",
+      "config": "/etc/mongod.conf",
+      "fork": "",
+      "system_log": "/var/log/mongodb/mongod.log",
+      "db_path": "/var/lib/mongodb",
+      "max_incoming_conn": "default:819",
+      "database_role": ""
+    }]
+  }
+}

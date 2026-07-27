@@ -1,0 +1,3 @@
+# HELP activemq_info Auto-generated help for activemq_info
+# TYPE activemq_info gauge
+activemq_info{bin_path="/usr/bin",bk_obj_id="activemq",collect_status="success",config="/usr/share/activemq/conf/activemq.xml",host="activemq.example.invalid",inst_name="activemq.example.invalid-activemq-61616",ip_addr="192.0.2.23",listening_ports="1883,5672,61613,61616,8161",model_id="activemq",obj_id="activemq",pid="46",port="61616",user="activemq",version="",web_port="8161",web_reachable="false"} 1 1700000000123

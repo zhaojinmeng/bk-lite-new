@@ -1,0 +1,3 @@
+# HELP mongodb_info Auto-generated help for mongodb_info
+# TYPE mongodb_info gauge
+mongodb_info{bin_path="/usr/bin",bk_obj_id="mongodb",collect_status="success",config="/etc/mongod.conf",database_role="",db_path="/var/lib/mongodb",fork="",host="mongodb.example.invalid",inst_name="mongodb.example.invalid-mongodb-27017",ip_addr="192.0.2.23",max_incoming_conn="default:819",model_id="mongodb",mongo_path="",obj_id="mongodb",port="27017",system_log="/var/log/mongodb/mongod.log",version="7.0.37"} 1 1700000000123

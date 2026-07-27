@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "result": {
+    "redis": [{
+      "inst_name": "redis.example.invalid-redis-6379",
+      "bk_obj_id": "redis",
+      "ip_addr": "127.0.0.1",
+      "port": "6379",
+      "version": "7.4.9",
+      "install_path": "",
+      "max_conn": "10000",
+      "max_mem": "0",
+      "database_role": "master",
+      "topo_mode": "replication",
+      "cluster_uuid": "",
+      "slaves": [],
+      "master": {}
+    }]
+  }
+}

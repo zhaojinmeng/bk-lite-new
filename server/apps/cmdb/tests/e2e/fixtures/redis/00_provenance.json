@@ -1,0 +1,18 @@
+{
+  "source_type": "sanitized_real_environment",
+  "vendor": "redis_community",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-04T16:15:48Z",
+  "sanitization": "源自 agents/stargazer/tests/fixtures/collect/redis.json（提交 ee2987167）；保留 Redis 7.4.9 的真实采集字段，将实例名替换为 example.invalid 测试标识。",
+  "review_basis": {
+    "source_commit": "ee2987167",
+    "scalar_labels": "逐项核对 11 个业务标量；max_mem 字符串 0 与三个空字符串均保留。",
+    "none_or_nested_exclusion": "slaves 列表与 master 字典只属于源结构，按转换合同不得进入标签。",
+    "derived_labels": "人工核对 model_id/collect_status/host，源 bk_obj_id 保持 redis。",
+    "common_tags": "人工核对 agent_id/instance_id/instance_type/collect_type/config_type。",
+    "timestamp": "1700000000123 毫秒转换为 1700000000123000000 纳秒。"
+  }
+}
