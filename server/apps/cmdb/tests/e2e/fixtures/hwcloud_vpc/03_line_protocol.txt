@@ -1,0 +1,1 @@
+hwcloud_vpc_info,agent_id=agent-contract,bk_obj_id=hwcloud_vpc,cidr=192.0.2.0/24,collect_status=success,collect_type=discovery,config_type=production-contract,instance_id=cmdb-hwcloud,instance_type=hwcloud,is_default=False,model_id=hwcloud_vpc,region=cn-south-1,resource_id=vpc-001,resource_name=vpc-contract,status=AVAILABLE gauge=1i 1700000000123000000

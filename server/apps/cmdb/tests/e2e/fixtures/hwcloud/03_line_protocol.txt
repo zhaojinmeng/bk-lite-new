@@ -1,0 +1,1 @@
+hwcloud_info,agent_id=agent-contract,bk_obj_id=hwcloud,collect_status=success,collect_type=discovery,config_type=production-contract,endpoint=https://ecs.cn-south-1.example.invalid,instance_id=cmdb-hwcloud,instance_type=hwcloud,model_id=hwcloud gauge=1i 1700000000123000000

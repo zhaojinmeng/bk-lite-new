@@ -1,0 +1,3 @@
+# HELP hwcloud_obs_info Auto-generated help for hwcloud_obs_info
+# TYPE hwcloud_obs_info gauge
+hwcloud_obs_info{bk_obj_id="hwcloud_obs",bucket_type="STANDARD",collect_status="success",create_time="",model_id="hwcloud_obs",region="cn-south-1",resource_id="obs-contract",resource_name="obs-contract"} 1 1700000000123

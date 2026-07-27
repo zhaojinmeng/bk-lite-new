@@ -1,0 +1,3 @@
+# HELP hwcloud_info Auto-generated help for hwcloud_info
+# TYPE hwcloud_info gauge
+hwcloud_info{bk_obj_id="hwcloud",collect_status="success",endpoint="https://ecs.cn-south-1.example.invalid",model_id="hwcloud"} 1 1700000000123

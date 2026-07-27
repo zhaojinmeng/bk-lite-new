@@ -1,0 +1,1 @@
+hwcloud_obs_info,agent_id=agent-contract,bk_obj_id=hwcloud_obs,bucket_type=STANDARD,collect_status=success,collect_type=discovery,config_type=production-contract,instance_id=cmdb-hwcloud,instance_type=hwcloud,model_id=hwcloud_obs,region=cn-south-1,resource_id=obs-contract,resource_name=obs-contract gauge=1i 1700000000123000000

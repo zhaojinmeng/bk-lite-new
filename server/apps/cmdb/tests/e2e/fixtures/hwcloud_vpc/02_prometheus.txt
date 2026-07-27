@@ -1,0 +1,3 @@
+# HELP hwcloud_vpc_info Auto-generated help for hwcloud_vpc_info
+# TYPE hwcloud_vpc_info gauge
+hwcloud_vpc_info{bk_obj_id="hwcloud_vpc",cidr="192.0.2.0/24",collect_status="success",is_default="False",model_id="hwcloud_vpc",region="cn-south-1",resource_id="vpc-001",resource_name="vpc-contract",status="AVAILABLE"} 1 1700000000123

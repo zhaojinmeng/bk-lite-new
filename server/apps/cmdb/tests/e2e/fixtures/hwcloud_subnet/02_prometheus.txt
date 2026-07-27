@@ -1,0 +1,3 @@
+# HELP hwcloud_subnet_info Auto-generated help for hwcloud_subnet_info
+# TYPE hwcloud_subnet_info gauge
+hwcloud_subnet_info{bk_obj_id="hwcloud_subnet",cidr="192.0.2.0/28",collect_status="success",gateway="192.0.2.1",model_id="hwcloud_subnet",region="cn-south-1",resource_id="subnet-001",resource_name="subnet-contract",status="AVAILABLE",vpc="vpc-001",zone=""} 1 1700000000123

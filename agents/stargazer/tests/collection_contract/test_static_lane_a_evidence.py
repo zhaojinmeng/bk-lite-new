@@ -57,16 +57,31 @@ ALIYUN_CASES = (
     "aliyun_pgsql",
     "aliyun_redis",
 )
+HWCLOUD_CASES = (
+    "hwcloud",
+    "hwcloud_dcs",
+    "hwcloud_ecs",
+    "hwcloud_eip",
+    "hwcloud_elb",
+    "hwcloud_evs",
+    "hwcloud_obs",
+    "hwcloud_rds",
+    "hwcloud_sg",
+    "hwcloud_subnet",
+    "hwcloud_vpc",
+)
 
 
 def _assert_timestamp_propagation_with_influx_tag_normalization(
-    prometheus_semantics, line_protocol_semantics
+    prometheus_semantics, line_protocol_semantics, overridden_labels=()
 ):
     """InfluxDB Point 不编码空 tag 并裁剪尾随空格；其余身份必须传播。"""
     unmatched_records = list(line_protocol_semantics.elements())
     for sample in prometheus_semantics.elements():
         identity_labels = {
-            key: value.rstrip() for key, value in sample.labels if value != ""
+            key: value.rstrip()
+            for key, value in sample.labels
+            if value != "" and key not in overridden_labels
         }
         matches = [
             record
@@ -333,4 +348,57 @@ def test_腾讯云逐emitted_case只比较自身模型并匹配静态Golden(case
     )
     _assert_timestamp_propagation_with_influx_tag_normalization(
         actual_prometheus_semantics, actual_line_protocol_semantics,
+    )
+
+
+@pytest.mark.parametrize("case_id", HWCLOUD_CASES)
+def test_华为云逐emitted_case只比较自身模型并匹配静态Golden(case_id, monkeypatch):
+    evidence = EVIDENCE_ROOT / case_id
+    source = json.loads((evidence / "01_source_raw.json").read_text(encoding="utf-8"))
+    provenance = json.loads(
+        (evidence / "00_provenance.json").read_text(encoding="utf-8")
+    )
+    source_model_id = provenance["source_model_id"]
+    assert provenance["emitted_case_id"] == case_id
+    assert set(source["result"]) == {source_model_id}
+
+    monkeypatch.setattr(base_utils.time, "time", lambda: 1_700_000_000.123)
+    normalized = CollectionService(
+        {"plugin_name": "hwcloud_info", "model_id": "hwcloud", "host": None,}
+    )._process_result(deepcopy(source))
+    actual_prometheus = convert_to_prometheus_format(normalized)
+    expected_prometheus = (evidence / "02_prometheus.txt").read_text(encoding="utf-8")
+    actual_prometheus_semantics = semantics.parse_prometheus(actual_prometheus)
+    assert actual_prometheus_semantics == semantics.parse_prometheus(
+        expected_prometheus
+    )
+
+    actual_line_protocol = convert_prometheus_to_influx(
+        actual_prometheus,
+        {
+            "monitor_type": "hwcloud",
+            "plugin_name": "hwcloud_info",
+            "model_id": "hwcloud",
+            "tags": {
+                "agent_id": "agent-contract",
+                "instance_id": "cmdb-hwcloud",
+                "instance_type": "hwcloud",
+                "collect_type": "discovery",
+                "config_type": "production-contract",
+            },
+        },
+    )
+    expected_line_protocol = (evidence / "03_line_protocol.txt").read_text(
+        encoding="utf-8"
+    )
+    actual_line_protocol_semantics = semantics.parse_line_protocol(
+        actual_line_protocol
+    )
+    assert actual_line_protocol_semantics == semantics.parse_line_protocol(
+        expected_line_protocol
+    )
+    _assert_timestamp_propagation_with_influx_tag_normalization(
+        actual_prometheus_semantics,
+        actual_line_protocol_semantics,
+        overridden_labels=("instance_type",) if case_id == "hwcloud_ecs" else (),
     )
