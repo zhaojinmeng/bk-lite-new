@@ -1,0 +1,18 @@
+{
+  "source_type": "sanitized_real_environment",
+  "vendor": "postgresql_community",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-04T16:04:40Z",
+  "sanitization": "与 postgresql case 共享提交 ee2987167 的同一真实父采集输出；独立验证 protocol 三元组，将实例名和采集 host 替换为 example.invalid。",
+  "review_basis": {
+    "source_commit": "ee2987167",
+    "scalar_labels": "逐项核对 9 个业务标量，不复用运行时 expected。",
+    "none_exclusion": "源记录没有 None 字段。",
+    "derived_labels": "人工核对 bk_obj_id/model_id/collect_status/host。",
+    "common_tags": "独立核对 instance_id=cmdb-protocol-postgresql 及其余公共 tag。",
+    "timestamp": "1700000000123 毫秒转换为 1700000000123000000 纳秒。"
+  }
+}

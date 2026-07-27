@@ -1,0 +1,3 @@
+# HELP postgresql_info Auto-generated help for postgresql_info
+# TYPE postgresql_info gauge
+postgresql_info{bk_obj_id="postgresql",cache_memory_mb="128",collect_status="success",conf_path="/var/lib/postgresql/data/postgresql.conf",data_path="/var/lib/postgresql/data",host="postgresql.example.invalid",inst_name="postgresql.example.invalid-pg-15432",ip_addr="127.0.0.1",log_path="/var/lib/postgresql/data/log",max_conn="100",model_id="postgresql",port="15432",version="16.14"} 1 1700000000123
