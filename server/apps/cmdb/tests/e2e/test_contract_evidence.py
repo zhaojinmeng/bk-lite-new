@@ -1,7 +1,6 @@
 import json
 
 import pytest
-
 from apps.cmdb.tests.e2e.contract_loader import (
     LANE_A_REQUIRED,
     REQUIRED,
@@ -330,11 +329,7 @@ def test_qcloud十四个三元组LaneA_evidence全部ready():
 
 def test_aliyun八个三元组LaneA_evidence全部ready():
     audit = audit_lane_a_evidence(load_manifest())
-    aliyun_items = [
-        item
-        for item in audit.validation
-        if item.contract_id[0:2] == ("cloud", "aliyun_account")
-    ]
+    aliyun_items = [item for item in audit.validation if item.contract_id[0:2] == ("cloud", "aliyun_account")]
 
     assert len(aliyun_items) == 8
     assert all(item.status == "ready" for item in aliyun_items)
@@ -342,11 +337,7 @@ def test_aliyun八个三元组LaneA_evidence全部ready():
 
 def test_hwcloud十一个三元组LaneA_evidence全部ready():
     audit = audit_lane_a_evidence(load_manifest())
-    hwcloud_items = [
-        item
-        for item in audit.validation
-        if item.contract_id[0:2] == ("cloud", "hwcloud")
-    ]
+    hwcloud_items = [item for item in audit.validation if item.contract_id[0:2] == ("cloud", "hwcloud")]
 
     assert len(hwcloud_items) == 11
     assert all(item.status == "ready" for item in hwcloud_items)

@@ -391,9 +391,7 @@ def test_华为云逐emitted_case只比较自身模型并匹配静态Golden(case
     expected_line_protocol = (evidence / "03_line_protocol.txt").read_text(
         encoding="utf-8"
     )
-    actual_line_protocol_semantics = semantics.parse_line_protocol(
-        actual_line_protocol
-    )
+    actual_line_protocol_semantics = semantics.parse_line_protocol(actual_line_protocol)
     assert actual_line_protocol_semantics == semantics.parse_line_protocol(
         expected_line_protocol
     )

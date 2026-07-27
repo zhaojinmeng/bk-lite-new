@@ -1396,11 +1396,7 @@ def _ecs_server(resource_id):
 def _patch_ecs_interfaces(monkeypatch):
     def list_interfaces(self, request):
         return _HuaweiSdkResponse(
-            {
-                "interface_attachments": [
-                    {"fixed_ips": [{"subnet_id": "subnet-001"}]}
-                ]
-            }
+            {"interface_attachments": [{"fixed_ips": [{"subnet_id": "subnet-001"}]}]}
         )
 
     monkeypatch.setattr(
@@ -1429,10 +1425,7 @@ def test_华为云十一项operation显式声明五态与官方来源():
     for operation in operations:
         assert set(operation["scenarios"]) == HWCLOUD_SCENARIOS
         assert operation["documentation_url"].startswith(
-            (
-                "https://support.huaweicloud.com/",
-                "https://developer.huaweicloud.com/",
-            )
+            ("https://support.huaweicloud.com/", "https://developer.huaweicloud.com/",)
         )
         pagination = operation["pagination"]
         assert pagination["kind"] in {
@@ -1510,9 +1503,7 @@ def test_华为云ECS单页与缺可选字段经真实父链路保留身份(monk
             {"count": 1, "servers": [_ecs_server("ecs-001")]}
         )
     )
-    monkeypatch.setattr(
-        cw_huaweicloud.EcsClient, "list_servers_details", sdk_call
-    )
+    monkeypatch.setattr(cw_huaweicloud.EcsClient, "list_servers_details", sdk_call)
 
     result = _hwcloud_manager().get_ecs()
 
@@ -1537,9 +1528,7 @@ def test_华为云ECS按官方offset_limit完整翻页(monkeypatch):
         requests.append((getattr(request, "offset", None), request.limit))
         return _HuaweiSdkResponse(pages[len(requests) - 1])
 
-    monkeypatch.setattr(
-        cw_huaweicloud.EcsClient, "list_servers_details", list_servers
-    )
+    monkeypatch.setattr(cw_huaweicloud.EcsClient, "list_servers_details", list_servers)
 
     result = _hwcloud_manager().get_ecs()
 
@@ -1594,9 +1583,7 @@ def test_华为云EVS按官方offset_limit完整翻页(monkeypatch):
     pages = [
         {
             "count": 51,
-            "volumes": [
-                _evs_volume(f"evs-{index:03d}") for index in range(1, 51)
-            ],
+            "volumes": [_evs_volume(f"evs-{index:03d}") for index in range(1, 51)],
         },
         {"count": 51, "volumes": [_evs_volume("evs-051")]},
     ]
@@ -1709,10 +1696,7 @@ def test_华为云OBS单页空桶缺可选字段和错误均保持明确(monkeyp
                 }
             ),
             _obs_response(
-                {
-                    "contents": [{"key": "one", "size": 0}],
-                    "isTruncated": False,
-                }
+                {"contents": [{"key": "one", "size": 0}], "isTruncated": False,}
             ),
         ]
     )
@@ -1735,18 +1719,14 @@ def test_华为云OBS按官方marker完整读取桶内对象(monkeypatch):
     pages = [
         _obs_response(
             {
-                "contents": [
-                    {"key": "one", "size": 1024, "storageClass": "STANDARD"}
-                ],
+                "contents": [{"key": "one", "size": 1024, "storageClass": "STANDARD"}],
                 "isTruncated": True,
                 "nextMarker": "one",
             }
         ),
         _obs_response(
             {
-                "contents": [
-                    {"key": "two", "size": 2048, "storageClass": "WARM"}
-                ],
+                "contents": [{"key": "two", "size": 2048, "storageClass": "WARM"}],
                 "isTruncated": False,
             }
         ),
@@ -1805,9 +1785,7 @@ def test_华为云EIP单页空集缺可选字段和错误保持明确(monkeypatc
             raise response
         return response
 
-    monkeypatch.setattr(
-        cw_huaweicloud.EipClient, "list_publicips", list_publicips
-    )
+    monkeypatch.setattr(cw_huaweicloud.EipClient, "list_publicips", list_publicips)
     manager = _hwcloud_manager()
 
     assert manager.get_eip()[0]["resource_id"] == "eip-001"
@@ -1828,9 +1806,7 @@ def test_华为云EIP按官方marker完整翻页(monkeypatch):
         requests.append((getattr(request, "marker", None), request.limit))
         return _HuaweiSdkResponse(pages[len(requests) - 1])
 
-    monkeypatch.setattr(
-        cw_huaweicloud.EipClient, "list_publicips", list_publicips
-    )
+    monkeypatch.setattr(cw_huaweicloud.EipClient, "list_publicips", list_publicips)
 
     result = _hwcloud_manager()._driver().list_eips(limit=2)
 
@@ -1873,9 +1849,7 @@ def test_华为云安全组五态在V1V2无分页且错误不伪装成功(monkey
         return response
 
     monkeypatch.setattr(
-        cw_huaweicloud.VpcClient,
-        "list_security_groups",
-        list_security_groups,
+        cw_huaweicloud.VpcClient, "list_security_groups", list_security_groups,
     )
     manager = _hwcloud_manager()
 
@@ -1912,9 +1886,7 @@ def test_华为云ELB单页空集缺可选字段和错误保持明确(monkeypatc
         return response
 
     monkeypatch.setattr(
-        cw_huaweicloud.ElbClient,
-        "list_load_balancers",
-        list_load_balancers,
+        cw_huaweicloud.ElbClient, "list_load_balancers", list_load_balancers,
     )
     manager = _hwcloud_manager()
 
@@ -1936,9 +1908,7 @@ def test_华为云ELB按官方marker完整翻页(monkeypatch):
         return _HuaweiSdkResponse(pages[len(requests) - 1])
 
     monkeypatch.setattr(
-        cw_huaweicloud.ElbClient,
-        "list_load_balancers",
-        list_load_balancers,
+        cw_huaweicloud.ElbClient, "list_load_balancers", list_load_balancers,
     )
 
     result = _hwcloud_manager()._driver().list_load_balancers(limit=2)
@@ -1992,13 +1962,7 @@ def _dcs_instance(resource_id):
 @pytest.mark.parametrize(
     ("method_name", "sdk_class", "item_factory", "total_field", "expected_id"),
     (
-        (
-            "get_rds",
-            cw_huaweicloud.RdsClient,
-            _rds_instance,
-            "total_count",
-            "rds-001",
-        ),
+        ("get_rds", cw_huaweicloud.RdsClient, _rds_instance, "total_count", "rds-001",),
         (
             "get_dcs",
             cw_huaweicloud.DcsClient,
@@ -2058,10 +2022,7 @@ def test_华为云RDS与DCS按官方offset_limit完整翻页(
 ):
     requests = []
     pages = [
-        {
-            "instances": [item_factory(ids[0]), item_factory(ids[1])],
-            total_field: 3,
-        },
+        {"instances": [item_factory(ids[0]), item_factory(ids[1])], total_field: 3,},
         {"instances": [item_factory(ids[2])], total_field: 3},
     ]
 
