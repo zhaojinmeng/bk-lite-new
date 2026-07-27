@@ -1,0 +1,61 @@
+services:
+  nats:
+    image: nats:2.10.26-alpine
+    command: ["-js", "-m", "8222", "--store_dir", "/data"]
+    ports:
+      - "127.0.0.1::4222"
+    tmpfs:
+      - /data:size=128m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8222/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    mem_limit: 192m
+    cpus: 0.50
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.115.0
+    command: ["-storageDataPath=/storage", "-retentionPeriod=1d"]
+    ports:
+      - "127.0.0.1::8428"
+    tmpfs:
+      - /storage:size=256m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8428/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    mem_limit: 512m
+    cpus: 1.00
+
+  falkordb:
+    image: falkordb/falkordb:v4.4.0
+    ports:
+      - "127.0.0.1::6379"
+    tmpfs:
+      - /data:size=128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    mem_limit: 384m
+    cpus: 0.75
+
+  telegraf:
+    image: telegraf:1.34.0-alpine
+    depends_on:
+      nats:
+        condition: service_healthy
+      victoriametrics:
+        condition: service_healthy
+    configs:
+      - source: telegraf_config
+        target: /etc/telegraf/telegraf.conf
+    mem_limit: 192m
+    cpus: 0.50
+
+configs:
+  telegraf_config:
+    file: ./telegraf.conf

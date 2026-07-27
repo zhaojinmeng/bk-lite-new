@@ -1,0 +1,72 @@
+# CMDB 采集链路真实基础设施 Smoke
+
+本目录只提供 Task 9 业务 smoke 所需的隔离基础设施和安全运行器。普通
+pytest/CI 默认不启动 Docker；只有显式设置 `CMDB_COLLECTION_SMOKE=1` 才能构造运行配置。
+
+## 环境要求
+
+- Docker Engine 与 Docker Compose v2；
+- 可用内存至少 1.5 GiB；
+- 镜像架构支持当前宿主机；
+- 测试只连接回环随机端口或 Compose 内部服务名，不接受外部 VM、NATS 或 FalkorDB 地址。
+
+镜像固定为明确版本，禁止 `latest`：
+
+- `nats:2.10.26-alpine`
+- `telegraf:1.34.0-alpine`
+- `victoriametrics/victoria-metrics:v1.115.0`
+- `falkordb/falkordb:v4.4.0`
+
+升级时逐个修改版本，并先执行 `docker compose pull`、`docker compose config`
+和本目录 safety tests，再运行 Task 9 的完整业务 smoke。若供应链要求 digest，
+应在受信任 CI 中拉取多架构 manifest 后，将对应 digest 补入此文件和 Compose，
+不能猜测 digest。
+
+## 本地安全合同
+
+```bash
+cd server
+MINIO_ENDPOINT=localhost:9000 \
+MINIO_ACCESS_KEY=test \
+MINIO_SECRET_KEY=test \
+MINIO_USE_HTTPS=false \
+INSTALL_APPS=system_mgmt,node_mgmt,cmdb \
+uv run pytest -q -o addopts='' \
+  apps/cmdb/tests/smoke/collection_chain/test_safety.py
+```
+
+Safety tests 完全离线，不要求 Docker daemon。检查 Compose 语法时可运行：
+
+```bash
+docker compose \
+  --file server/apps/cmdb/tests/smoke/collection_chain/compose.yaml \
+  config --quiet
+```
+
+真实 smoke 必须显式启用，并为单次运行生成唯一 `run_id` 和对应 Compose project：
+
+```bash
+CMDB_COLLECTION_SMOKE=1 \
+CMDB_SMOKE_RUN_ID=cmdb-a1b2c3d4 \
+uv run pytest -q -o addopts='' \
+  apps/cmdb/tests/smoke/collection_chain/test_collection_chain.py
+```
+
+运行器使用随机宿主端口、条件健康检查和有界轮询，不使用裸 `sleep`。无论启动、
+健康检查还是业务断言失败，都会在 `finally` 中先保存 Compose 日志，再仅对当前
+project 执行 `down --remove-orphans`。Compose 使用 tmpfs，不创建持久 named volume；
+禁止 `down -v`、全局 `prune` 或宽目录递归删除。
+
+## Task 9 接入点
+
+Task 9 在 `CollectionChainSmokeRunner.run(workload)` 的 workload 中接入七类代表对象：
+`host`、`mysql`、`influxdb`、`nginx`、`qcloud`、`vmware`、`network`。workload
+通过 `SmokeContext` 获取 `run_id` 和 ledger：
+
+- 所有写入的指标、CMDB 实体和图关联都带 `run_id`；
+- 创建后立即登记精确资源标识；
+- 图清理由 Task 9 提供资源级 remover，且必须验证资源 owner 等于当前 `run_id`；
+- 容器端口通过 `docker compose port` 查询，不写固定宿主端口；
+- 用有界查询轮询等待 VM/图库可见，不允许依赖固定睡眠。
+
+Task 9 完成前，本目录不声称七个业务对象已通过真实 smoke。
