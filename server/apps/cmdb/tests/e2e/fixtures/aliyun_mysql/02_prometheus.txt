@@ -1,3 +1,3 @@
 # HELP aliyun_mysql_info Auto-generated help for aliyun_mysql_info
 # TYPE aliyun_mysql_info gauge
-aliyun_mysql_info{bk_obj_id="aliyun_mysql",collect_status="success",engine="MySQL",model_id="aliyun_mysql",region="cn-hangzhou",resource_id="rm-001",resource_name="mysql-contract",status="Running"} 1 1700000000123
+aliyun_mysql_info{bk_obj_id="aliyun_mysql",collect_status="success",create_time="",engine="MySQL",expire_time="",model_id="aliyun_mysql",region="cn-hangzhou",resource_id="rm-001",resource_name="mysql-contract",status="Running",zone_slave=""} 1 1700000000123

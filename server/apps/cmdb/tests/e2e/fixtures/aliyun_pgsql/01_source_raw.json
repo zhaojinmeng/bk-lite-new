@@ -1,1 +1,29 @@
-{"success":true,"result":{"aliyun_pgsql":[{"resource_name":"pgsql-contract","resource_id":"pg-001","region":"cn-hangzhou","engine":"PostgreSQL","status":"Running"}]}}
+{
+  "success": true,
+  "result": {
+    "aliyun_pgsql": [
+      {
+        "resource_name": "pgsql-contract",
+        "resource_id": "pg-001",
+        "region": "cn-hangzhou",
+        "zone": null,
+        "zone_slave": "",
+        "engine": "PostgreSQL",
+        "version": null,
+        "type": null,
+        "status": "Running",
+        "class": null,
+        "storage_type": null,
+        "network_type": null,
+        "net_type": null,
+        "connection_mode": null,
+        "lock_mode": null,
+        "cpu": "",
+        "memory_mb": null,
+        "charge_type": "",
+        "create_time": "",
+        "expire_time": ""
+      }
+    ]
+  }
+}

@@ -1,3 +1,3 @@
 # HELP aliyun_bucket_info Auto-generated help for aliyun_bucket_info
 # TYPE aliyun_bucket_info gauge
-aliyun_bucket_info{bk_obj_id="aliyun_bucket",block_public_access="True",collect_status="success",location="oss-cn-hangzhou",model_id="aliyun_bucket",resource_id="bucket-contract",resource_name="bucket-contract",storage_class="Standard"} 1 1700000000123
+aliyun_bucket_info{bk_obj_id="aliyun_bucket",block_public_access="True",collect_status="success",creation_date="2026-01-02 11:04:05",cross_region_replication="Disabled",extranet_endpoint="bucket-contract.oss-cn-hangzhou.aliyuncs.com",intranet_endpoint="bucket-contract.oss-cn-hangzhou-internal.aliyuncs.com",location="oss-cn-hangzhou",model_id="aliyun_bucket",resource_id="bucket-contract",resource_name="bucket-contract",storage_class="Standard"} 1 1700000000123

@@ -1,1 +1,27 @@
-{"success":true,"result":{"aliyun_redis":[{"resource_name":"redis-contract","resource_id":"r-001","region":"cn-hangzhou","capacity":4096,"status":"Normal"}]}}
+{
+  "success": true,
+  "result": {
+    "aliyun_redis": [
+      {
+        "resource_name": "redis-contract",
+        "resource_id": "r-001",
+        "region": "cn-hangzhou",
+        "zone": "cn-hangzhou-h",
+        "engine_version": "6.0",
+        "architecture_type": "cluster",
+        "capacity": 4096,
+        "network_type": "VPC",
+        "connection_domain": "redis.example.invalid",
+        "port": 6379,
+        "bandwidth": 10,
+        "shard_count": "",
+        "qps": 1000,
+        "instance_class": "redis.master.small.default",
+        "package_type": "standard",
+        "charge_type": "PostPaid",
+        "create_time": "",
+        "end_time": ""
+      }
+    ]
+  }
+}

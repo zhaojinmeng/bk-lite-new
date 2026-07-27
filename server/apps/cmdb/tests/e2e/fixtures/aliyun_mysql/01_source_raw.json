@@ -1,1 +1,28 @@
-{"success":true,"result":{"aliyun_mysql":[{"resource_name":"mysql-contract","resource_id":"rm-001","region":"cn-hangzhou","engine":"MySQL","status":"Running"}]}}
+{
+  "success": true,
+  "result": {
+    "aliyun_mysql": [
+      {
+        "resource_name": "mysql-contract",
+        "resource_id": "rm-001",
+        "region": "cn-hangzhou",
+        "zone": null,
+        "zone_slave": "",
+        "engine": "MySQL",
+        "version": null,
+        "type": null,
+        "status": "Running",
+        "class": null,
+        "storage_type": null,
+        "network_type": null,
+        "connection_mode": null,
+        "lock_mode": null,
+        "cpu": null,
+        "memory_mb": null,
+        "charge_type": null,
+        "create_time": "",
+        "expire_time": ""
+      }
+    ]
+  }
+}

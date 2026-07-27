@@ -1,3 +1,3 @@
 # HELP aliyun_pgsql_info Auto-generated help for aliyun_pgsql_info
 # TYPE aliyun_pgsql_info gauge
-aliyun_pgsql_info{bk_obj_id="aliyun_pgsql",collect_status="success",engine="PostgreSQL",model_id="aliyun_pgsql",region="cn-hangzhou",resource_id="pg-001",resource_name="pgsql-contract",status="Running"} 1 1700000000123
+aliyun_pgsql_info{bk_obj_id="aliyun_pgsql",charge_type="",collect_status="success",cpu="",create_time="",engine="PostgreSQL",expire_time="",model_id="aliyun_pgsql",region="cn-hangzhou",resource_id="pg-001",resource_name="pgsql-contract",status="Running",zone_slave=""} 1 1700000000123

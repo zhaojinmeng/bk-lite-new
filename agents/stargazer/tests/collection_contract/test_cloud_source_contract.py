@@ -1518,6 +1518,164 @@ def test_阿里云Kafka分页场景由同一官方operation页面明确N_A():
     assert "no page number" in operation["pagination"]["reason"]
 
 
+def test_阿里云冻结SDK响应经真实父collector逐case匹配完整来源证据(monkeypatch):
+    cases = tuple(
+        case_id
+        for operation in ALIYUN_SCENARIO_MATRIX["operations"]
+        for case_id in operation["case_ids"]
+    )
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+
+    ecs = _aliyun_instance("i-001")
+    ecs["InstanceName"] = "ecs-contract"
+
+    def ecs_boundary(self, request):
+        return json.dumps(
+            {"TotalCount": 1, "Instances": {"Instance": [ecs]}}
+        ).encode()
+
+    bucket = {
+        "Name": "bucket-contract",
+        "Location": "oss-cn-hangzhou",
+        "ExtranetEndpoint": "oss-cn-hangzhou.aliyuncs.com",
+        "IntranetEndpoint": "oss-cn-hangzhou-internal.aliyuncs.com",
+        "StorageClass": "Standard",
+        "CrossRegionReplication": "Disabled",
+        "BlockPublicAccess": True,
+        "CreationDate": "2026-01-02T03:04:05.000Z",
+    }
+    rds_items = {
+        "Mysql": {
+            "DBInstanceDescription": "mysql-contract",
+            "DBInstanceId": "rm-001",
+            "RegionId": "cn-hangzhou",
+            "Engine": "MySQL",
+            "DBInstanceStatus": "Running",
+        },
+        "PostgreSQL": {
+            "DBInstanceDescription": "pgsql-contract",
+            "DBInstanceId": "pg-001",
+            "RegionId": "cn-hangzhou",
+            "Engine": "PostgreSQL",
+            "DBInstanceStatus": "Running",
+        },
+    }
+
+    def rds_boundary(self, request, runtime):
+        items = [rds_items[request.engine]] if request.page_number == 1 else []
+        return _sdk_response({"Items": {"DBInstance": items}})
+
+    redis = {
+        "InstanceName": "redis-contract",
+        "InstanceId": "r-001",
+        "RegionId": "cn-hangzhou",
+        "ZoneId": "cn-hangzhou-h",
+        "EngineVersion": "6.0",
+        "ArchitectureType": "cluster",
+        "Capacity": 4096,
+        "NetworkType": "VPC",
+        "ConnectionDomain": "redis.example.invalid",
+        "Port": 6379,
+        "Bandwidth": 10,
+        "QPS": 1000,
+        "InstanceClass": "redis.master.small.default",
+        "PackageType": "standard",
+        "ChargeType": "PostPaid",
+    }
+
+    def redis_boundary(self, request, runtime):
+        items = [redis] if request.page_number == 1 else []
+        return _sdk_response({"Instances": {"KVStoreInstance": items}})
+
+    mongodb = {
+        "DBInstanceDescription": "mongodb-contract",
+        "DBInstanceId": "dds-001",
+        "RegionId": "cn-hangzhou",
+        "DBInstanceType": "replicate",
+        "DBInstanceStatus": "Running",
+    }
+
+    def mongodb_boundary(self, request, runtime):
+        items = (
+            [mongodb]
+            if request.dbinstance_type == "replicate" and request.page_number == 1
+            else []
+        )
+        return _sdk_response({"DBInstances": {"DBInstance": items}})
+
+    kafka = {
+        "Name": "kafka-contract",
+        "InstanceId": "alikafka-001",
+        "RegionId": "cn-hangzhou",
+        "DiskSize": 3600,
+        "ServiceStatus": 5,
+        "CreateTime": 0,
+    }
+    clb = {
+        "LoadBalancerName": "clb-contract",
+        "LoadBalancerId": "lb-001",
+        "RegionId": "cn-hangzhou",
+        "Address": "192.0.2.10",
+        "LoadBalancerStatus": "active",
+        "CreateTime": "2026-01-02T03:04Z",
+    }
+
+    monkeypatch.setattr(
+        aliyun_info.client.AcsClient, "do_action_with_exception", ecs_boundary
+    )
+    monkeypatch.setattr(
+        aliyun_info.Oss20190517Client,
+        "list_buckets_with_options",
+        lambda self, request, headers, runtime: _sdk_response(
+            {"buckets": [bucket], "isTruncated": False}
+        ),
+    )
+    monkeypatch.setattr(
+        aliyun_info.Oss20190517Client,
+        "get_bucket_info_with_options",
+        lambda self, name, headers, runtime: _sdk_response({"Bucket": bucket}),
+    )
+    monkeypatch.setattr(
+        aliyun_info.Rds20140815Client,
+        "describe_dbinstances_with_options",
+        rds_boundary,
+    )
+    monkeypatch.setattr(
+        aliyun_info.R_kvstore20150101Client,
+        "describe_instances_with_options",
+        redis_boundary,
+    )
+    monkeypatch.setattr(
+        aliyun_info.Dds20151201Client,
+        "describe_dbinstances_with_options",
+        mongodb_boundary,
+    )
+    monkeypatch.setattr(
+        aliyun_info.alikafka20190916Client,
+        "get_instance_list_with_options",
+        lambda self, request, runtime: _sdk_response(
+            {"InstanceList": {"InstanceVO": [kafka]}}
+        ),
+    )
+    monkeypatch.setattr(
+        aliyun_info.Slb20140515Client,
+        "describe_load_balancers_with_options",
+        lambda self, request, runtime: _sdk_response(
+            {"TotalCount": 1, "LoadBalancers": {"LoadBalancer": [clb]}}
+        ),
+    )
+
+    result = aliyun_info.CwAliyun(
+        {
+            "secret_id": "contract-id",
+            "secret_key": "contract-key",
+            "region_id": "cn-hangzhou",
+        }
+    ).list_all_resources()
+
+    _assert_parent_replay_matches_case_evidence(result, cases)
+
+
 def test_华为云SDK空集保持稳定(monkeypatch):
     class FakeSdkResponse:
         status_code = 200

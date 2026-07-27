@@ -1,1 +1,24 @@
-{"success":true,"result":{"aliyun_ecs":[{"resource_name":"ecs-contract","resource_id":"i-001","region":"cn-hangzhou","status":"RUNNING","memory":4096}]}}
+{
+  "success": true,
+  "result": {
+    "aliyun_ecs": [
+      {
+        "resource_name": "ecs-contract",
+        "resource_id": "i-001",
+        "ip_addr": "10.0.0.9",
+        "public_ip": "10.0.0.9",
+        "region": "cn-hangzhou",
+        "zone": "cn-hangzhou-h",
+        "vpc": "vpc-aliyun",
+        "status": "RUNNING",
+        "instance_type": "ecs.g7.large",
+        "os_name": "Linux",
+        "vcpus": 2,
+        "memory": 4096,
+        "charge_type": "POSTPAID_BY_HOUR",
+        "create_time": "2026-01-01 08:00:00",
+        "expired_time": ""
+      }
+    ]
+  }
+}

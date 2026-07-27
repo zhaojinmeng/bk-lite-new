@@ -1,1 +1,24 @@
-{"success":true,"result":{"aliyun_kafka_inst":[{"resource_name":"kafka-contract","resource_id":"alikafka-001","region":"cn-hangzhou","storage_gb":3600,"status":5}]}}
+{
+  "success": true,
+  "result": {
+    "aliyun_kafka_inst": [
+      {
+        "resource_name": "kafka-contract",
+        "resource_id": "alikafka-001",
+        "region": "cn-hangzhou",
+        "zone": null,
+        "vpc": null,
+        "status": 5,
+        "class": null,
+        "storage_gb": 3600,
+        "storage_type": "",
+        "msg_retain": null,
+        "topoc_num": "",
+        "io_max_read": "",
+        "io_max_write": "",
+        "charge_type": "",
+        "create_time": "1970-01-01 08:00:00"
+      }
+    ]
+  }
+}

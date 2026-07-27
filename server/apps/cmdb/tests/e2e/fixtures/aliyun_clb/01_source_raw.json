@@ -1,1 +1,20 @@
-{"success":true,"result":{"aliyun_clb":[{"resource_name":"clb-contract","resource_id":"lb-001","region":"cn-hangzhou","ip_addr":"192.0.2.10","status":"active"}]}}
+{
+  "success": true,
+  "result": {
+    "aliyun_clb": [
+      {
+        "resource_name": "clb-contract",
+        "resource_id": "lb-001",
+        "region": "cn-hangzhou",
+        "zone": null,
+        "zone_slave": null,
+        "vpc": null,
+        "ip_addr": "192.0.2.10",
+        "status": "active",
+        "class": null,
+        "charge_type": "",
+        "create_time": "2026-01-02 11:04:00"
+      }
+    ]
+  }
+}

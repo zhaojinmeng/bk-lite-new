@@ -1,1 +1,18 @@
-{"success":true,"result":{"aliyun_bucket":[{"resource_name":"bucket-contract","resource_id":"bucket-contract","location":"oss-cn-hangzhou","storage_class":"Standard","block_public_access":true}]}}
+{
+  "success": true,
+  "result": {
+    "aliyun_bucket": [
+      {
+        "resource_name": "bucket-contract",
+        "resource_id": "bucket-contract",
+        "location": "oss-cn-hangzhou",
+        "extranet_endpoint": "bucket-contract.oss-cn-hangzhou.aliyuncs.com",
+        "intranet_endpoint": "bucket-contract.oss-cn-hangzhou-internal.aliyuncs.com",
+        "storage_class": "Standard",
+        "cross_region_replication": "Disabled",
+        "block_public_access": true,
+        "creation_date": "2026-01-02 11:04:05"
+      }
+    ]
+  }
+}
