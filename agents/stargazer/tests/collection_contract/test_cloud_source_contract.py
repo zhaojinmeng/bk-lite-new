@@ -1620,11 +1620,20 @@ def test_华为云EVS按官方offset_limit完整翻页(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ("case_ids", "method_name", "sdk_class", "sdk_method", "collection", "item"),
+    (
+        "case_ids",
+        "method_name",
+        "driver_method",
+        "sdk_class",
+        "sdk_method",
+        "collection",
+        "item",
+    ),
     (
         (
             ["hwcloud_vpc"],
             "get_vpc",
+            "list_vpcs",
             cw_huaweicloud.VpcClient,
             "list_vpcs",
             "vpcs",
@@ -1639,6 +1648,7 @@ def test_华为云EVS按官方offset_limit完整翻页(monkeypatch):
         (
             ["hwcloud_subnet"],
             "get_subnet",
+            "list_subnets",
             cw_huaweicloud.VpcClient,
             "list_subnets",
             "subnets",
@@ -1654,8 +1664,15 @@ def test_华为云EVS按官方offset_limit完整翻页(monkeypatch):
         ),
     ),
 )
-def test_华为云VPC与Subnet五态在V1V2无分页且错误不伪装成功(
-    case_ids, method_name, sdk_class, sdk_method, collection, item, monkeypatch
+def test_华为云VPC与Subnet五态且错误不伪装成功(
+    case_ids,
+    method_name,
+    driver_method,
+    sdk_class,
+    sdk_method,
+    collection,
+    item,
+    monkeypatch,
 ):
     operation = next(
         item
@@ -1682,7 +1699,93 @@ def test_华为云VPC与Subnet五态在V1V2无分页且错误不伪装成功(
     assert getattr(manager, method_name)() == []
     assert getattr(manager, method_name)()[0]["resource_id"] == item["id"]
     assert getattr(manager, method_name)() == []
-    assert operation["pagination"]["kind"] == "not_applicable"
+    assert operation["pagination"]["kind"] == "marker"
+
+
+@pytest.mark.parametrize(
+    ("driver_method", "sdk_method", "collection", "item_factory"),
+    (
+        (
+            "list_vpcs",
+            "list_vpcs",
+            "vpcs",
+            lambda resource_id: {
+                "id": resource_id,
+                "name": f"vpc-{resource_id}",
+                "description": "",
+                "status": "OK",
+                "cidr": "192.0.2.0/24",
+            },
+        ),
+        (
+            "list_subnets",
+            "list_subnets",
+            "subnets",
+            lambda resource_id: {
+                "id": resource_id,
+                "name": f"subnet-{resource_id}",
+                "description": "",
+                "status": "ACTIVE",
+                "gateway_ip": "192.0.2.1",
+                "cidr": "192.0.2.0/28",
+                "vpc_id": "vpc-001",
+            },
+        ),
+        (
+            "list_security_groups",
+            "list_security_groups",
+            "security_groups",
+            lambda resource_id: {
+                "id": resource_id,
+                "name": f"sg-{resource_id}",
+                "description": "",
+                "enterprise_project_id": "",
+                "security_group_rules": [],
+            },
+        ),
+    ),
+)
+def test_华为云VPC_Subnet_安全组按官方marker完整翻页且防无进展(
+    driver_method, sdk_method, collection, item_factory, monkeypatch
+):
+    requests = []
+    pages = [
+        {collection: [item_factory("001"), item_factory("002")]},
+        {collection: [item_factory("003")]},
+    ]
+
+    def sdk_boundary(self, request):
+        requests.append(
+            (getattr(request, "marker", None), getattr(request, "limit", None))
+        )
+        return _HuaweiSdkResponse(pages[len(requests) - 1])
+
+    monkeypatch.setattr(cw_huaweicloud.VpcClient, sdk_method, sdk_boundary)
+    result = getattr(_hwcloud_manager()._driver(), driver_method)(limit=2)
+
+    assert [item["resource_id"] for item in result["data"]] == [
+        "001",
+        "002",
+        "003",
+    ]
+    assert requests == [(None, 2), ("002", 2)]
+
+    requests.clear()
+
+    def repeated_page(self, request):
+        requests.append(
+            (getattr(request, "marker", None), getattr(request, "limit", None))
+        )
+        return _HuaweiSdkResponse(
+            {collection: [item_factory("001"), item_factory("001")]}
+        )
+
+    monkeypatch.setattr(cw_huaweicloud.VpcClient, sdk_method, repeated_page)
+    result = getattr(_hwcloud_manager()._driver(), driver_method)(limit=2)
+
+    assert len(requests) == 2
+    assert requests == [(None, 2), ("001", 2)]
+    assert len(result["data"]) == 4
 
 
 def _obs_response(body):

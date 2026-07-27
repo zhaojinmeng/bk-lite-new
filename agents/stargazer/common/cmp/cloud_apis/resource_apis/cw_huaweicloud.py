@@ -1655,6 +1655,36 @@ class Huaweicloud(PublicCloudManage):
 
     # ************************网络*****************************
 
+    def _list_vpc_marker_pages(self, request, sdk_method, collection_key):
+        """读取 VPC v2 marker/limit 列表，并在服务端游标不前进时安全停止。"""
+
+        def request_page():
+            @exception_handler
+            def call_sdk():
+                return sdk_method(request)
+
+            return call_sdk
+
+        response = request_page()
+        if not response["result"]:
+            return response
+
+        items = list(response["data"].get(collection_key, []))
+        while len(response["data"].get(collection_key, [])) == request.limit:
+            page_items = response["data"].get(collection_key, [])
+            next_marker = page_items[-1].get("id") if page_items else None
+            if not next_marker or next_marker == getattr(request, "marker", None):
+                break
+            request.marker = next_marker
+            response = request_page()
+            if not response["result"]:
+                return response
+            next_page_items = response["data"].get(collection_key, [])
+            if not next_page_items:
+                break
+            items.extend(next_page_items)
+        return success(items)
+
     def list_vpcs(self, resource_id="", **kwargs):
         """
         查询VPC列表信息（未分页获取全部）
@@ -1669,19 +1699,17 @@ class Huaweicloud(PublicCloudManage):
         if resource_id:
             return self.get_vpc_detail(resource_id)
         request = ListVpcsRequest()
-        page_size = 1000
-        request.limit = page_size
-
-        @exception_handler
-        def list_vpcs():
-            return self.get_client(VpcClient, VpcRegion).list_vpcs(request)
-
-        response = list_vpcs
+        request.limit = int(kwargs.get("limit", 1000))
+        response = self._list_vpc_marker_pages(
+            request,
+            self.get_client(VpcClient, VpcRegion).list_vpcs,
+            "vpcs",
+        )
         if not response["result"]:
             logger.error(response["message"])
             return fail("VPC列表获取失败")
         return success(
-            format_resource(CloudResourceType.VPC.value, response["data"]["vpcs"], self.region_id, self.project_id)
+            format_resource(CloudResourceType.VPC.value, response["data"], self.region_id, self.project_id)
         )
 
     def get_vpc_detail(self, resource_id):
@@ -1766,19 +1794,19 @@ class Huaweicloud(PublicCloudManage):
         if resource_id:
             return self.get_subnet_detail(resource_id)
         request = ListSubnetsRequest()
+        request.limit = int(kwargs.get("limit", 1000))
         request.vpc_id = kwargs.get("vpc_id")
-
-        @exception_handler
-        def list_subnets():
-            return self.get_client(VpcClient, VpcRegion).list_subnets(request)
-
-        response = list_subnets
+        response = self._list_vpc_marker_pages(
+            request,
+            self.get_client(VpcClient, VpcRegion).list_subnets,
+            "subnets",
+        )
         if not response["result"]:
             logger.error(response["message"])
             return fail("子网列表获取失败")
         return success(
             format_resource(
-                CloudResourceType.SUBNET.value, response["data"]["subnets"], self.region_id, self.project_id
+                CloudResourceType.SUBNET.value, response["data"], self.region_id, self.project_id
             )
         )
 
@@ -2328,21 +2356,20 @@ class Huaweicloud(PublicCloudManage):
         if resource_id:
             return self.get_security_group_detail(resource_id)
         request = ListSecurityGroupsRequest()
-        request.limit = 1000
+        request.limit = int(kwargs.get("limit", 1000))
         request.vpc_id = kwargs.get("vpc_id")
-
-        @exception_handler
-        def list_security_groups():
-            return self.get_client(VpcClient, VpcRegion).list_security_groups(request)
-
-        response = list_security_groups
+        response = self._list_vpc_marker_pages(
+            request,
+            self.get_client(VpcClient, VpcRegion).list_security_groups,
+            "security_groups",
+        )
         if not response["result"]:
             logger.error(response["message"])
             return fail("安全组列表获取失败")
         return success(
             format_resource(
                 CloudResourceType.SECURITY_GROUP.value,
-                response["data"]["security_groups"],
+                response["data"],
                 self.region_id,
                 self.project_id,
             )

@@ -71,11 +71,7 @@
       "api_or_sdk_version": "VPC API V1/V2 / huaweicloudsdkvpc v2",
       "documentation_url": "https://support.huaweicloud.com/intl/zh-cn/api-vpc/vpc_api01_0003.html",
       "response_collection_path": "vpcs",
-      "pagination": {
-        "kind": "not_applicable",
-        "documentation_url": "https://support.huaweicloud.com/intl/zh-cn/api-vpc/vpc_api01_0003.html",
-        "reason": "The V1/V2 ListVpcs operation used by huaweicloudsdkvpc.v2 documents no request pagination parameter."
-      },
+      "pagination": {"kind": "marker", "marker": "marker", "limit": "limit"},
       "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
     },
     {
@@ -85,11 +81,7 @@
       "api_or_sdk_version": "VPC API V1/V2 / huaweicloudsdkvpc v2",
       "documentation_url": "https://support.huaweicloud.com/api-vpc/vpc_subnet01_0003.html",
       "response_collection_path": "subnets",
-      "pagination": {
-        "kind": "not_applicable",
-        "documentation_url": "https://support.huaweicloud.com/api-vpc/vpc_subnet01_0003.html",
-        "reason": "The V1/V2 ListSubnets operation used by huaweicloudsdkvpc.v2 documents no request pagination parameter."
-      },
+      "pagination": {"kind": "marker", "marker": "marker", "limit": "limit"},
       "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
     },
     {
@@ -109,11 +101,7 @@
       "api_or_sdk_version": "VPC API V1/V2 / huaweicloudsdkvpc v2",
       "documentation_url": "https://support.huaweicloud.com/api-vpc/vpc_sg01_0003.html",
       "response_collection_path": "security_groups",
-      "pagination": {
-        "kind": "not_applicable",
-        "documentation_url": "https://support.huaweicloud.com/api-vpc/vpc_sg01_0003.html",
-        "reason": "The V1/V2 ListSecurityGroups operation used by huaweicloudsdkvpc.v2 documents no request pagination parameter."
-      },
+      "pagination": {"kind": "marker", "marker": "marker", "limit": "limit"},
       "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
     },
     {
