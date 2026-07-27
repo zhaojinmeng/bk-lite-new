@@ -1,0 +1,1 @@
+{"success":true,"result":{"aliyun_pgsql":[{"resource_name":"pgsql-contract","resource_id":"pg-001","region":"cn-hangzhou","engine":"PostgreSQL","status":"Running"}]}}

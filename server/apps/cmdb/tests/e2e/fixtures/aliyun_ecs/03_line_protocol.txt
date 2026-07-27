@@ -1,0 +1,1 @@
+aliyun_ecs_info,agent_id=agent-contract,bk_obj_id=aliyun_ecs,collect_status=success,collect_type=discovery,config_type=production-contract,instance_id=cmdb-aliyun_account,instance_type=aliyun_account,memory=4096,model_id=aliyun_ecs,region=cn-hangzhou,resource_id=i-001,resource_name=ecs-contract,status=RUNNING gauge=1i 1700000000123000000

@@ -1,0 +1,1 @@
+aliyun_mysql_info,agent_id=agent-contract,bk_obj_id=aliyun_mysql,collect_status=success,collect_type=discovery,config_type=production-contract,engine=MySQL,instance_id=cmdb-aliyun_account,instance_type=aliyun_account,model_id=aliyun_mysql,region=cn-hangzhou,resource_id=rm-001,resource_name=mysql-contract,status=Running gauge=1i 1700000000123000000

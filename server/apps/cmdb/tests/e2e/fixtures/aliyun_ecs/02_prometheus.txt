@@ -1,0 +1,3 @@
+# HELP aliyun_ecs_info Auto-generated help for aliyun_ecs_info
+# TYPE aliyun_ecs_info gauge
+aliyun_ecs_info{bk_obj_id="aliyun_ecs",collect_status="success",memory="4096",model_id="aliyun_ecs",region="cn-hangzhou",resource_id="i-001",resource_name="ecs-contract",status="RUNNING"} 1 1700000000123

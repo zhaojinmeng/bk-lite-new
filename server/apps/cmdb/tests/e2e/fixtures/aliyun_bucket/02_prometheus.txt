@@ -1,0 +1,3 @@
+# HELP aliyun_bucket_info Auto-generated help for aliyun_bucket_info
+# TYPE aliyun_bucket_info gauge
+aliyun_bucket_info{bk_obj_id="aliyun_bucket",block_public_access="True",collect_status="success",location="oss-cn-hangzhou",model_id="aliyun_bucket",resource_id="bucket-contract",resource_name="bucket-contract",storage_class="Standard"} 1 1700000000123
