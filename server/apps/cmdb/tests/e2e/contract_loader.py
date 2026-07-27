@@ -106,20 +106,12 @@ class Evidence:
         case_id: str | None = None,
     ) -> "Evidence":
         return cls(
-            case_id=case_id or fixture_dir.name,
-            fixture_dir=fixture_dir,
-            schema_dir=schema_dir,
-            required=required,
-            required_schemas=required_schemas,
+            case_id=case_id or fixture_dir.name, fixture_dir=fixture_dir, schema_dir=schema_dir, required=required, required_schemas=required_schemas,
         )
 
     @property
     def missing_files(self) -> list[str]:
-        return [
-            filename
-            for filename in (*self.required, *self.required_schemas)
-            if not self.path_for(filename).is_file()
-        ]
+        return [filename for filename in (*self.required, *self.required_schemas) if not self.path_for(filename).is_file()]
 
     def path_for(self, filename: str) -> Path:
         root = self.schema_dir if filename in self.required_schemas else self.fixture_dir
@@ -238,9 +230,7 @@ def load_evidence(case_id: str, root: Path | str | None = None) -> Evidence:
     return Evidence.from_paths(evidence_root / "fixtures" / case_id, evidence_root / "schemas" / case_id, required=REQUIRED, case_id=case_id,)
 
 
-def load_lane_a_evidence(
-    case_id: str, root: Path | str | None = None
-) -> Evidence:
+def load_lane_a_evidence(case_id: str, root: Path | str | None = None) -> Evidence:
     evidence_root = E2E_ROOT if root is None else Path(root)
     return Evidence.from_paths(
         evidence_root / "fixtures" / case_id,
@@ -271,11 +261,7 @@ def audit_manifest_evidence(
     return ManifestEvidenceAudit(validation=validation, non_production=non_production)
 
 
-def audit_lane_a_evidence(
-    manifest: ContractManifest | None = None,
-    *,
-    root: Path | str | None = None,
-) -> ManifestEvidenceAudit:
+def audit_lane_a_evidence(manifest: ContractManifest | None = None, *, root: Path | str | None = None,) -> ManifestEvidenceAudit:
     """逐三元组审计 Task 5 的来源、Prometheus 和 Line Protocol 证据。
 
     Lane A 不要求也不接受用伪造的 VM/CMDB 文件填满 Task 6 的制品。
@@ -283,21 +269,11 @@ def audit_lane_a_evidence(
 
     manifest = manifest or load_manifest()
     evidence_root = E2E_ROOT if root is None else Path(root)
-    validation = tuple(
-        _audit_validation_entry(
-            entry, evidence_root, evidence_loader=load_lane_a_evidence
-        )
-        for entry in manifest.validation_entries
-    )
+    validation = tuple(_audit_validation_entry(entry, evidence_root, evidence_loader=load_lane_a_evidence) for entry in manifest.validation_entries)
     return ManifestEvidenceAudit(validation=validation, non_production=())
 
 
-def _audit_validation_entry(
-    entry: ContractEntry,
-    evidence_root: Path,
-    *,
-    evidence_loader=load_evidence,
-) -> ValidationEvidenceAudit:
+def _audit_validation_entry(entry: ContractEntry, evidence_root: Path, *, evidence_loader=load_evidence,) -> ValidationEvidenceAudit:
     evidence = evidence_loader(entry.case_id, root=evidence_root)
     missing_files = tuple(evidence.missing_files)
     validation_errors = []

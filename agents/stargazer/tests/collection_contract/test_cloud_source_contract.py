@@ -129,9 +129,7 @@ def test_腾讯云逐case_provenance与operation矩阵严格一致(operation):
     provenance = json.loads(
         (evidence / "00_provenance.json").read_text(encoding="utf-8")
     )
-    source = json.loads(
-        (evidence / "01_source_raw.json").read_text(encoding="utf-8")
-    )
+    source = json.loads((evidence / "01_source_raw.json").read_text(encoding="utf-8"))
 
     assert {
         key: provenance[key]
@@ -207,12 +205,7 @@ _QCLOUD_FIRST_BATCH = {
 
 
 def _qcloud_page(spec, items, *, total_count):
-    return {
-        "Response": {
-            "TotalCount": total_count,
-            spec["collection"]: items,
-        }
-    }
+    return {"Response": {"TotalCount": total_count, spec["collection"]: items,}}
 
 
 @pytest.mark.parametrize("case_id", tuple(_QCLOUD_FIRST_BATCH))
@@ -367,21 +360,14 @@ def _prepare_second_batch_manager(case_id, monkeypatch, sdk_call):
     manager = _qcloud_manager(monkeypatch, sdk_call)
     if case_id in {"qcloud_cmq", "qcloud_cmq_topic"}:
         monkeypatch.setitem(
-            qcloud_info.product_available_region_list_map,
-            "cmq",
-            ["ap-shanghai"],
+            qcloud_info.product_available_region_list_map, "cmq", ["ap-shanghai"],
         )
         monkeypatch.setattr(qcloud_info.time, "sleep", lambda _: None)
     return manager
 
 
 def _second_batch_page(spec, items, total_count):
-    return {
-        "Response": {
-            spec["collection"]: items,
-            "TotalCount": total_count,
-        }
-    }
+    return {"Response": {spec["collection"]: items, "TotalCount": total_count,}}
 
 
 @pytest.mark.parametrize("case_id", tuple(_QCLOUD_SECOND_BATCH))
@@ -398,9 +384,7 @@ def test_腾讯云第二批列表API单页缺可选字段和空集合同(case_id
     assert actual[0]["resource_id"] == spec["id"]
 
     manager = _prepare_second_batch_manager(
-        case_id,
-        monkeypatch,
-        Mock(return_value=_second_batch_page(spec, [], 0)),
+        case_id, monkeypatch, Mock(return_value=_second_batch_page(spec, [], 0)),
     )
     assert getattr(manager, spec["method"])() == []
 
@@ -493,9 +477,7 @@ def test_腾讯云COS在官方SDK边界覆盖单页空集缺可选字段和错�
         side_effect=[
             {
                 "Buckets": {
-                    "Bucket": [
-                        {"Name": "bucket-contract", "Location": "ap-shanghai"}
-                    ]
+                    "Bucket": [{"Name": "bucket-contract", "Location": "ap-shanghai"}]
                 }
             },
             {"Buckets": {"Bucket": []}},
@@ -564,9 +546,7 @@ def test_腾讯云单页响应映射为CVM对象(monkeypatch):
             "charge_type": "POSTPAID_BY_HOUR",
         }
     ]
-    sdk_call.assert_called_once_with(
-        "DescribeInstances", {"Limit": 100, "Offset": 0}
-    )
+    sdk_call.assert_called_once_with("DescribeInstances", {"Limit": 100, "Offset": 0})
 
 
 def test_腾讯云空集返回空列表(monkeypatch):

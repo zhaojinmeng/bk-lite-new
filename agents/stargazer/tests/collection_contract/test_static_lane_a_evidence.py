@@ -241,16 +241,10 @@ def test_腾讯云逐emitted_case只比较自身模型并匹配静态Golden(case
 
     monkeypatch.setattr(base_utils.time, "time", lambda: 1_700_000_000.123)
     normalized = CollectionService(
-        {
-            "plugin_name": "qcloud_info",
-            "model_id": "qcloud",
-            "host": None,
-        }
+        {"plugin_name": "qcloud_info", "model_id": "qcloud", "host": None,}
     )._process_result(deepcopy(source))
     actual_prometheus = convert_to_prometheus_format(normalized)
-    expected_prometheus = (evidence / "02_prometheus.txt").read_text(
-        encoding="utf-8"
-    )
+    expected_prometheus = (evidence / "02_prometheus.txt").read_text(encoding="utf-8")
     actual_prometheus_semantics = semantics.parse_prometheus(actual_prometheus)
     assert actual_prometheus_semantics == semantics.parse_prometheus(
         expected_prometheus
@@ -274,13 +268,10 @@ def test_腾讯云逐emitted_case只比较自身模型并匹配静态Golden(case
     expected_line_protocol = (evidence / "03_line_protocol.txt").read_text(
         encoding="utf-8"
     )
-    actual_line_protocol_semantics = semantics.parse_line_protocol(
-        actual_line_protocol
-    )
+    actual_line_protocol_semantics = semantics.parse_line_protocol(actual_line_protocol)
     assert actual_line_protocol_semantics == semantics.parse_line_protocol(
         expected_line_protocol
     )
     _assert_timestamp_propagation_with_influx_tag_normalization(
-        actual_prometheus_semantics,
-        actual_line_protocol_semantics,
+        actual_prometheus_semantics, actual_line_protocol_semantics,
     )
