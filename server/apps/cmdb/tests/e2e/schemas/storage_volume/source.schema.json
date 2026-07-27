@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["success", "result"],
+  "properties": {
+    "success": {"const": true},
+    "result": {
+      "type": "object",
+      "required": ["storage_volume"],
+      "additionalProperties": false,
+      "properties": {
+        "storage_volume": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["NAME", "PARENTNAME", "WWN", "CAPACITY", "ALLOCCAPACITY", "SECTORSIZE", "ALLOCTYPE", "RUNNINGSTATUS"],
+            "properties": {
+              "NAME": {"const": "volume-contract"},
+              "PARENTNAME": {"type": "string"},
+              "WWN": {"type": "string"},
+              "CAPACITY": {"type": "string"},
+              "ALLOCCAPACITY": {"type": "string"},
+              "SECTORSIZE": {"type": "string"},
+              "ALLOCTYPE": {"type": "string"},
+              "RUNNINGSTATUS": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

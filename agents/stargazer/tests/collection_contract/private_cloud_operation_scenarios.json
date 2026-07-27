@@ -13,7 +13,7 @@
         "collector_operation": "GET /web/api/v2/clusters",
         "collector_response_collection_path": "<root>[]",
         "collector_pagination": {"kind": "none", "request_parameters": []},
-        "collector_contract_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "error_response"],
+        "collector_contract_scenarios": ["single_page", "multi_record", "empty", "missing_optional_field", "error_response"],
         "official_detail_status": "missing",
         "missing_official_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
       },
@@ -23,14 +23,14 @@
         "collector_operation": "GET /web/api/v2/hosts?no_page=true",
         "collector_response_collection_path": "hosts",
         "collector_pagination": {"kind": "no_page", "parameter": "no_page", "value": true},
-        "collector_contract_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "error_response"],
+        "collector_contract_scenarios": ["single_page", "multi_record", "empty", "missing_optional_field", "error_response"],
         "official_detail_status": "missing",
         "missing_official_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
       }
     ]
   },
   "oceanstor": {
-    "vendor": "fusioninsight",
+    "vendor": "oceanstor",
     "documentation_url": "https://support.huawei.com/enterprise/en/enterprise-storage/oceanstor-dorado-18000-v6-pid-24030083",
     "api_or_sdk_version": "OceanStor Dorado 6.1.8 REST Interface Reference",
     "documentation_access": "华为企业支持站产品页公开列出OceanStor Dorado 6.1.8 REST Interface Reference，但匿名页面未暴露storagepool/disk/lun条目正文。产品入口只能证明版本化REST参考存在，不能证明字段、range分页或错误码。",

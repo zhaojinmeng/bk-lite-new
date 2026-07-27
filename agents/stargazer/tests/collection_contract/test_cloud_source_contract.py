@@ -69,6 +69,13 @@ PRIVATE_CLOUD_COLLECTOR_SCENARIOS = {
     "missing_optional_field",
     "error_response",
 }
+PRIVATE_CLOUD_NON_PAGED_COLLECTOR_SCENARIOS = {
+    "single_page",
+    "multi_record",
+    "empty",
+    "missing_optional_field",
+    "error_response",
+}
 QCLOUD_EVIDENCE_ROOT = (
     STARGAZER_ROOT.parents[1]
     / "server"
@@ -2687,6 +2694,8 @@ def test_FusionInsight与OceanStor六项case显式区分可执行合同和官方
     fusioninsight = PRIVATE_CLOUD_SCENARIO_MATRIX["fusioninsight"]
     oceanstor = PRIVATE_CLOUD_SCENARIO_MATRIX["oceanstor"]
 
+    assert fusioninsight["vendor"] == "fusioninsight"
+    assert oceanstor["vendor"] == "oceanstor"
     assert {
         operation["case_id"]
         for family in (fusioninsight, oceanstor)
@@ -2703,9 +2712,12 @@ def test_FusionInsight与OceanStor六项case显式区分可执行合同和官方
         assert family["documentation_url"].startswith("https://support.huawei.com/")
         assert family["documentation_access"]
         for operation in family["operations"]:
-            assert set(operation["collector_contract_scenarios"]) == (
-                PRIVATE_CLOUD_COLLECTOR_SCENARIOS
+            expected_scenarios = (
+                PRIVATE_CLOUD_NON_PAGED_COLLECTOR_SCENARIOS
+                if family is fusioninsight
+                else PRIVATE_CLOUD_COLLECTOR_SCENARIOS
             )
+            assert set(operation["collector_contract_scenarios"]) == expected_scenarios
             assert operation["official_detail_status"] == "missing"
             assert set(operation["missing_official_scenarios"]) == (
                 PRIVATE_CLOUD_SCENARIOS
@@ -2754,6 +2766,12 @@ def test_FusionInsight_clusters五态collector合同不冒充官方细目():
     manager, calls = _fusioninsight_manager(
         [
             _PrivateCloudResponse([{"id": 1, "name": "cluster-contract"}]),
+            _PrivateCloudResponse(
+                [
+                    {"id": 11, "name": "cluster-multi-a"},
+                    {"id": 12, "name": "cluster-multi-b"},
+                ]
+            ),
             _PrivateCloudResponse([]),
             _PrivateCloudResponse([{"id": 2}]),
             _PrivateCloudResponse(
@@ -2764,6 +2782,10 @@ def test_FusionInsight_clusters五态collector合同不冒充官方细目():
 
     assert manager.get_clusters() == [
         {"resource_id": "1", "resource_name": "cluster-contract"}
+    ]
+    assert manager.get_clusters() == [
+        {"resource_id": "11", "resource_name": "cluster-multi-a"},
+        {"resource_id": "12", "resource_name": "cluster-multi-b"},
     ]
     assert manager.get_clusters() == []
     assert manager.get_clusters() == [{"resource_id": "2", "resource_name": ""}]
@@ -2792,6 +2814,14 @@ def test_FusionInsight_hosts五态collector合同且no_page不冒充官方分页
                     ]
                 }
             ),
+            _PrivateCloudResponse(
+                {
+                    "hosts": [
+                        {"hostname": "host-multi-a", "clusterId": 11},
+                        {"hostname": "host-multi-b", "clusterId": 12},
+                    ]
+                }
+            ),
             _PrivateCloudResponse({"hosts": []}),
             _PrivateCloudResponse({"hosts": [{"hostname": "host-minimal"}]}),
             _PrivateCloudResponse(
@@ -2800,7 +2830,43 @@ def test_FusionInsight_hosts五态collector合同且no_page不冒充官方分页
         ]
     )
 
-    assert manager.get_hosts()[0]["resource_id"] == "host-contract"
+    assert manager.get_hosts() == [
+        {
+            "cluster_id": "1",
+            "ip_addr": "192.0.2.10",
+            "memory_mb": "",
+            "os_name": "",
+            "resource_id": "host-contract",
+            "resource_name": "host-contract",
+            "status": "",
+            "storage_gb": "",
+            "vcpus": "",
+        }
+    ]
+    assert manager.get_hosts() == [
+        {
+            "cluster_id": "11",
+            "ip_addr": "",
+            "memory_mb": "",
+            "os_name": "",
+            "resource_id": "host-multi-a",
+            "resource_name": "host-multi-a",
+            "status": "",
+            "storage_gb": "",
+            "vcpus": "",
+        },
+        {
+            "cluster_id": "12",
+            "ip_addr": "",
+            "memory_mb": "",
+            "os_name": "",
+            "resource_id": "host-multi-b",
+            "resource_name": "host-multi-b",
+            "status": "",
+            "storage_gb": "",
+            "vcpus": "",
+        },
+    ]
     assert manager.get_hosts() == []
     assert manager.get_hosts()[0] == {
         "cluster_id": "",
@@ -2817,7 +2883,7 @@ def test_FusionInsight_hosts五态collector合同且no_page不冒充官方分页
         manager.get_hosts()
     assert [call_kwargs["params"] for _, _, call_kwargs in calls] == [
         {"no_page": True},
-    ] * 4
+    ] * 5
     assert operation["collector_pagination"] == {
         "kind": "no_page",
         "parameter": "no_page",
@@ -2889,7 +2955,7 @@ def test_OceanStor三个资源GET按collector_range完整翻页(path, monkeypatc
 
     result = _oceanstor_manager()._fetch_all(path)
 
-    assert len(result) == 101
+    assert result == first_page + [{"ID": f"{path}-100"}]
     assert [kwargs["params"]["range"] for _, kwargs in calls] == [
         "[0-99]",
         "[100-199]",
@@ -2925,6 +2991,164 @@ def test_OceanStor三个资源GET覆盖单页空集缺可选字段与collector�
     assert manager._fetch_all(path) == [{"ID": ""}]
     with pytest.raises(RuntimeError, match="1077948996"):
         manager._fetch_all(path)
+
+
+def test_OceanStor聚合storage逐态精确核对正常空集缺可选多记录与错误(monkeypatch):
+    from plugins.inputs.oceanstor import oceanstor_info
+
+    pool = {
+        "NAME": "pool-contract",
+        "USERTOTALCAPACITY": "4194304",
+        "USERCONSUMEDCAPACITY": "2097152",
+        "USERFREECAPACITY": "2097152",
+        "SECTORSIZE": "512",
+    }
+    disk = {"LOCATION": "DAE000.A", "MODEL": "SSD-CONTRACT"}
+    lun = {"NAME": "volume-contract", "PARENTNAME": "pool-contract"}
+
+    def collect(resources, *, error_path=None):
+        monkeypatch.setattr(
+            oceanstor_info.requests,
+            "post",
+            lambda *args, **kwargs: _PrivateCloudResponse(
+                {
+                    "data": {
+                        "iBaseToken": "redacted",
+                        "deviceid": "device-contract",
+                    }
+                }
+            ),
+        )
+
+        def get(url, **kwargs):
+            path = url.rsplit("/", 1)[-1]
+            if path == error_path:
+                return _PrivateCloudResponse(
+                    {
+                        "error": {
+                            "code": 1077948996,
+                            "description": "contract authentication error",
+                        }
+                    }
+                )
+            return _PrivateCloudResponse(
+                {"error": {"code": 0}, "data": resources[path]}
+            )
+
+        monkeypatch.setattr(oceanstor_info.requests, "get", get)
+        monkeypatch.setattr(
+            oceanstor_info.requests,
+            "delete",
+            Mock(return_value=_PrivateCloudResponse({"error": {"code": 0}})),
+        )
+        return oceanstor_info.OceanStorManager(
+            {
+                "host": "oceanstor.example.invalid",
+                "username": "contract-user",
+                "password": "contract-password",
+            }
+        ).list_all_resources()
+
+    normal = collect({"storagepool": [pool], "disk": [disk], "lun": [lun]})
+    assert normal == {
+        "success": True,
+        "result": {
+            "storage": [
+                {
+                    "device_sn": "device-contract",
+                    "model": "",
+                    "brand": "huawei",
+                    "storage_type": "SAN",
+                    "firmware_version": "",
+                    "sys_desc": "Huawei OceanStor",
+                    "total_capacity": "2",
+                    "used_capacity": "1",
+                    "available_capacity": "1",
+                    "pool_count": "1",
+                    "disk_count": "1",
+                    "volume_count": "1",
+                    "RUNNINGSTATUS": "27",
+                }
+            ],
+            "storage_pool": [pool],
+            "storage_disk": [disk],
+            "storage_volume": [lun],
+        },
+    }
+
+    empty = collect({"storagepool": [], "disk": [], "lun": []})
+    assert empty["result"]["storage"] == [
+        normal["result"]["storage"][0]
+        | {
+            "total_capacity": "0",
+            "used_capacity": "0",
+            "available_capacity": "0",
+            "pool_count": "0",
+            "disk_count": "0",
+            "volume_count": "0",
+        }
+    ]
+    assert empty["result"]["storage_pool"] == []
+    assert empty["result"]["storage_disk"] == []
+    assert empty["result"]["storage_volume"] == []
+
+    missing_optional = collect(
+        {
+            "storagepool": [{"NAME": "pool-minimal"}],
+            "disk": [{"LOCATION": "disk-minimal"}],
+            "lun": [{"NAME": "volume-minimal"}],
+        }
+    )
+    assert missing_optional["result"]["storage"][0] == (
+        normal["result"]["storage"][0]
+        | {
+            "total_capacity": "0",
+            "used_capacity": "0",
+            "available_capacity": "0",
+        }
+    )
+    assert missing_optional["result"]["storage_pool"] == [{"NAME": "pool-minimal"}]
+    assert missing_optional["result"]["storage_disk"] == [
+        {"LOCATION": "disk-minimal"}
+    ]
+    assert missing_optional["result"]["storage_volume"] == [
+        {"NAME": "volume-minimal"}
+    ]
+
+    multi_record = collect(
+        {
+            "storagepool": [pool, pool | {"NAME": "pool-contract-2"}],
+            "disk": [disk, disk | {"LOCATION": "DAE000.B"}],
+            "lun": [lun, lun | {"NAME": "volume-contract-2"}],
+        }
+    )
+    assert multi_record["result"]["storage"][0] == (
+        normal["result"]["storage"][0]
+        | {
+            "total_capacity": "4",
+            "used_capacity": "2",
+            "available_capacity": "2",
+            "pool_count": "2",
+            "disk_count": "2",
+            "volume_count": "2",
+        }
+    )
+    assert multi_record["result"]["storage_pool"] == [
+        pool,
+        pool | {"NAME": "pool-contract-2"},
+    ]
+
+    error = collect(
+        {"storagepool": [pool], "disk": [disk], "lun": [lun]},
+        error_path="storagepool",
+    )
+    assert error["success"] is False
+    assert error["result"] == {
+        "cmdb_collect_error": (
+            "OceanStor fetch storagepool error: code=1077948996, "
+            "description=contract authentication error"
+        )
+    }
 
 
 def test_OceanStor登录登出是资源GET的会话前后置而非资源场景(monkeypatch):

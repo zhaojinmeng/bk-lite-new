@@ -1,0 +1,26 @@
+{
+  "source_type": "official_cloud_api_documentation",
+  "source_kind": "private_api_mock",
+  "vendor": "oceanstor",
+  "service": "oceanstor_devicemanager",
+  "api_operation": "GET /deviceManager/rest/{deviceid}/lun",
+  "api_or_sdk_version": "OceanStor Dorado 6.1.8 REST Interface Reference",
+  "documentation_url": "https://support.huawei.com/enterprise/en/enterprise-storage/oceanstor-dorado-18000-v6-pid-24030083",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "sanitization": "私有API边界合同使用保留卷名、池名与WWN，不含账号、令牌、凭据或真实环境标识。",
+  "documentation_access": "官方产品页列出版本化REST参考，但接口条目正文需要登录且匿名不可公开读取；本制品不冒充官方API响应样例。",
+  "evidence_boundary": "HTTP响应经真实OceanStorManager父collector映射后的逐模型投影",
+  "scenario_matrix": "agents/stargazer/tests/collection_contract/private_cloud_operation_scenarios.json",
+  "source_model_id": "storage_volume",
+  "emitted_case_id": "storage_volume",
+  "review_basis": {
+    "normal": true,
+    "empty": true,
+    "missing_optional_field": true,
+    "pagination": true,
+    "error": true,
+    "formatter": "真实CollectionService._process_result",
+    "line_protocol": "静态Golden经Prometheus语义逐字段复核",
+    "timestamp": "固定为1700000000123毫秒"
+  }
+}

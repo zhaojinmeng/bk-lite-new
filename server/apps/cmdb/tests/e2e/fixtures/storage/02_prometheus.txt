@@ -1,0 +1,3 @@
+# HELP storage_info Auto-generated help for storage_info
+# TYPE storage_info gauge
+storage_info{RUNNINGSTATUS="27",available_capacity="1",bk_obj_id="storage",brand="huawei",collect_status="success",device_sn="device-contract",disk_count="1",firmware_version="",model="",model_id="storage",pool_count="1",storage_type="SAN",sys_desc="Huawei OceanStor",total_capacity="2",used_capacity="1",volume_count="1"} 1 1700000000123

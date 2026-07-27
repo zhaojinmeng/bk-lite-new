@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "result": {
+    "storage_pool": [
+      {
+        "NAME": "pool-contract",
+        "USAGETYPE": "1",
+        "USERTOTALCAPACITY": "4194304",
+        "USERCONSUMEDCAPACITY": "2097152",
+        "USERFREECAPACITY": "2097152",
+        "SECTORSIZE": "512",
+        "RUNNINGSTATUS": "27"
+      }
+    ]
+  }
+}

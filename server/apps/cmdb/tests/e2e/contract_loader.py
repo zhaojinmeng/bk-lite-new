@@ -72,6 +72,7 @@ _OFFICIAL_DOCUMENTATION_HOSTS = {
     "hwcloud": frozenset({"developer.huaweicloud.com", "support.huaweicloud.com"}),
     "huawei_cloud": frozenset({"developer.huaweicloud.com", "support.huaweicloud.com"}),
     "fusioninsight": frozenset({"support.huawei.com", "support.huaweicloud.com"}),
+    "oceanstor": frozenset({"support.huawei.com"}),
     "h3c_cas": frozenset({"www.h3c.com"}),
     "zstack": frozenset({"www.zstack.io"}),
 }

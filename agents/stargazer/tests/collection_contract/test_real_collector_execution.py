@@ -7,7 +7,11 @@ from unittest.mock import Mock
 import pytest
 import semantics
 import yaml
-from conftest import PRODUCTION_ADAPTER_BINDINGS, confirm_real_collector_execution
+from conftest import (
+    PRODUCTION_ADAPTER_BINDINGS,
+    REPOSITORY_ROOT,
+    confirm_real_collector_execution,
+)
 from plugins import base_utils, script_executor
 from plugins.base_utils import convert_to_prometheus_format
 from service.collection_service import CollectionService
@@ -82,6 +86,21 @@ def _assert_real_result_reaches_publish(binding, result, expected_source_models)
         assert len(matches) == 1
         assert matches[0].timestamp_ns == sample.timestamp_ms * 1_000_000
     confirm_real_collector_execution(binding.case_id)
+
+
+def _assert_parent_result_matches_private_evidence(result, case_ids):
+    evidence_root = (
+        REPOSITORY_ROOT / "server" / "apps" / "cmdb" / "tests" / "e2e" / "fixtures"
+    )
+    for case_id in case_ids:
+        expected = json.loads(
+            (evidence_root / case_id / "01_source_raw.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert expected["success"] is True
+        assert set(expected["result"]) == {case_id}
+        assert result["result"][case_id] == expected["result"][case_id]
 
 
 GENERIC_SSH_BINDINGS = tuple(
@@ -459,6 +478,11 @@ def test_FusionInsight父collector在HTTP边界执行全部资源并发布(monke
                             {
                                 "hostname": "host-contract",
                                 "ip": "192.0.2.110",
+                                "cpuCores": 16,
+                                "totalMemory": 65536,
+                                "totalHardDiskSpace": 1024,
+                                "runningStatus": "running",
+                                "osType": "EulerOS",
                                 "clusterId": 1,
                             }
                         ]
@@ -478,6 +502,9 @@ def test_FusionInsight父collector在HTTP边界执行全部资源并发布(monke
 
     result = manager.list_all_resources()
 
+    _assert_parent_result_matches_private_evidence(
+        result, ("fusioninsight_cluster", "fusioninsight_host")
+    )
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 
@@ -502,14 +529,54 @@ def test_OceanStor父collector在HTTP边界执行全部资源并发布(monkeypat
         oceanstor_info.requests,
         "post",
         lambda *args, **kwargs: FakeResponse(
-            {"data": {"iBaseToken": "token-contract", "deviceid": "device-001"}}
+            {"data": {"iBaseToken": "token-contract", "deviceid": "device-contract"}}
         ),
     )
-    monkeypatch.setattr(
-        oceanstor_info.requests,
-        "get",
-        lambda *args, **kwargs: FakeResponse({"error": {"code": 0}, "data": []}),
-    )
+
+    resources = {
+        "storagepool": [
+            {
+                "NAME": "pool-contract",
+                "USAGETYPE": "1",
+                "USERTOTALCAPACITY": "4194304",
+                "USERCONSUMEDCAPACITY": "2097152",
+                "USERFREECAPACITY": "2097152",
+                "SECTORSIZE": "512",
+                "RUNNINGSTATUS": "27",
+            }
+        ],
+        "disk": [
+            {
+                "LOCATION": "DAE000.A",
+                "MANUFACTURER": "Huawei",
+                "MODEL": "SSD-CONTRACT",
+                "DISKTYPE": "SSD",
+                "SECTORS": "4194304",
+                "SECTORSIZE": "512",
+                "SERIALNUMBER": "DISK-CONTRACT-001",
+                "SPEEDRPM": "0",
+                "RUNNINGSTATUS": "27",
+            }
+        ],
+        "lun": [
+            {
+                "NAME": "volume-contract",
+                "PARENTNAME": "pool-contract",
+                "WWN": "60000000000000000000000000000001",
+                "CAPACITY": "2097152",
+                "ALLOCCAPACITY": "1048576",
+                "SECTORSIZE": "512",
+                "ALLOCTYPE": "thin",
+                "RUNNINGSTATUS": "27",
+            }
+        ],
+    }
+
+    def get(url, **kwargs):
+        path = url.rsplit("/", 1)[-1]
+        return FakeResponse({"error": {"code": 0}, "data": resources[path]})
+
+    monkeypatch.setattr(oceanstor_info.requests, "get", get)
     monkeypatch.setattr(
         oceanstor_info.requests, "delete", Mock(return_value=FakeResponse({})),
     )
@@ -524,6 +591,9 @@ def test_OceanStor父collector在HTTP边界执行全部资源并发布(monkeypat
 
     result = manager.list_all_resources()
 
+    _assert_parent_result_matches_private_evidence(
+        result, ("storage", "storage_disk", "storage_pool", "storage_volume")
+    )
     _assert_real_result_reaches_publish(binding, result, binding.source_model_ids)
 
 

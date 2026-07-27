@@ -1,0 +1,3 @@
+# HELP storage_disk_info Auto-generated help for storage_disk_info
+# TYPE storage_disk_info gauge
+storage_disk_info{DISKTYPE="SSD",LOCATION="DAE000.A",MANUFACTURER="Huawei",MODEL="SSD-CONTRACT",RUNNINGSTATUS="27",SECTORS="4194304",SECTORSIZE="512",SERIALNUMBER="DISK-CONTRACT-001",SPEEDRPM="0",bk_obj_id="storage_disk",collect_status="success",model_id="storage_disk"} 1 1700000000123

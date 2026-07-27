@@ -1,0 +1,3 @@
+# HELP storage_volume_info Auto-generated help for storage_volume_info
+# TYPE storage_volume_info gauge
+storage_volume_info{ALLOCCAPACITY="1048576",ALLOCTYPE="thin",CAPACITY="2097152",NAME="volume-contract",PARENTNAME="pool-contract",RUNNINGSTATUS="27",SECTORSIZE="512",WWN="60000000000000000000000000000001",bk_obj_id="storage_volume",collect_status="success",model_id="storage_volume"} 1 1700000000123

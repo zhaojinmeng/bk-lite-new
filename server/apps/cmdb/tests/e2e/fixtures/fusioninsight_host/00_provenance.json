@@ -1,0 +1,26 @@
+{
+  "source_type": "official_cloud_api_documentation",
+  "source_kind": "private_api_mock",
+  "vendor": "fusioninsight",
+  "service": "fusioninsight_manager",
+  "api_operation": "GET /web/api/v2/hosts?no_page=true",
+  "api_or_sdk_version": "FusionInsight Manager REST API v2 (collector declaration)",
+  "documentation_url": "https://support.huawei.com/enterprise/en/cloud-computing/fusioninsight-pid-21277731",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "sanitization": "私有API边界合同使用保留测试主机名与文档保留地址，不含账号、凭据或真实环境标识。",
+  "documentation_access": "官方产品入口可定位文档族，但接口细目需要登录且匿名不可公开读取；本制品不冒充官方API响应样例。",
+  "evidence_boundary": "HTTP响应经真实FusionInsightManager父collector映射后的逐模型投影",
+  "scenario_matrix": "agents/stargazer/tests/collection_contract/private_cloud_operation_scenarios.json",
+  "source_model_id": "fusioninsight_host",
+  "emitted_case_id": "fusioninsight_host",
+  "review_basis": {
+    "normal": true,
+    "empty": true,
+    "missing_optional_field": true,
+    "multi_record": true,
+    "error": true,
+    "formatter": "真实CollectionService._process_result",
+    "line_protocol": "静态Golden经Prometheus语义逐字段复核",
+    "timestamp": "固定为1700000000123毫秒"
+  }
+}

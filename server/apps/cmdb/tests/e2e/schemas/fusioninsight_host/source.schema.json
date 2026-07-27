@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["success", "result"],
+  "properties": {
+    "success": {"const": true},
+    "result": {
+      "type": "object",
+      "required": ["fusioninsight_host"],
+      "additionalProperties": false,
+      "properties": {
+        "fusioninsight_host": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["resource_name", "resource_id", "ip_addr", "vcpus", "memory_mb", "storage_gb", "status", "os_name", "cluster_id"],
+            "properties": {
+              "resource_name": {"const": "host-contract"},
+              "resource_id": {"const": "host-contract"},
+              "ip_addr": {"const": "192.0.2.110"},
+              "vcpus": {"const": "16"},
+              "memory_mb": {"const": "65536"},
+              "storage_gb": {"const": "1024"},
+              "status": {"const": "running"},
+              "os_name": {"const": "EulerOS"},
+              "cluster_id": {"const": "1"}
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

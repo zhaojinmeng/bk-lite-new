@@ -208,6 +208,7 @@ def test_provenance_拒绝未声明或不兼容的来源分栏(
         ("hwcloud", "https://support.huaweicloud.com/api-ecs/ecs_02_0101.html"),
         ("huawei_cloud", "https://developer.huaweicloud.com/intl/en-us/api-ecs/"),
         ("fusioninsight", "https://support.huawei.com/enterprise/en/cloud-computing/fusioninsight-pid-21277731"),
+        ("oceanstor", "https://support.huawei.com/enterprise/en/enterprise-storage/oceanstor-dorado-18000-v6-pid-24030083"),
         ("h3c_cas", "https://www.h3c.com/en/Support/Resource_Center/EN/Cloud_Computing/"),
         ("zstack", "https://www.zstack.io/help/product_manuals/api_reference/"),
     ],
@@ -407,3 +408,23 @@ def test_hwcloud十一个三元组LaneA_evidence全部ready():
 
     assert len(hwcloud_items) == 11
     assert all(item.status == "ready" for item in hwcloud_items)
+
+
+def test_私有云六个三元组LaneA_evidence全部ready且来源独立分栏():
+    audit = audit_lane_a_evidence(load_manifest())
+    private_case_ids = {
+        "fusioninsight_cluster",
+        "fusioninsight_host",
+        "storage",
+        "storage_disk",
+        "storage_pool",
+        "storage_volume",
+    }
+    private_items = [
+        item for item in audit.validation if item.case_id in private_case_ids
+    ]
+
+    assert len(private_items) == 6
+    assert all(item.status == "ready" for item in private_items)
+    grouped = audit.ready_by_source_kind()
+    assert private_case_ids <= set(grouped["private_api_mock"])

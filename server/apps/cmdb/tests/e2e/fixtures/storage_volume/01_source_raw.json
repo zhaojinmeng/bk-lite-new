@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "result": {
+    "storage_volume": [
+      {
+        "NAME": "volume-contract",
+        "PARENTNAME": "pool-contract",
+        "WWN": "60000000000000000000000000000001",
+        "CAPACITY": "2097152",
+        "ALLOCCAPACITY": "1048576",
+        "SECTORSIZE": "512",
+        "ALLOCTYPE": "thin",
+        "RUNNINGSTATUS": "27"
+      }
+    ]
+  }
+}

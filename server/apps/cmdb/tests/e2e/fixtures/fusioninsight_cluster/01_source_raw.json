@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "result": {
+    "fusioninsight_cluster": [
+      {
+        "resource_name": "cluster-contract",
+        "resource_id": "1"
+      }
+    ]
+  }
+}

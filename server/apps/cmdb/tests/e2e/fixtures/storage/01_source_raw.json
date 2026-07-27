@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "result": {
+    "storage": [
+      {
+        "device_sn": "device-contract",
+        "model": "",
+        "brand": "huawei",
+        "storage_type": "SAN",
+        "firmware_version": "",
+        "sys_desc": "Huawei OceanStor",
+        "total_capacity": "2",
+        "used_capacity": "1",
+        "available_capacity": "1",
+        "pool_count": "1",
+        "disk_count": "1",
+        "volume_count": "1",
+        "RUNNINGSTATUS": "27"
+      }
+    ]
+  }
+}

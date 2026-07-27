@@ -1,0 +1,3 @@
+# HELP fusioninsight_cluster_info Auto-generated help for fusioninsight_cluster_info
+# TYPE fusioninsight_cluster_info gauge
+fusioninsight_cluster_info{bk_obj_id="fusioninsight_cluster",collect_status="success",model_id="fusioninsight_cluster",resource_id="1",resource_name="cluster-contract"} 1 1700000000123

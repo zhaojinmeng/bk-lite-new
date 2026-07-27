@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["success", "result"],
+  "properties": {
+    "success": {"const": true},
+    "result": {
+      "type": "object",
+      "required": ["fusioninsight_cluster"],
+      "additionalProperties": false,
+      "properties": {
+        "fusioninsight_cluster": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["resource_name", "resource_id"],
+            "properties": {
+              "resource_name": {"const": "cluster-contract"},
+              "resource_id": {"const": "1"}
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

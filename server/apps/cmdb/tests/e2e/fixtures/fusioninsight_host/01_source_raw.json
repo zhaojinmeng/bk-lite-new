@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "result": {
+    "fusioninsight_host": [
+      {
+        "resource_name": "host-contract",
+        "resource_id": "host-contract",
+        "ip_addr": "192.0.2.110",
+        "vcpus": "16",
+        "memory_mb": "65536",
+        "storage_gb": "1024",
+        "status": "running",
+        "os_name": "EulerOS",
+        "cluster_id": "1"
+      }
+    ]
+  }
+}
