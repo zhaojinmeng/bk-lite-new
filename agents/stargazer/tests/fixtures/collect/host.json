@@ -1,0 +1,36 @@
+{
+  "model_id": "host",
+  "captured_at": "2026-07-27T06:46:22Z",
+  "image": "ubuntu:22.04",
+  "image_digest": "ubuntu@sha256:0e0a0fc6d18feda9db1590da249ac93e8d5abfea8f4c3c0c849ce512b5ef8982",
+  "container_meta": {
+    "container_id": "7c425fbe4a02",
+    "image": "ubuntu:22.04",
+    "image_id": "sha256:f4849cfc95b06132c3f9d2ae5f3fe08a41143cb8da1ef5e2e4e5f5ebf3adea28",
+    "architecture": "arm64"
+  },
+  "collector": "plugins/inputs/host/host_default_discover.sh -> HostInfo.list_all_resources",
+  "raw_stdout": {
+    "hostname": "host.example.invalid",
+    "os_type": "Linux",
+    "os_name": "Ubuntu",
+    "os_version": "22.04",
+    "os_bits": "64-bit",
+    "cpu_architecture": "aarch64",
+    "cpu_model": "unknown",
+    "cpu_cores": "8",
+    "memory_gb": "7.8",
+    "disk_gb": "58.4",
+    "mac_address": "unknown",
+    "proc": [
+      {"pid": "1", "name": "sleep", "arg": "sleep 300", "exe": "/usr/bin/sleep", "cwd": "/", "ports": ""},
+      {"pid": "7", "name": "bash", "arg": "bash", "exe": "/usr/bin/bash", "cwd": "/", "ports": ""},
+      {"pid": "53", "name": "bash", "arg": "bash", "exe": "/usr/bin/bash", "cwd": "/", "ports": ""},
+      {"pid": "64", "name": "ps", "arg": "ps -e -o pid= -o comm= -o args=", "exe": "", "cwd": "", "ports": ""}
+    ]
+  },
+  "sanitization": {
+    "hostname": "临时容器 ID -> host.example.invalid",
+    "ip_addr": "采集边界固定为 RFC 5737 地址 192.0.2.60"
+  }
+}

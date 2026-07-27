@@ -1,0 +1,29 @@
+{
+  "source_type": "sanitized_real_environment",
+  "source_kind": "docker_real",
+  "vendor": "not_applicable",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-27T06:46:22Z",
+  "sanitization": "容器 hostname 替换为保留域名，采集边界地址使用 RFC 5737",
+  "source_model_id": "host_proc_usage",
+  "emitted_case_id": "host_proc_usage",
+  "source_fixture": "agents/stargazer/tests/fixtures/collect/host.json",
+  "source_commit": "65ef0c628",
+  "image": "ubuntu:22.04",
+  "image_digest": "ubuntu@sha256:0e0a0fc6d18feda9db1590da249ac93e8d5abfea8f4c3c0c849ce512b5ef8982",
+  "container_meta": {"runtime": "Docker 28.0.1", "architecture": "arm64", "removed_after_capture": true},
+  "review_basis": {
+    "source_commit": "65ef0c628",
+    "scalar_labels": "逐字段核对 HostInfo 拆分后的四条真实进程",
+    "none_or_nested_exclusion": "进程项均为标量",
+    "derived_labels": "self_device/ip_addr 由真实 HostInfo 添加",
+    "common_tags": "发布公共 tags 使用 production-contract 固定值",
+    "raw_output": "与 host 共用同一次父采集",
+    "formatter": "运行真实 HostInfo 拆分结果与 CollectionService._process_result",
+    "timestamp": "固定为 1700000000123 毫秒",
+    "record_count": 4
+  }
+}

@@ -1,0 +1,3 @@
+# HELP host_info Auto-generated help for host_info
+# TYPE host_info gauge
+host_info{bk_obj_id="host",collect_status="success",cpu_architecture="aarch64",cpu_cores="8",cpu_model="unknown",disk_gb="58.4",host="192.0.2.60",hostname="host.example.invalid",ip_addr="192.0.2.60",mac_address="unknown",memory_gb="7.8",model_id="host",os_bits="64-bit",os_name="Ubuntu",os_type="Linux",os_version="22.04"} 1 1700000000123

@@ -8,6 +8,14 @@
     "source_commit": "73f9b17c9",
     "source_model_alias": "elasticsearch->es"
   },
+  "host": {
+    "fixture": "host.json",
+    "source_commit": "65ef0c628"
+  },
+  "host_proc_usage": {
+    "fixture": "host.json",
+    "source_commit": "65ef0c628"
+  },
   "mongodb": {"fixture": "mongodb.json", "source_commit": "73f9b17c9"},
   "postgresql": {"fixture": "postgresql.json", "source_commit": "ee2987167"},
   "redis": {"fixture": "redis.json", "source_commit": "ee2987167"},

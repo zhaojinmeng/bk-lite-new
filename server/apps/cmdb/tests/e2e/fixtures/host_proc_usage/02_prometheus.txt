@@ -1,0 +1,6 @@
+# HELP host_proc_usage_info Auto-generated help for host_proc_usage_info
+# TYPE host_proc_usage_info gauge
+host_proc_usage_info{arg="sleep 300",bk_obj_id="host_proc_usage",collect_status="success",cwd="/",exe="/usr/bin/sleep",host="192.0.2.60",ip_addr="192.0.2.60",model_id="host_proc_usage",name="sleep",pid="1",ports="",self_device="192.0.2.60"} 1 1700000000123
+host_proc_usage_info{arg="bash",bk_obj_id="host_proc_usage",collect_status="success",cwd="/",exe="/usr/bin/bash",host="192.0.2.60",ip_addr="192.0.2.60",model_id="host_proc_usage",name="bash",pid="7",ports="",self_device="192.0.2.60"} 1 1700000000123
+host_proc_usage_info{arg="bash",bk_obj_id="host_proc_usage",collect_status="success",cwd="/",exe="/usr/bin/bash",host="192.0.2.60",ip_addr="192.0.2.60",model_id="host_proc_usage",name="bash",pid="53",ports="",self_device="192.0.2.60"} 1 1700000000123
+host_proc_usage_info{arg="ps -e -o pid= -o comm= -o args=",bk_obj_id="host_proc_usage",collect_status="success",cwd="",exe="",host="192.0.2.60",ip_addr="192.0.2.60",model_id="host_proc_usage",name="ps",pid="64",ports="",self_device="192.0.2.60"} 1 1700000000123
