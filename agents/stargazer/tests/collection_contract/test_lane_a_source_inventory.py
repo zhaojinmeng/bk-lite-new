@@ -17,7 +17,7 @@ def test_已批准迁移的非云来源均有捕获元数据和提交依据():
     }
 
     assert set(inventory) < set(validation)
-    assert len(inventory) == 23
+    assert len(inventory) == 24
     for case_id, source in inventory.items():
         capture = json.loads(
             (CAPTURE_ROOT / source["fixture"]).read_text(encoding="utf-8")
@@ -47,7 +47,6 @@ def test_缺真实来源的非云case保持显式阻塞():
         "hbase",
         "host_physcial_server",
         "iis",
-        "ip",
         "keepalived",
         "memory",
         "mssql",
