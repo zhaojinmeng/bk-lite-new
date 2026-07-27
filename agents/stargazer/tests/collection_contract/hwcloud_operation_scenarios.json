@@ -1,0 +1,150 @@
+{
+  "vendor": "hwcloud",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "operations": [
+    {
+      "case_ids": ["hwcloud"],
+      "service": "platform",
+      "api_operation": "parent_account_context",
+      "api_or_sdk_version": "Huawei Cloud API Request Signing Guide 2026-02-09",
+      "documentation_url": "https://support.huaweicloud.com/intl/en-us/devg-apisign/api-sign-provide-start.html",
+      "response_collection_path": "collector.params.{host,region,project_id}",
+      "pagination": {
+        "kind": "not_applicable",
+        "documentation_url": "https://support.huaweicloud.com/intl/en-us/devg-apisign/api-sign-provide-start.html",
+        "reason": "The platform record is parent account context assembled from endpoint, region, and project ID; it is not returned by a list API."
+      },
+      "scenario_notes": {
+        "single_page": "The parent context produces exactly one platform record.",
+        "empty": "not_applicable: configured parent context is required to start the collector.",
+        "missing_optional_field": "Endpoint is optional and is preserved as an empty string.",
+        "documented_error": "not_applicable: authentication errors are asserted by each concrete service operation."
+      },
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["hwcloud_ecs"],
+      "service": "ecs",
+      "api_operation": "ListServersDetails",
+      "api_or_sdk_version": "ECS API v1.1 / huaweicloudsdkecs v2",
+      "documentation_url": "https://support.huaweicloud.com/intl/en-us/api-ecs/ecs_02_0107.html",
+      "error_documentation_url": "https://support.huaweicloud.com/api-ecs/ecs_07_0002.html",
+      "response_collection_path": "servers",
+      "pagination": {"kind": "offset_limit", "offset": "offset", "limit": "limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["hwcloud_evs"],
+      "service": "evs",
+      "api_operation": "ListVolumes",
+      "api_or_sdk_version": "EVS API v2 / huaweicloudsdkevs v2",
+      "documentation_url": "https://support.huaweicloud.com/api-evs/evs_04_2006.html",
+      "error_documentation_url": "https://support.huaweicloud.com/intl/en-us/api-evs/evs_04_0038.html",
+      "response_collection_path": "volumes",
+      "pagination": {"kind": "offset_limit", "offset": "offset", "limit": "limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["hwcloud_obs"],
+      "service": "obs",
+      "api_operation": "listBuckets+listObjects",
+      "api_or_sdk_version": "OBS Python SDK / OBS XML API",
+      "documentation_url": "https://support.huaweicloud.com/intl/en-us/sdk-nodejs-devg-obs/obs_29_0302.html",
+      "additional_documentation_urls": [
+        "https://support.huaweicloud.com/intl/en-us/api-obs/obs_04_0022.html",
+        "https://support.huaweicloud.com/intl/en-us/obs_faq/obs_03_0348.html"
+      ],
+      "response_collection_path": "body.buckets + body.contents",
+      "pagination": {
+        "kind": "marker",
+        "marker": "marker",
+        "next_marker": "nextMarker",
+        "scope": "listObjects",
+        "list_buckets_reason": "listBuckets returns the account bucket list and documents no continuation parameter."
+      },
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["hwcloud_vpc"],
+      "service": "vpc",
+      "api_operation": "ListVpcs",
+      "api_or_sdk_version": "VPC API V1/V2 / huaweicloudsdkvpc v2",
+      "documentation_url": "https://support.huaweicloud.com/intl/zh-cn/api-vpc/vpc_api01_0003.html",
+      "response_collection_path": "vpcs",
+      "pagination": {
+        "kind": "not_applicable",
+        "documentation_url": "https://support.huaweicloud.com/intl/zh-cn/api-vpc/vpc_api01_0003.html",
+        "reason": "The V1/V2 ListVpcs operation used by huaweicloudsdkvpc.v2 documents no request pagination parameter."
+      },
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["hwcloud_subnet"],
+      "service": "vpc",
+      "api_operation": "ListSubnets",
+      "api_or_sdk_version": "VPC API V1/V2 / huaweicloudsdkvpc v2",
+      "documentation_url": "https://support.huaweicloud.com/api-vpc/vpc_subnet01_0003.html",
+      "response_collection_path": "subnets",
+      "pagination": {
+        "kind": "not_applicable",
+        "documentation_url": "https://support.huaweicloud.com/api-vpc/vpc_subnet01_0003.html",
+        "reason": "The V1/V2 ListSubnets operation used by huaweicloudsdkvpc.v2 documents no request pagination parameter."
+      },
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["hwcloud_eip"],
+      "service": "eip",
+      "api_operation": "ListPublicips",
+      "api_or_sdk_version": "EIP API v1 / huaweicloudsdkeip v2",
+      "documentation_url": "https://support.huaweicloud.com/api-eip/eip_api_0003.html",
+      "response_collection_path": "publicips",
+      "pagination": {"kind": "marker", "marker": "marker", "limit": "limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["hwcloud_sg"],
+      "service": "vpc",
+      "api_operation": "ListSecurityGroups",
+      "api_or_sdk_version": "VPC API V1/V2 / huaweicloudsdkvpc v2",
+      "documentation_url": "https://support.huaweicloud.com/api-vpc/vpc_sg01_0003.html",
+      "response_collection_path": "security_groups",
+      "pagination": {
+        "kind": "not_applicable",
+        "documentation_url": "https://support.huaweicloud.com/api-vpc/vpc_sg01_0003.html",
+        "reason": "The V1/V2 ListSecurityGroups operation used by huaweicloudsdkvpc.v2 documents no request pagination parameter."
+      },
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["hwcloud_elb"],
+      "service": "elb",
+      "api_operation": "ListLoadBalancers",
+      "api_or_sdk_version": "ELB API v3 / huaweicloudsdkelb v3",
+      "documentation_url": "https://support.huaweicloud.com/api-elb/ListLoadBalancers.html",
+      "response_collection_path": "loadbalancers",
+      "pagination": {"kind": "marker", "marker": "marker", "limit": "limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["hwcloud_rds"],
+      "service": "rds",
+      "api_operation": "ListInstances",
+      "api_or_sdk_version": "RDS API v3 / huaweicloudsdkrds v3",
+      "documentation_url": "https://support.huaweicloud.com/intl/zh-cn/api-rds/rds_01_0004.html",
+      "response_collection_path": "instances",
+      "pagination": {"kind": "offset_limit", "offset": "offset", "limit": "limit", "total": "total_count"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["hwcloud_dcs"],
+      "service": "dcs",
+      "api_operation": "ListInstances",
+      "api_or_sdk_version": "DCS API v2 / huaweicloudsdkdcs v2",
+      "documentation_url": "https://support.huaweicloud.com/api-dcs/ListInstances.html",
+      "response_collection_path": "instances",
+      "pagination": {"kind": "offset_limit", "offset": "offset", "limit": "limit", "total": "instance_num"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    }
+  ]
+}

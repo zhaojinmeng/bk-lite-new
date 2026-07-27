@@ -41,6 +41,11 @@ ALIYUN_SCENARIO_MATRIX = json.loads(
         encoding="utf-8"
     )
 )
+HWCLOUD_SCENARIO_MATRIX = json.loads(
+    (Path(__file__).with_name("hwcloud_operation_scenarios.json")).read_text(
+        encoding="utf-8"
+    )
+)
 QCLOUD_SCENARIOS = {
     "single_page",
     "pagination",
@@ -48,6 +53,7 @@ QCLOUD_SCENARIOS = {
     "missing_optional_field",
     "documented_error",
 }
+HWCLOUD_SCENARIOS = QCLOUD_SCENARIOS
 QCLOUD_EVIDENCE_ROOT = (
     STARGAZER_ROOT.parents[1]
     / "server"
@@ -1334,3 +1340,305 @@ def test_华为云SDK错误转换为明确异常(monkeypatch):
     )
     with pytest.raises(RuntimeError, match="APIGW.0101"):
         manager.get_ecs()
+
+
+def _hwcloud_manager():
+    return HuaweiCloudManager(
+        {
+            "accessKey": "contract-id",
+            "accessSecret": "contract-key",
+            "region": "cn-south-1",
+            "project_id": "project-001",
+            "host": "https://ecs.cn-south-1.example.invalid",
+        }
+    )
+
+
+class _HuaweiSdkResponse:
+    status_code = 200
+
+    def __init__(self, data):
+        self._data = data
+
+    def to_dict(self):
+        return self._data
+
+
+def _ecs_server(resource_id):
+    address = SimpleNamespace(
+        addr="192.0.2.10",
+        os_ext_ip_sport_id=f"port-{resource_id}",
+        os_ext_ip_stype="fixed",
+    )
+    return {
+        "id": resource_id,
+        "name": f"ecs-{resource_id}",
+        "host_id": f"host-{resource_id}",
+        "description": "",
+        "flavor": {"id": "s6.large.2", "vcpus": "2", "ram": "4096"},
+        "image": {"id": "image-contract"},
+        "metadata": {
+            "image_name": "EulerOS",
+            "charging_mode": "0",
+            "vpc_id": "vpc-001",
+        },
+        "status": "ACTIVE",
+        "addresses": {"contract-net": [address]},
+        "os_extended_volumesvolumes_attached": [],
+        "security_groups": [],
+        "created": "2026-01-02T03:04:05Z",
+        "os_ext_a_zavailability_zone": "cn-south-1a",
+        "tags": [],
+    }
+
+
+def _patch_ecs_interfaces(monkeypatch):
+    def list_interfaces(self, request):
+        return _HuaweiSdkResponse(
+            {
+                "interface_attachments": [
+                    {"fixed_ips": [{"subnet_id": "subnet-001"}]}
+                ]
+            }
+        )
+
+    monkeypatch.setattr(
+        cw_huaweicloud.EcsClient, "list_server_interfaces", list_interfaces
+    )
+
+
+def test_华为云十一项operation显式声明五态与官方来源():
+    operations = HWCLOUD_SCENARIO_MATRIX["operations"]
+
+    assert {
+        case_id for operation in operations for case_id in operation["case_ids"]
+    } == {
+        "hwcloud",
+        "hwcloud_dcs",
+        "hwcloud_ecs",
+        "hwcloud_eip",
+        "hwcloud_elb",
+        "hwcloud_evs",
+        "hwcloud_obs",
+        "hwcloud_rds",
+        "hwcloud_sg",
+        "hwcloud_subnet",
+        "hwcloud_vpc",
+    }
+    for operation in operations:
+        assert set(operation["scenarios"]) == HWCLOUD_SCENARIOS
+        assert operation["documentation_url"].startswith(
+            (
+                "https://support.huaweicloud.com/",
+                "https://developer.huaweicloud.com/",
+            )
+        )
+        pagination = operation["pagination"]
+        assert pagination["kind"] in {
+            "offset_limit",
+            "marker",
+            "not_applicable",
+        }
+        if pagination["kind"] == "not_applicable":
+            assert pagination["reason"]
+            assert pagination["documentation_url"] == operation["documentation_url"]
+
+
+def test_华为云平台对象来自父账户上下文且可选endpoint保持空值():
+    operation = next(
+        item
+        for item in HWCLOUD_SCENARIO_MATRIX["operations"]
+        if item["case_ids"] == ["hwcloud"]
+    )
+    manager = HuaweiCloudManager(
+        {
+            "accessKey": "contract-id",
+            "accessSecret": "contract-key",
+            "region": "cn-south-1",
+            "project_id": "project-001",
+        }
+    )
+
+    assert manager.get_platform() == [{"endpoint": ""}]
+    assert operation["pagination"]["kind"] == "not_applicable"
+    assert "not returned by a list API" in operation["pagination"]["reason"]
+
+
+def test_华为云ECS单页与缺可选字段经真实父链路保留身份(monkeypatch):
+    _patch_ecs_interfaces(monkeypatch)
+    sdk_call = Mock(
+        return_value=_HuaweiSdkResponse(
+            {"count": 1, "servers": [_ecs_server("ecs-001")]}
+        )
+    )
+    monkeypatch.setattr(
+        cw_huaweicloud.EcsClient, "list_servers_details", sdk_call
+    )
+
+    result = _hwcloud_manager().get_ecs()
+
+    assert result[0]["resource_id"] == "ecs-001"
+    assert result[0]["os_name"] == "EulerOS"
+    assert result[0]["expired_time"] == ""
+    assert sdk_call.call_count == 1
+
+
+def test_华为云ECS按官方offset_limit完整翻页(monkeypatch):
+    _patch_ecs_interfaces(monkeypatch)
+    requests = []
+    pages = [
+        {
+            "count": 51,
+            "servers": [_ecs_server(f"ecs-{index:03d}") for index in range(1, 51)],
+        },
+        {"count": 51, "servers": [_ecs_server("ecs-051")]},
+    ]
+
+    def list_servers(self, request):
+        requests.append((getattr(request, "offset", None), request.limit))
+        return _HuaweiSdkResponse(pages[len(requests) - 1])
+
+    monkeypatch.setattr(
+        cw_huaweicloud.EcsClient, "list_servers_details", list_servers
+    )
+
+    result = _hwcloud_manager().get_ecs()
+
+    assert len(result) == 51
+    assert [result[0]["resource_id"], result[-1]["resource_id"]] == [
+        "ecs-001",
+        "ecs-051",
+    ]
+    assert requests == [(None, 50), (50, 50)]
+
+
+def _evs_volume(resource_id):
+    return {
+        "id": resource_id,
+        "name": f"evs-{resource_id}",
+        "description": "",
+        "bootable": "false",
+        "size": 40,
+        "metadata": {"order_id": ""},
+        "status": "available",
+        "volume_type": "SSD",
+        "attachments": [],
+        "created_at": "2026-01-02T03:04:05Z",
+        "availability_zone": "cn-south-1a",
+        "encrypted": False,
+    }
+
+
+def test_华为云EVS单页空集缺可选字段和错误保持明确(monkeypatch):
+    responses = [
+        _HuaweiSdkResponse({"count": 1, "volumes": [_evs_volume("evs-001")]}),
+        _HuaweiSdkResponse({"count": 0, "volumes": []}),
+        RuntimeError("EVS.0001"),
+    ]
+
+    def list_volumes(self, request):
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(cw_huaweicloud.EvsClient, "list_volumes", list_volumes)
+    manager = _hwcloud_manager()
+
+    assert manager.get_evs()[0]["resource_id"] == "evs-001"
+    assert manager.get_evs() == []
+    assert manager.get_evs() == []
+
+
+def test_华为云EVS按官方offset_limit完整翻页(monkeypatch):
+    requests = []
+    pages = [
+        {
+            "count": 51,
+            "volumes": [
+                _evs_volume(f"evs-{index:03d}") for index in range(1, 51)
+            ],
+        },
+        {"count": 51, "volumes": [_evs_volume("evs-051")]},
+    ]
+
+    def list_volumes(self, request):
+        requests.append((getattr(request, "offset", None), request.limit))
+        return _HuaweiSdkResponse(pages[len(requests) - 1])
+
+    monkeypatch.setattr(cw_huaweicloud.EvsClient, "list_volumes", list_volumes)
+
+    result = _hwcloud_manager().get_evs()
+
+    assert len(result) == 51
+    assert [result[0]["resource_id"], result[-1]["resource_id"]] == [
+        "evs-001",
+        "evs-051",
+    ]
+    assert requests == [(None, 50), (50, 50)]
+
+
+@pytest.mark.parametrize(
+    ("case_ids", "method_name", "sdk_class", "sdk_method", "collection", "item"),
+    (
+        (
+            ["hwcloud_vpc"],
+            "get_vpc",
+            cw_huaweicloud.VpcClient,
+            "list_vpcs",
+            "vpcs",
+            {
+                "id": "vpc-001",
+                "name": "vpc-contract",
+                "description": "",
+                "status": "OK",
+                "cidr": "192.0.2.0/24",
+            },
+        ),
+        (
+            ["hwcloud_subnet"],
+            "get_subnet",
+            cw_huaweicloud.VpcClient,
+            "list_subnets",
+            "subnets",
+            {
+                "id": "subnet-001",
+                "name": "subnet-contract",
+                "description": "",
+                "status": "ACTIVE",
+                "gateway_ip": "192.0.2.1",
+                "cidr": "192.0.2.0/28",
+                "vpc_id": "vpc-001",
+            },
+        ),
+    ),
+)
+def test_华为云VPC与Subnet五态在V1V2无分页且错误不伪装成功(
+    case_ids, method_name, sdk_class, sdk_method, collection, item, monkeypatch
+):
+    operation = next(
+        item
+        for item in HWCLOUD_SCENARIO_MATRIX["operations"]
+        if item["case_ids"] == case_ids
+    )
+    responses = [
+        _HuaweiSdkResponse({collection: [item]}),
+        _HuaweiSdkResponse({collection: []}),
+        _HuaweiSdkResponse({collection: [item]}),
+        RuntimeError("VPC.0101"),
+    ]
+
+    def sdk_boundary(self, request):
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(sdk_class, sdk_method, sdk_boundary)
+    manager = _hwcloud_manager()
+
+    assert getattr(manager, method_name)()[0]["resource_id"] == item["id"]
+    assert getattr(manager, method_name)() == []
+    assert getattr(manager, method_name)()[0]["resource_id"] == item["id"]
+    assert getattr(manager, method_name)() == []
+    assert operation["pagination"]["kind"] == "not_applicable"
