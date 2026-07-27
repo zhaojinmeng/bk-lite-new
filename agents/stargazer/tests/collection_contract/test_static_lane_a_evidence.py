@@ -82,9 +82,7 @@ def test_可审计非云来源经过生产转换匹配逐case静态Golden(case_i
         }
     )._process_result(deepcopy(source))
     actual_prometheus = convert_to_prometheus_format(normalized)
-    expected_prometheus = (evidence / "02_prometheus.txt").read_text(
-        encoding="utf-8"
-    )
+    expected_prometheus = (evidence / "02_prometheus.txt").read_text(encoding="utf-8")
     actual_prometheus_semantics = semantics.parse_prometheus(actual_prometheus)
     if "record_count" in review_basis:
         assert sum(actual_prometheus_semantics.values()) == int(
@@ -112,15 +110,12 @@ def test_可审计非云来源经过生产转换匹配逐case静态Golden(case_i
     expected_line_protocol = (evidence / "03_line_protocol.txt").read_text(
         encoding="utf-8"
     )
-    actual_line_protocol_semantics = semantics.parse_line_protocol(
-        actual_line_protocol
-    )
+    actual_line_protocol_semantics = semantics.parse_line_protocol(actual_line_protocol)
     assert actual_line_protocol_semantics == semantics.parse_line_protocol(
         expected_line_protocol
     )
     _assert_timestamp_propagation_with_influx_tag_normalization(
-        actual_prometheus_semantics,
-        actual_line_protocol_semantics,
+        actual_prometheus_semantics, actual_line_protocol_semantics,
     )
 
 
