@@ -1666,13 +1666,13 @@ serverless"""
         result = []
         for data in data_list:
             result.append({
-                "resource_name": data.get("LoadBalancerName"),
-                "resource_id": data.get("LoadBalancerId"),
+                "resource_name": data.get("Name"),
+                "resource_id": data.get("InstanceId"),
                 "region": data.get("RegionId"),
                 "zone": data.get("ZoneId"),
                 "vpc": data.get("VpcId"),
-                "status": data.get("LoadBalancerStatus"),
-                "class": data.get("LoadBalancerSpec"),
+                "status": data.get("ServiceStatus"),
+                "class": data.get("SpecType"),
                 "storage_gb": data.get("DiskSize", ""),
                 "storage_type": data.get("DiskType", ""),
                 "msg_retain": data.get("MsgRetain"),

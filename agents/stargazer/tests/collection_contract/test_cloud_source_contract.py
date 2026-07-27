@@ -1256,6 +1256,47 @@ def test_阿里云Kafka_GetInstanceList覆盖单页空集缺可选字段和错�
     assert "InvalidAccessKeyId.NotFound" in error["message"]
 
 
+def test_阿里云Kafka官方字段经真实父collector格式化后保留资源身份(monkeypatch):
+    from plugins.inputs.aliyun import aliyun_info
+
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+    collector = _aliyun_without_init()
+    collector.kafka_client = SimpleNamespace(
+        get_instance_list_with_options=Mock(
+            return_value=_sdk_response(
+                {
+                    "InstanceList": {
+                        "InstanceVO": [
+                            {
+                                "Name": "kafka-contract",
+                                "InstanceId": "alikafka-001",
+                                "RegionId": "cn-hangzhou",
+                                "ZoneId": "cn-hangzhou-h",
+                                "VpcId": "vpc-001",
+                                "ServiceStatus": 5,
+                                "DiskSize": 3600,
+                                "DiskType": 1,
+                                "MsgRetain": 72,
+                                "TopicNumLimit": 180,
+                                "IoMaxRead": 1000,
+                                "IoMaxWrite": 1000,
+                                "PaidType": 1,
+                                "CreateTime": 1_577_961_819_000,
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+    )
+
+    raw = collector.list_kafka()
+    formatted = collector.format_aliyun_data({"aliyun_kafka_inst": raw["data"]})
+
+    assert formatted["aliyun_kafka_inst"][0]["resource_name"] == "kafka-contract"
+    assert formatted["aliyun_kafka_inst"][0]["resource_id"] == "alikafka-001"
+
+
 def test_阿里云Kafka分页场景由同一官方operation页面明确N_A():
     operation = next(
         item
