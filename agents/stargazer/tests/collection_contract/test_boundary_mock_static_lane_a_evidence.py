@@ -62,6 +62,7 @@ def test_Docker降级对象逐项声明实际失败和五态边界():
         "spark",
         "mssql",
         "network",
+        "oracle",
     }
     for case_id, declaration in SCENARIOS["cases"].items():
         assert declaration["docker_result"]

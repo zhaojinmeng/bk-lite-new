@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "result": {
+    "oracle": [
+      {
+        "version": "Oracle Database 19c Enterprise Edition",
+        "max_mem": "1024",
+        "max_conn": "100",
+        "db_name": "ORCL",
+        "database_role": "PRIMARY",
+        "sid": "ORCL1",
+        "ip_addr": "192.0.2.77",
+        "port": 1521,
+        "service_name": "orclpdb",
+        "inst_name": "oracle.example.invalid"
+      }
+    ]
+  }
+}

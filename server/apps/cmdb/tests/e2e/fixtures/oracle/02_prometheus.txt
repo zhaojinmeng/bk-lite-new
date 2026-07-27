@@ -1,0 +1,3 @@
+# HELP oracle_info Auto-generated help for oracle_info
+# TYPE oracle_info gauge
+oracle_info{bk_obj_id="oracle",collect_status="success",database_role="PRIMARY",db_name="ORCL",host="oracle.example.invalid",inst_name="oracle.example.invalid",ip_addr="192.0.2.77",max_conn="100",max_mem="1024",model_id="oracle",port="1521",service_name="orclpdb",sid="ORCL1",version="Oracle Database 19c Enterprise Edition"} 1 1700000000123

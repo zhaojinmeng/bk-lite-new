@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["success", "result"],
+  "properties": {
+    "success": {"const": true},
+    "result": {
+      "type": "object",
+      "required": ["oracle"],
+      "additionalProperties": false,
+      "properties": {
+        "oracle": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["version", "max_mem", "max_conn", "db_name", "database_role", "sid", "ip_addr", "port", "service_name", "inst_name"],
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -7,6 +7,7 @@
     "rocketmq": {"parent_binding": "middleware-rocketmq", "docker_result": "container reached SSH install then command exit=1", "mock_boundary": "SSH command response"},
     "spark": {"parent_binding": "middleware-spark", "docker_result": "manifest unknown", "mock_boundary": "SSH command response"},
     "mssql": {"parent_binding": "protocol-mssql", "docker_result": "MSSQL ready but host ODBC Driver 17 unavailable", "mock_boundary": "pyodbc cursor response"},
-    "network": {"parent_binding": "snmp-network", "docker_result": "SNMP image registry EOF", "mock_boundary": "pysnmp transport response"}
+    "network": {"parent_binding": "snmp-network", "docker_result": "SNMP image registry EOF", "mock_boundary": "pysnmp transport response"},
+    "oracle": {"parent_binding": "protocol-oracle", "docker_result": "Oracle Free image pull repeatedly stalled after partial layer download and was terminated without creating a container", "mock_boundary": "oracledb cursor response"}
   }
 }

@@ -1,0 +1,29 @@
+{
+  "source_type": "sanitized_real_environment",
+  "source_kind": "boundary_mock",
+  "vendor": "not_applicable",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-27T07:00:00Z",
+  "sanitization": "仅使用 RFC 5737 地址和 example.invalid 保留域名；无真实凭据",
+  "source_model_id": "oracle",
+  "emitted_case_id": "oracle",
+  "docker_attempt": {
+    "kind": "image_pull",
+    "command": "docker pull gvenzl/oracle-free:23-slim-faststart",
+    "result": "两次实际拉取均在部分 layer 下载后长时间无进展；为避免后台阻塞终止，未创建容器"
+  },
+  "mock_boundary": "仅替换 oracledb connect/cursor 返回；真实 OracleInfo 查询、字段清洗、formatter 与发布转换继续运行",
+  "scenario_contract": ["normal_non_empty", "empty", "missing_optional", "multi_record", "protocol_error"],
+  "review_basis": {
+    "source_commit": "79b6bb418",
+    "scalar_labels": "逐字段复核 OracleInfo 六条 SQL 的聚合结果",
+    "none_or_nested_exclusion": "无 None 或嵌套业务字段",
+    "derived_labels": "inst_name/ip_addr/port/service_name 与公共标签由真实生产代码生成",
+    "common_tags": "发布公共 tags 使用 production-contract 固定值",
+    "timestamp": "固定为 1700000000123 毫秒",
+    "record_count": 1
+  }
+}
