@@ -1682,10 +1682,9 @@ class Huaweicloud(PublicCloudManage):
             next_page_items = response["data"].get(collection_key, [])
             if not next_page_items:
                 break
-            if len(next_page_items) == request.limit:
-                following_marker = next_page_items[-1].get("id")
-                if not following_marker or following_marker == request.marker:
-                    break
+            following_marker = next_page_items[-1].get("id")
+            if not following_marker or following_marker == request.marker:
+                break
             items.extend(next_page_items)
         return success(items)
 

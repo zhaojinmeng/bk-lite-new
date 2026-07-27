@@ -2145,6 +2145,26 @@ def test_华为云VPC_Subnet_安全组按官方marker完整翻页且防无进展
     assert [item["resource_id"] for item in result["data"]] == ["001", "001"]
 
     requests.clear()
+    pages_with_short_stalled_marker = [
+        {collection: [item_factory("001"), item_factory("002")]},
+        {collection: [item_factory("002")]},
+    ]
+
+    def short_page_with_stalled_marker(self, request):
+        requests.append(
+            (getattr(request, "marker", None), getattr(request, "limit", None))
+        )
+        return _HuaweiSdkResponse(pages_with_short_stalled_marker[len(requests) - 1])
+
+    monkeypatch.setattr(
+        cw_huaweicloud.VpcClient, sdk_method, short_page_with_stalled_marker
+    )
+    result = getattr(_hwcloud_manager()._driver(), driver_method)(limit=2)
+
+    assert requests == [(None, 2), ("002", 2)]
+    assert [item["resource_id"] for item in result["data"]] == ["001", "002"]
+
+    requests.clear()
 
     def item_without_id(resource_id):
         return {
