@@ -23,8 +23,8 @@ if str(STARGAZER_ROOT) not in sys.path:
 
 from aliyunsdkcore.request import CommonRequest  # noqa: E402
 from common.cmp.cloud_apis.constant import CloudType  # noqa: E402
-from plugins.inputs.aliyun.aliyun_info import Aliyun  # noqa: E402
 from common.cmp.cloud_apis.resource_apis import cw_huaweicloud  # noqa: E402
+from plugins.inputs.aliyun.aliyun_info import Aliyun  # noqa: E402
 from plugins.inputs.hwcloud.huaweicloud_info import HuaweiCloudManager  # noqa: E402
 from plugins.inputs.qcloud import qcloud_info  # noqa: E402
 from plugins.inputs.qcloud.qcloud_info import TencentCloudManager  # noqa: E402
@@ -308,9 +308,7 @@ def test_华为云SDK空集保持稳定(monkeypatch):
             return {"count": 0, "servers": []}
 
     sdk_call = Mock(return_value=FakeSdkResponse())
-    monkeypatch.setattr(
-        cw_huaweicloud.EcsClient, "list_servers_details", sdk_call
-    )
+    monkeypatch.setattr(cw_huaweicloud.EcsClient, "list_servers_details", sdk_call)
     manager = HuaweiCloudManager(
         {
             "accessKey": "contract-id",
@@ -329,9 +327,7 @@ def test_华为云SDK错误转换为明确异常(monkeypatch):
     def sdk_error(self, request):
         raise RuntimeError("APIGW.0101")
 
-    monkeypatch.setattr(
-        cw_huaweicloud.EcsClient, "list_servers_details", sdk_error
-    )
+    monkeypatch.setattr(cw_huaweicloud.EcsClient, "list_servers_details", sdk_error)
     manager = HuaweiCloudManager(
         {
             "accessKey": "contract-id",
