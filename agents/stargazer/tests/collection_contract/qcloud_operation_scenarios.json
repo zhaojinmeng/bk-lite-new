@@ -61,6 +61,90 @@
       "response_collection_path": "Response.ClusterSet",
       "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
       "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_rocketmq",
+      "service": "tdmq",
+      "api_operation": "DescribeRocketMQClusters",
+      "api_or_sdk_version": "2020-02-17",
+      "documentation_url": "https://cloud.tencent.com/document/product/1179/63421",
+      "response_collection_path": "Response.ClusterList",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_cmq",
+      "service": "cmq",
+      "api_operation": "DescribeQueueDetail",
+      "api_or_sdk_version": "2019-03-04",
+      "documentation_url": "https://intl.cloud.tencent.com/document/product/406/35944",
+      "response_collection_path": "Response.QueueSet",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_cmq_topic",
+      "service": "cmq",
+      "api_operation": "DescribeTopicDetail",
+      "api_or_sdk_version": "2019-03-04",
+      "documentation_url": "https://intl.cloud.tencent.com/document/product/406/35931",
+      "response_collection_path": "Response.TopicSet",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_clb",
+      "service": "clb",
+      "api_operation": "DescribeLoadBalancers",
+      "api_or_sdk_version": "2018-03-17",
+      "documentation_url": "https://intl.cloud.tencent.com/document/product/214/30685",
+      "response_collection_path": "Response.LoadBalancerSet",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_eip",
+      "service": "vpc",
+      "api_operation": "DescribeAddresses",
+      "api_or_sdk_version": "2017-03-12",
+      "documentation_url": "https://intl.cloud.tencent.com/document/product/215/16702",
+      "response_collection_path": "Response.AddressSet",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_bucket",
+      "service": "cos",
+      "api_operation": "list_buckets",
+      "api_or_sdk_version": "COS XML API GET Service",
+      "documentation_url": "https://intl.cloud.tencent.com/document/product/436/31471",
+      "response_collection_path": "Buckets.Bucket",
+      "pagination": {
+        "kind": "not_applicable",
+        "documentation_url": "https://intl.cloud.tencent.com/document/product/436/31471",
+        "reason": "GET Service/list_buckets returns the complete bucket list for the account and documents no pagination parameter."
+      },
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_filesystem",
+      "service": "cfs",
+      "api_operation": "DescribeCfsFileSystems",
+      "api_or_sdk_version": "2019-07-19",
+      "documentation_url": "https://intl.cloud.tencent.com/document/product/582/34514",
+      "response_collection_path": "Response.FileSystems",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_domain",
+      "service": "domain",
+      "api_operation": "DescribeDomainNameList",
+      "api_or_sdk_version": "2018-08-08",
+      "documentation_url": "https://cloud.tencent.com/document/api/242/48941",
+      "response_collection_path": "Response.DomainSet",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
     }
   ]
 }

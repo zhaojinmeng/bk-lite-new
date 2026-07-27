@@ -78,23 +78,35 @@ def _qcloud_cvm(instance):
     return {"Response": {"TotalCount": 1, "InstanceSet": [instance]}}
 
 
-def test_腾讯云首批六项operation显式声明五态与官方来源():
+def test_腾讯云十四项operation显式声明五态与官方来源():
     operations = QCLOUD_SCENARIO_MATRIX["operations"]
 
     assert {item["case_id"] for item in operations} == {
+        "qcloud_bucket",
+        "qcloud_clb",
+        "qcloud_cmq",
+        "qcloud_cmq_topic",
         "qcloud_cvm",
+        "qcloud_domain",
+        "qcloud_eip",
+        "qcloud_filesystem",
         "qcloud_mysql",
         "qcloud_redis",
         "qcloud_mongodb",
         "qcloud_pgsql",
         "qcloud_plusar_cluster",
+        "qcloud_rocketmq",
     }
     for operation in operations:
         assert set(operation["scenarios"]) == QCLOUD_SCENARIOS
-        assert operation["pagination"]["kind"] == "offset_limit"
         assert operation["documentation_url"].startswith(
             ("https://cloud.tencent.com/", "https://intl.cloud.tencent.com/")
         )
+        pagination = operation["pagination"]
+        assert pagination["kind"] in {"offset_limit", "not_applicable"}
+        if pagination["kind"] == "not_applicable":
+            assert pagination["reason"]
+            assert pagination["documentation_url"] == operation["documentation_url"]
 
 
 _QCLOUD_FIRST_BATCH = {
@@ -229,6 +241,241 @@ def test_腾讯云首批列表API文档化鉴权错误不伪装为空集(case_id
         getattr(manager, spec["method"])()
 
     assert exc_info.value.code == "AuthFailure.SignatureFailure"
+
+
+_QCLOUD_SECOND_BATCH = {
+    "qcloud_rocketmq": {
+        "method": "get_qcloud_rocketmq",
+        "operation": "DescribeRocketMQClusters",
+        "collection": "ClusterList",
+        "minimal": {
+            "Info": {
+                "ClusterName": "rocketmq-contract",
+                "ClusterId": "rocketmq-001",
+                "ZoneId": "200001",
+            },
+            "Config": {},
+        },
+        "id_key": ("Info", "ClusterId"),
+        "id": "rocketmq-001",
+    },
+    "qcloud_cmq": {
+        "method": "get_qcloud_cmq",
+        "operation": "DescribeQueueDetail",
+        "collection": "QueueSet",
+        "minimal": {"QueueName": "queue-contract", "QueueId": "queue-001"},
+        "id_key": ("QueueId",),
+        "id": "queue-001",
+    },
+    "qcloud_cmq_topic": {
+        "method": "get_qcloud_cmq_topic",
+        "operation": "DescribeTopicDetail",
+        "collection": "TopicSet",
+        "minimal": {"TopicName": "topic-contract", "TopicId": "topic-001"},
+        "id_key": ("TopicId",),
+        "id": "topic-001",
+    },
+    "qcloud_clb": {
+        "method": "get_qcloud_clb",
+        "operation": "DescribeLoadBalancers",
+        "collection": "LoadBalancerSet",
+        "minimal": {"LoadBalancerName": "clb-contract", "LoadBalancerId": "lb-001"},
+        "id_key": ("LoadBalancerId",),
+        "id": "lb-001",
+    },
+    "qcloud_eip": {
+        "method": "get_qcloud_eip",
+        "operation": "DescribeAddresses",
+        "collection": "AddressSet",
+        "minimal": {"AddressName": "eip-contract", "AddressId": "eip-001"},
+        "id_key": ("AddressId",),
+        "id": "eip-001",
+    },
+    "qcloud_filesystem": {
+        "method": "get_qcloud_filesystem",
+        "operation": "DescribeCfsFileSystems",
+        "collection": "FileSystems",
+        "minimal": {"FsName": "cfs-contract", "FileSystemId": "cfs-001"},
+        "id_key": ("FileSystemId",),
+        "id": "cfs-001",
+    },
+    "qcloud_domain": {
+        "method": "get_qcloud_domain",
+        "operation": "DescribeDomainNameList",
+        "collection": "DomainSet",
+        "minimal": {"DomainName": "example.invalid", "DomainId": "domain-001"},
+        "id_key": ("DomainId",),
+        "id": "domain-001",
+    },
+}
+
+
+def _replace_nested_id(item, key_path, value):
+    cursor = item
+    for key in key_path[:-1]:
+        cursor = cursor[key]
+    cursor[key_path[-1]] = value
+
+
+def _prepare_second_batch_manager(case_id, monkeypatch, sdk_call):
+    manager = _qcloud_manager(monkeypatch, sdk_call)
+    if case_id in {"qcloud_cmq", "qcloud_cmq_topic"}:
+        monkeypatch.setitem(
+            qcloud_info.product_available_region_list_map,
+            "cmq",
+            ["ap-shanghai"],
+        )
+        monkeypatch.setattr(qcloud_info.time, "sleep", lambda _: None)
+    return manager
+
+
+def _second_batch_page(spec, items, total_count):
+    return {
+        "Response": {
+            spec["collection"]: items,
+            "TotalCount": total_count,
+        }
+    }
+
+
+@pytest.mark.parametrize("case_id", tuple(_QCLOUD_SECOND_BATCH))
+def test_腾讯云第二批列表API单页缺可选字段和空集合同(case_id, monkeypatch):
+    spec = _QCLOUD_SECOND_BATCH[case_id]
+    single_page_responses = [_second_batch_page(spec, [spec["minimal"]], 1)]
+    if case_id == "qcloud_rocketmq":
+        single_page_responses.append(_second_batch_page(spec, [], 1))
+    manager = _prepare_second_batch_manager(
+        case_id, monkeypatch, Mock(side_effect=single_page_responses)
+    )
+
+    actual = getattr(manager, spec["method"])()
+    assert actual[0]["resource_id"] == spec["id"]
+
+    manager = _prepare_second_batch_manager(
+        case_id,
+        monkeypatch,
+        Mock(return_value=_second_batch_page(spec, [], 0)),
+    )
+    assert getattr(manager, spec["method"])() == []
+
+
+@pytest.mark.parametrize(
+    "case_id",
+    (
+        "qcloud_cmq",
+        "qcloud_cmq_topic",
+        "qcloud_clb",
+        "qcloud_eip",
+        "qcloud_filesystem",
+        "qcloud_domain",
+    ),
+)
+def test_腾讯云第二批OffsetLimit列表完整翻页(case_id, monkeypatch):
+    spec = _QCLOUD_SECOND_BATCH[case_id]
+    first = json.loads(json.dumps(spec["minimal"]))
+    second = json.loads(json.dumps(spec["minimal"]))
+    second_id = f"{spec['id']}-page-2"
+    _replace_nested_id(second, spec["id_key"], second_id)
+    limit = 50 if case_id in {"qcloud_cmq", "qcloud_cmq_topic"} else 100
+    sdk_call = Mock(
+        side_effect=[
+            _second_batch_page(spec, [first], limit + 1),
+            _second_batch_page(spec, [second], limit + 1),
+        ]
+    )
+    manager = _prepare_second_batch_manager(case_id, monkeypatch, sdk_call)
+
+    actual = getattr(manager, spec["method"])()
+
+    assert [item["resource_id"] for item in actual] == [spec["id"], second_id]
+    assert sdk_call.call_args_list == [
+        call(spec["operation"], {"Limit": limit, "Offset": 0}),
+        call(spec["operation"], {"Limit": limit, "Offset": limit}),
+    ]
+
+
+@pytest.mark.parametrize(
+    "case_id",
+    (
+        "qcloud_rocketmq",
+        "qcloud_clb",
+        "qcloud_eip",
+        "qcloud_filesystem",
+        "qcloud_domain",
+    ),
+)
+def test_腾讯云第二批文档化鉴权错误不伪装为空集(case_id, monkeypatch):
+    spec = _QCLOUD_SECOND_BATCH[case_id]
+    sdk_error = tencent_cloud_sdk_exception.TencentCloudSDKException(
+        "AuthFailure.SignatureFailure", "signature invalid", "request-contract"
+    )
+    manager = _prepare_second_batch_manager(
+        case_id, monkeypatch, Mock(side_effect=sdk_error)
+    )
+
+    with pytest.raises(
+        tencent_cloud_sdk_exception.TencentCloudSDKException
+    ) as exc_info:
+        getattr(manager, spec["method"])()
+
+    assert exc_info.value.code == "AuthFailure.SignatureFailure"
+
+
+def test_腾讯云COS分页场景有官方not_applicable依据():
+    operation = next(
+        item
+        for item in QCLOUD_SCENARIO_MATRIX["operations"]
+        if item["case_id"] == "qcloud_bucket"
+    )
+
+    assert operation["pagination"] == {
+        "kind": "not_applicable",
+        "documentation_url": operation["documentation_url"],
+        "reason": (
+            "GET Service/list_buckets returns the complete bucket list for the "
+            "account and documents no pagination parameter."
+        ),
+    }
+
+
+def test_腾讯云COS在官方SDK边界覆盖单页空集缺可选字段和错误(monkeypatch):
+    manager = TencentCloudManager(
+        {"secret_id": "contract-id", "secret_key": "contract-key"}
+    )
+    manager.__dict__["available_region_list"] = ["ap-shanghai"]
+    sdk_call = Mock(
+        side_effect=[
+            {
+                "Buckets": {
+                    "Bucket": [
+                        {"Name": "bucket-contract", "Location": "ap-shanghai"}
+                    ]
+                }
+            },
+            {"Buckets": {"Bucket": []}},
+            {"Buckets": {"Bucket": [{"Name": "bucket-minimal"}]}},
+            RuntimeError("AccessDenied"),
+        ]
+    )
+    monkeypatch.setattr(
+        manager,
+        "get_tencent_cos_client",
+        lambda region: type(
+            "CosSdkBoundary", (), {"list_buckets": lambda self: sdk_call()}
+        )(),
+    )
+
+    assert manager.get_qcloud_bucket() == [
+        {
+            "resource_name": "bucket-contract",
+            "resource_id": "bucket-contract",
+            "region": "ap-shanghai",
+        }
+    ]
+    assert manager.get_qcloud_bucket() == []
+    assert manager.get_qcloud_bucket()[0]["resource_id"] == "bucket-minimal"
+    with pytest.raises(RuntimeError, match="AccessDenied"):
+        manager.get_qcloud_bucket()
 
 
 def test_腾讯云单页响应映射为CVM对象(monkeypatch):

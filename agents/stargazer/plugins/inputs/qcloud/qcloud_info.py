@@ -152,6 +152,30 @@ class TencentCloudManager:
             offset += limit
         return result
 
+    def _list_cmq_offset_pages(
+        self,
+        region: str,
+        action: str,
+        collection_key: str,
+        *,
+        limit: int = 50,
+    ) -> List[Dict]:
+        """按 CMQ 文档上限读取完整 Offset/Limit 列表。"""
+        result = []
+        offset = 0
+        while True:
+            response = self._call_cmq_with_retry(
+                region=region,
+                action=action,
+                params={"Limit": limit, "Offset": offset},
+            ).get("Response", {})
+            result.extend(response.get(collection_key, []) or [])
+            total_count = response.get("TotalCount")
+            if not isinstance(total_count, int) or offset + limit >= total_count:
+                break
+            offset += limit
+        return result
+
     @cached_property
     def available_region_list(self):
         return [region.get("Region") for region in self.list_regions() if region.get("RegionState") == "AVAILABLE"]
@@ -402,7 +426,9 @@ class TencentCloudManager:
         result = []
         for region in product_available_region_list_map.get("cmq", []):
             try:
-                cmq_info = self._call_cmq_with_retry(region=region, action="DescribeQueueDetail")
+                instances = self._list_cmq_offset_pages(
+                    region, "DescribeQueueDetail", "QueueSet"
+                )
             except TencentCloudSDKException as err:
                 logger.warning(
                     f"Skip qcloud cmq collection action=DescribeQueueDetail region={region} "
@@ -415,7 +441,6 @@ class TencentCloudManager:
                     f"after transient retries exhausted: {err}"
                 )
                 continue
-            instances = cmq_info.get("Response", {}).get("QueueSet", [])
             result.extend([{
                 "resource_name": instance.get("QueueName"),
                 "resource_id": instance.get("QueueId"),
@@ -435,7 +460,9 @@ class TencentCloudManager:
         result = []
         for region in product_available_region_list_map.get("cmq", []):
             try:
-                topic_info = self._call_cmq_with_retry(region=region, action="DescribeTopicDetail")
+                instances = self._list_cmq_offset_pages(
+                    region, "DescribeTopicDetail", "TopicSet"
+                )
             except TencentCloudSDKException as err:
                 logger.warning(
                     f"Skip qcloud cmq topic collection action=DescribeTopicDetail region={region} "
@@ -448,7 +475,6 @@ class TencentCloudManager:
                     f"after transient retries exhausted: {err}"
                 )
                 continue
-            instances = topic_info.get("Response", {}).get("TopicSet", [])
             result.extend([{
                 "resource_name": instance.get("TopicName"),
                 "resource_id": instance.get("TopicId"),
@@ -466,8 +492,11 @@ class TencentCloudManager:
         """资源名、资源ID、标签、项目ID、安全组ID、VPC、地域、主可用区、备可用区、状态、域名、VIP、网络类型、运营商、付费类型"""
         result = []
         for region in self.available_region_list:
-            clb_info = self.get_tencent_client(region=region).clb.call_json("DescribeLoadBalancers", {})
-            instances = clb_info.get("Response", {}).get("LoadBalancerSet", [])
+            instances = self._list_offset_pages(
+                self.get_tencent_client(region=region).clb,
+                "DescribeLoadBalancers",
+                "LoadBalancerSet",
+            )
             result.extend([{
                 "resource_name": instance.get("LoadBalancerName"),
                 "resource_id": instance.get("LoadBalancerId"),
@@ -480,7 +509,9 @@ class TencentCloudManager:
                 "backup_zone": ",".join([zone.get("Zone") for zone in instance.get("BackupZoneSet", []) if zone.get("Zone")]),
                 "status": clb_status_map.get(instance.get("Status"), "未知"),
                 "domain": instance.get("Domain"),
-                "ip_addr": ",".join([ip for ip in instance.get("LoadBalancerVips") if ip]),
+                "ip_addr": ",".join(
+                    [ip for ip in (instance.get("LoadBalancerVips") or []) if ip]
+                ),
                 "type": clb_net_type_map.get(instance.get("LoadBalancerType"), "未知"),
                 "isp": clb_isp_map.get(instance.get("VipIsp"), "未知"),
                 "charge_type": instance.get("ChargeType"),
@@ -491,8 +522,11 @@ class TencentCloudManager:
         """资源名、资源ID、标签、地域、状态、类型、公网IP地址、绑定资源类型、绑定资源ID、线路类型、付费类型"""
         result = []
         for region in self.available_region_list:
-            eip_info = self.get_tencent_client(region=region).vpc.call_json("DescribeAddresses", {})
-            instances = eip_info.get("Response", {}).get("AddressSet", [])
+            instances = self._list_offset_pages(
+                self.get_tencent_client(region=region).vpc,
+                "DescribeAddresses",
+                "AddressSet",
+            )
             result.extend([{
                 "resource_name": instance.get("AddressName") or "未命名", # 防止None导致字段丢失
                 "resource_id": instance.get("AddressId"),
@@ -511,22 +545,31 @@ class TencentCloudManager:
     def get_qcloud_bucket(self):
         """资源名、资源ID、地域"""
         result = []
-        for region in self.available_region_list:
-            buckets = self.get_tencent_cos_client(region=region).list_buckets().get("Buckets",{}).get("Bucket")
-            for bucket in buckets:
-                result.append({
-                    "resource_name": bucket.get("Name"),
-                    "resource_id": bucket.get("Name"),
-                    "region": bucket.get("Location"),
-                })
+        region = next(iter(self.available_region_list), "ap-guangzhou")
+        buckets = (
+            self.get_tencent_cos_client(region=region)
+            .list_buckets()
+            .get("Buckets", {})
+            .get("Bucket", [])
+            or []
+        )
+        for bucket in buckets:
+            result.append({
+                "resource_name": bucket.get("Name"),
+                "resource_id": bucket.get("Name"),
+                "region": bucket.get("Location"),
+            })
         return result
 
     def get_qcloud_filesystem(self):
         """资源名、资源ID、标签、地域、可用区、状态、文件系统协议、存储类型、吞吐上限(MiB/s)、总容量(GiB)"""
         result = []
         for region in self.available_region_list:
-            cfs_info = self.get_tencent_client(region=region).cfs.call_json("DescribeCfsFileSystems", {})
-            instances = cfs_info.get("Response", {}).get("FileSystems", [])
+            instances = self._list_offset_pages(
+                self.get_tencent_client(region=region).cfs,
+                "DescribeCfsFileSystems",
+                "FileSystems",
+            )
             result.extend([{
                 "resource_name": instance.get("FsName"),
                 "resource_id": instance.get("FileSystemId"),
@@ -543,14 +586,18 @@ class TencentCloudManager:
 
     def get_qcloud_domain(self):
         """资源名、资源ID、域名后缀、状态、到期时间"""
-        domain_info = self.get_tencent_client("").domain.call_json("DescribeDomainNameList", {})
+        instances = self._list_offset_pages(
+            self.get_tencent_client("").domain,
+            "DescribeDomainNameList",
+            "DomainSet",
+        )
         return [{
             "resource_name": instance.get("DomainName"),
             "resource_id": instance.get("DomainId"),
             "tld": instance.get("CodeTld"),  # 域名后缀
             "status": domain_status_map.get(instance.get("BuyStatus"), "未知"),
             "expired_time": instance.get("ExpirationDate"),  # 到期时间
-        } for instance in domain_info.get("DomainList", [])]
+        } for instance in instances]
 
     def exec_script(self):
         def handle_resource(resource_func, resource_name):
