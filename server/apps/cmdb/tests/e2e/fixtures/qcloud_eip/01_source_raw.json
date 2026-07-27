@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_eip": [
+      {
+        "resource_name": "eip-contract",
+        "resource_id": "eip-001",
+        "region": "ap-shanghai",
+        "ip_addr": "203.0.113.11",
+        "status": "已绑定"
+      }
+    ]
+  }
+}

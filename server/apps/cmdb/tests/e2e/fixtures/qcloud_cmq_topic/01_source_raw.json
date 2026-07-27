@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_cmq_topic": [
+      {
+        "resource_name": "topic-contract",
+        "resource_id": "topic-001",
+        "region": "ap-shanghai",
+        "qps": 5000
+      }
+    ]
+  }
+}

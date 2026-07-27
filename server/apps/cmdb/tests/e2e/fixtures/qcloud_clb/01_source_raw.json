@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_clb": [
+      {
+        "resource_name": "clb-contract",
+        "resource_id": "lb-001",
+        "region": "ap-shanghai",
+        "ip_addr": "203.0.113.10",
+        "status": "正常"
+      }
+    ]
+  }
+}

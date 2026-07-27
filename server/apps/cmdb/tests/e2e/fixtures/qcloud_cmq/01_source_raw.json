@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "result": {
+    "qcloud_cmq": [
+      {
+        "resource_name": "queue-contract",
+        "resource_id": "queue-001",
+        "region": "ap-shanghai",
+        "qps": 5000
+      }
+    ]
+  }
+}

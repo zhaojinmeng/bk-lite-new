@@ -1,0 +1,3 @@
+# HELP qcloud_cmq_info Auto-generated help for qcloud_cmq_info
+# TYPE qcloud_cmq_info gauge
+qcloud_cmq_info{bk_obj_id="qcloud_cmq",collect_status="success",model_id="qcloud_cmq",qps="5000",region="ap-shanghai",resource_id="queue-001",resource_name="queue-contract"} 1 1700000000123
