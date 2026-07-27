@@ -1,4 +1,9 @@
 {
+  "es": {
+    "fixture": "elasticsearch.json",
+    "source_commit": "73f9b17c9",
+    "source_model_alias": "elasticsearch->es"
+  },
   "mongodb": {"fixture": "mongodb.json", "source_commit": "73f9b17c9"},
   "postgresql": {"fixture": "postgresql.json", "source_commit": "ee2987167"},
   "redis": {"fixture": "redis.json", "source_commit": "ee2987167"},

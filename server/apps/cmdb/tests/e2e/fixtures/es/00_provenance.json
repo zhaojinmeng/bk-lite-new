@@ -1,0 +1,32 @@
+{
+  "source_type": "sanitized_real_environment",
+  "source_kind": "docker_real",
+  "vendor": "not_applicable",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-08T06:25:36Z",
+  "sanitization": "保留容器采集字段和值，仅将实例名改为保留域名；未包含凭据",
+  "capture_model_id": "elasticsearch",
+  "source_model_id": "es",
+  "emitted_case_id": "es",
+  "source_fixture": "agents/stargazer/tests/fixtures/collect/elasticsearch.json",
+  "source_commit": "73f9b17c9",
+  "image": "docker.m.daocloud.io/library/elasticsearch:8.13.0",
+  "image_id": "sha256:931922485be0",
+  "container_meta": {
+    "capture_container_id": "1ace2ff2f773",
+    "runtime": "docker",
+    "architecture": "arm64"
+  },
+  "review_basis": {
+    "alias": "旧采集清单 model_id=elasticsearch 在迁移边界显式归一为生产模型 es",
+    "raw_output": "源 fixture raw_stdout 非空且来自 Elasticsearch 容器",
+    "sanitization": "仅 inst_name 改为 es.example.invalid",
+    "formatter": "运行真实 CollectionService._process_result",
+    "prometheus": "静态 Golden 由逐字段人工复核",
+    "line_protocol": "静态 Golden 由 Prometheus 语义独立复核",
+    "timestamp": "固定为 1700000000123 毫秒"
+  }
+}

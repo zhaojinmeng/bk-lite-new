@@ -1,0 +1,25 @@
+{
+  "success": true,
+  "result": {
+    "es": [
+      {
+        "inst_name": "es.example.invalid",
+        "ip_addr": "172.17.0.4",
+        "obj_id": "elasticsearch",
+        "port": "9200",
+        "version": "8.19.18",
+        "lucene_version": "9.12.2",
+        "build_flavor": "default",
+        "cluster_name": "elasticsearch",
+        "status": "green",
+        "number_of_nodes": "1",
+        "active_shards": "0",
+        "unassigned_shards": "0",
+        "bin_path": "/usr/share/elasticsearch/bin",
+        "config": "/etc/elasticsearch/elasticsearch.yml",
+        "user": "elasticsearch",
+        "pid": "4440"
+      }
+    ]
+  }
+}

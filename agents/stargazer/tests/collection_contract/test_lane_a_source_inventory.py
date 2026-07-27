@@ -17,7 +17,7 @@ def test_已批准迁移的非云来源均有捕获元数据和提交依据():
     }
 
     assert set(inventory) < set(validation)
-    assert len(inventory) == 19
+    assert len(inventory) == 20
     for case_id, source in inventory.items():
         capture = json.loads(
             (CAPTURE_ROOT / source["fixture"]).read_text(encoding="utf-8")
@@ -27,6 +27,9 @@ def test_已批准迁移的非云来源均有捕获元数据和提交依据():
         assert capture["container_meta"]["image"], case_id
         assert capture["raw_stdout"], case_id
         assert len(source["source_commit"]) == 9, case_id
+        if case_id == "es":
+            assert capture["model_id"] == "elasticsearch"
+            assert source["source_model_alias"] == "elasticsearch->es"
 
 
 def test_缺真实来源的非云case保持显式阻塞():
@@ -41,7 +44,6 @@ def test_缺真实来源的非云case保持显式阻塞():
     assert non_cloud_cases - set(inventory) == {
         "disk",
         "docker",
-        "es",
         "gpu",
         "hbase",
         "host",

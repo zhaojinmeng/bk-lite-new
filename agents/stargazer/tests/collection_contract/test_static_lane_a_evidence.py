@@ -257,6 +257,65 @@ def test_mysql真实来源经过生产转换匹配静态LaneA_Golden(monkeypatch
     assert str(FIXED_TIMESTAMP_MS) in expected_prometheus
 
 
+def test_Elasticsearch旧捕获显式归一为es并匹配静态LaneA_Golden(monkeypatch):
+    capture = json.loads(
+        (
+            REPOSITORY_ROOT
+            / "agents"
+            / "stargazer"
+            / "tests"
+            / "fixtures"
+            / "collect"
+            / "elasticsearch.json"
+        ).read_text(encoding="utf-8")
+    )
+    evidence = EVIDENCE_ROOT / "es"
+    source = json.loads((evidence / "01_source_raw.json").read_text(encoding="utf-8"))
+    migrated = deepcopy(capture["raw_stdout"])
+    migrated["inst_name"] = "es.example.invalid"
+
+    assert capture["model_id"] == "elasticsearch"
+    assert source == {"success": True, "result": {"es": [migrated]}}
+
+    monkeypatch.setattr(base_utils.time, "time", lambda: 1_700_000_000.123)
+    normalized = CollectionService(
+        {
+            "plugin_name": "es_info",
+            "model_id": "es",
+            "host": "es.example.invalid",
+        }
+    )._process_result(deepcopy(source))
+    actual_prometheus = convert_to_prometheus_format(normalized)
+    expected_prometheus = (evidence / "02_prometheus.txt").read_text(
+        encoding="utf-8"
+    )
+    assert semantics.parse_prometheus(
+        actual_prometheus
+    ) == semantics.parse_prometheus(expected_prometheus)
+
+    actual_line_protocol = convert_prometheus_to_influx(
+        actual_prometheus,
+        {
+            "monitor_type": "es",
+            "plugin_name": "es_info",
+            "model_id": "es",
+            "tags": {
+                "agent_id": "agent-contract",
+                "instance_id": "cmdb-es",
+                "instance_type": "es",
+                "collect_type": "discovery",
+                "config_type": "production-contract",
+            },
+        },
+    )
+    expected_line_protocol = (evidence / "03_line_protocol.txt").read_text(
+        encoding="utf-8"
+    )
+    assert semantics.parse_line_protocol(
+        actual_line_protocol
+    ) == semantics.parse_line_protocol(expected_line_protocol)
+
+
 @pytest.mark.parametrize(
     ("case_id", "instance_id"),
     (
