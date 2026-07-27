@@ -58,8 +58,8 @@ _REAL_ENVIRONMENT_NOT_APPLICABLE_FIELDS = (
     "documentation_url",
 )
 _OFFICIAL_DOCUMENTATION_HOSTS = {
-    "qcloud": frozenset({"cloud.tencent.com", "www.tencentcloud.com"}),
-    "tencentcloud": frozenset({"cloud.tencent.com", "www.tencentcloud.com"}),
+    "qcloud": frozenset({"cloud.tencent.com", "intl.cloud.tencent.com"}),
+    "tencentcloud": frozenset({"cloud.tencent.com", "intl.cloud.tencent.com"}),
     "aliyun": frozenset({"help.aliyun.com", "www.alibabacloud.com"}),
     "alibaba_cloud": frozenset({"help.aliyun.com", "www.alibabacloud.com"}),
     "hwcloud": frozenset({"developer.huaweicloud.com", "support.huaweicloud.com"}),

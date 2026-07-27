@@ -42,6 +42,15 @@ QCLOUD_SCENARIOS = {
     "missing_optional_field",
     "documented_error",
 }
+QCLOUD_EVIDENCE_ROOT = (
+    STARGAZER_ROOT.parents[1]
+    / "server"
+    / "apps"
+    / "cmdb"
+    / "tests"
+    / "e2e"
+    / "fixtures"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -107,6 +116,43 @@ def test_腾讯云十四项operation显式声明五态与官方来源():
         if pagination["kind"] == "not_applicable":
             assert pagination["reason"]
             assert pagination["documentation_url"] == operation["documentation_url"]
+
+
+@pytest.mark.parametrize(
+    "operation",
+    QCLOUD_SCENARIO_MATRIX["operations"],
+    ids=lambda operation: operation["case_id"],
+)
+def test_腾讯云逐case_provenance与operation矩阵严格一致(operation):
+    case_id = operation["case_id"]
+    evidence = QCLOUD_EVIDENCE_ROOT / case_id
+    provenance = json.loads(
+        (evidence / "00_provenance.json").read_text(encoding="utf-8")
+    )
+    source = json.loads(
+        (evidence / "01_source_raw.json").read_text(encoding="utf-8")
+    )
+
+    assert {
+        key: provenance[key]
+        for key in (
+            "vendor",
+            "service",
+            "api_operation",
+            "api_or_sdk_version",
+            "documentation_url",
+            "read_at",
+        )
+    } == {
+        "vendor": QCLOUD_SCENARIO_MATRIX["vendor"],
+        "service": operation["service"],
+        "api_operation": operation["api_operation"],
+        "api_or_sdk_version": operation["api_or_sdk_version"],
+        "documentation_url": operation["documentation_url"],
+        "read_at": QCLOUD_SCENARIO_MATRIX["read_at"],
+    }
+    assert provenance["emitted_case_id"] == case_id
+    assert set(source["result"]) == {provenance["source_model_id"]}
 
 
 _QCLOUD_FIRST_BATCH = {

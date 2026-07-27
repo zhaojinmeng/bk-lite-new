@@ -148,7 +148,7 @@ def test_provenance_缺键明确失败(complete_evidence):
     ("vendor", "documentation_url"),
     [
         ("qcloud", "https://cloud.tencent.com/document/api/213/15753"),
-        ("tencentcloud", "https://www.tencentcloud.com/document/product/213"),
+        ("tencentcloud", "https://intl.cloud.tencent.com/document/product/213"),
         ("aliyun", "https://help.aliyun.com/document_detail/25506.html"),
         ("hwcloud", "https://support.huaweicloud.com/api-ecs/ecs_02_0101.html"),
         ("huawei_cloud", "https://developer.huaweicloud.com/intl/en-us/api-ecs/"),
@@ -289,7 +289,10 @@ def test_生产缺口与非生产归档状态由结构化_audit_返回():
 
     assert {item.contract_id for item in audit.validation} == set(manifest.validation_contracts)
     assert audit.incomplete_validation
-    assert all(item.missing_files for item in audit.incomplete_validation)
+    assert all(
+        item.missing_files or item.validation_errors
+        for item in audit.incomplete_validation
+    )
     assert {item.contract_id for item in audit.non_production} == set(manifest.non_production_contracts)
     assert all(item.status == "archived" for item in audit.non_production)
 
@@ -305,19 +308,42 @@ def test_audit_对文件齐全但门禁失败的生产包返回invalid(complete_
     assert "01_source_raw.json" in audit.validation[0].validation_errors[0]
 
 
-def test_qcloud_cvm_只迁移可独立证明的制品():
-    evidence = load_evidence("qcloud_cvm")
+def test_qcloud_cvm_LaneA制品已由官方operation证据独立证明():
+    evidence = load_lane_a_evidence("qcloud_cvm")
 
-    assert evidence.missing_files == [
-        "00_provenance.json",
-        "02_prometheus.txt",
-        "03_line_protocol.txt",
+    assert evidence.missing_files == []
+    evidence.validate_schemas()
+    evidence.validate_provenance()
+    evidence.assert_no_secrets()
+
+
+def test_qcloud官方文档域名拒绝旧www重定向域名(complete_evidence):
+    _update_provenance(
+        complete_evidence,
+        source_type="official_cloud_api_documentation",
+        vendor="qcloud",
+        service="compute",
+        api_operation="DescribeInstances",
+        api_or_sdk_version="v1",
+        documentation_url="https://www.tencentcloud.com/document/product/213",
+    )
+
+    with pytest.raises(EvidenceValidationError, match="documentation_url"):
+        load_evidence(
+            complete_evidence.case_id, root=complete_evidence.root
+        ).validate_provenance()
+
+
+def test_qcloud十四个三元组LaneA_evidence全部ready():
+    audit = audit_lane_a_evidence(load_manifest())
+    qcloud_items = [
+        item
+        for item in audit.validation
+        if item.contract_id[1] == "qcloud"
     ]
-    legacy_sources = {
-        "01_source_raw.json": "01_stargazer_raw.json",
-        "04_vm_response.json": "03_vm_metrics_response.json",
-        "05_expected_cmdb.json": "04_expected_cmdb_result.json",
-    }
-    for migrated_name, legacy_name in legacy_sources.items():
-        legacy = json.loads((evidence.fixture_dir / legacy_name).read_text(encoding="utf-8"))
-        assert evidence.read_json(migrated_name) == legacy
+
+    assert len(qcloud_items) == 14
+    assert [(item.case_id, item.validation_errors) for item in qcloud_items] == [
+        (item.case_id, ()) for item in qcloud_items
+    ]
+    assert all(item.status == "ready" for item in qcloud_items)

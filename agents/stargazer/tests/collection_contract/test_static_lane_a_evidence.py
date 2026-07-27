@@ -31,6 +31,22 @@ STATIC_REAL_ENVIRONMENT_CASES = (
     "memcached",
     "influxdb",
 )
+QCLOUD_CASES = (
+    "qcloud_bucket",
+    "qcloud_clb",
+    "qcloud_cmq",
+    "qcloud_cmq_topic",
+    "qcloud_cvm",
+    "qcloud_domain",
+    "qcloud_eip",
+    "qcloud_filesystem",
+    "qcloud_mongodb",
+    "qcloud_mysql",
+    "qcloud_pgsql",
+    "qcloud_plusar_cluster",
+    "qcloud_redis",
+    "qcloud_rocketmq",
+)
 
 
 def _assert_timestamp_propagation_with_influx_tag_normalization(
@@ -210,3 +226,61 @@ def test_PostgreSQL共享真实父来源但逐三元组匹配独立静态Golden(
     assert semantics.parse_line_protocol(
         actual_line_protocol
     ) == semantics.parse_line_protocol(expected_line_protocol)
+
+
+@pytest.mark.parametrize("case_id", QCLOUD_CASES)
+def test_腾讯云逐emitted_case只比较自身模型并匹配静态Golden(case_id, monkeypatch):
+    evidence = EVIDENCE_ROOT / case_id
+    source = json.loads((evidence / "01_source_raw.json").read_text(encoding="utf-8"))
+    provenance = json.loads(
+        (evidence / "00_provenance.json").read_text(encoding="utf-8")
+    )
+    source_model_id = provenance["source_model_id"]
+    assert provenance["emitted_case_id"] == case_id
+    assert set(source["result"]) == {source_model_id}
+
+    monkeypatch.setattr(base_utils.time, "time", lambda: 1_700_000_000.123)
+    normalized = CollectionService(
+        {
+            "plugin_name": "qcloud_info",
+            "model_id": "qcloud",
+            "host": None,
+        }
+    )._process_result(deepcopy(source))
+    actual_prometheus = convert_to_prometheus_format(normalized)
+    expected_prometheus = (evidence / "02_prometheus.txt").read_text(
+        encoding="utf-8"
+    )
+    actual_prometheus_semantics = semantics.parse_prometheus(actual_prometheus)
+    assert actual_prometheus_semantics == semantics.parse_prometheus(
+        expected_prometheus
+    )
+
+    actual_line_protocol = convert_prometheus_to_influx(
+        actual_prometheus,
+        {
+            "monitor_type": "qcloud",
+            "plugin_name": "qcloud_info",
+            "model_id": "qcloud",
+            "tags": {
+                "agent_id": "agent-contract",
+                "instance_id": "cmdb-qcloud",
+                "instance_type": "qcloud",
+                "collect_type": "discovery",
+                "config_type": "production-contract",
+            },
+        },
+    )
+    expected_line_protocol = (evidence / "03_line_protocol.txt").read_text(
+        encoding="utf-8"
+    )
+    actual_line_protocol_semantics = semantics.parse_line_protocol(
+        actual_line_protocol
+    )
+    assert actual_line_protocol_semantics == semantics.parse_line_protocol(
+        expected_line_protocol
+    )
+    _assert_timestamp_propagation_with_influx_tag_normalization(
+        actual_prometheus_semantics,
+        actual_line_protocol_semantics,
+    )
