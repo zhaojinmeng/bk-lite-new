@@ -1,0 +1,3 @@
+# HELP mysql_info Auto-generated help for mysql_info
+# TYPE mysql_info gauge
+mysql_info{basedir="/usr/",bind_address="*",bk_obj_id="mysql",cluster_id="00000000-0000-0000-0000-000000000001",collect_status="success",datadir="/var/lib/mysql/",enable_binlog="ON",has_slaves="False",host="mysql.example.invalid",ip_addr="127.0.0.1",log_error="stderr",max_conn="151",max_mem="67108864",model_id="mysql",port="13306",role="master",server_uuid="00000000-0000-0000-0000-000000000001",slow_query_log="OFF",slow_query_log_file="/var/lib/mysql/contract-mysql-slow.log",socket="/var/run/mysqld/mysqld.sock",sync_binlog="1",version="8.0.46",wait_timeout="28800"} 1 1700000000123

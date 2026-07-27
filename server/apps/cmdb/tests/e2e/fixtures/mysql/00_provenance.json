@@ -1,0 +1,10 @@
+{
+  "source_type": "sanitized_real_environment",
+  "vendor": "mysql_community",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-04T16:43:33Z",
+  "sanitization": "源自 agents/stargazer/tests/fixtures/collect/mysql.json（提交 ee2987167）；保留真实 MySQL 8.0.46 采集字段，将容器 UUID、server UUID 和容器日志文件名替换为 contract 占位值。"
+}

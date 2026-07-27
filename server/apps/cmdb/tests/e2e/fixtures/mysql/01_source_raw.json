@@ -1,0 +1,34 @@
+{
+  "success": true,
+  "result": {
+    "mysql": [
+      {
+        "ip_addr": "127.0.0.1",
+        "port": 13306,
+        "version": "8.0.46",
+        "enable_binlog": "ON",
+        "sync_binlog": 1,
+        "max_conn": 151,
+        "max_mem": 67108864,
+        "basedir": "/usr/",
+        "datadir": "/var/lib/mysql/",
+        "socket": "/var/run/mysqld/mysqld.sock",
+        "bind_address": "*",
+        "slow_query_log": "OFF",
+        "slow_query_log_file": "/var/lib/mysql/contract-mysql-slow.log",
+        "log_error": "stderr",
+        "wait_timeout": 28800,
+        "role": "master",
+        "cluster_id": "00000000-0000-0000-0000-000000000001",
+        "master_host": null,
+        "master_port": null,
+        "master_user": null,
+        "master_uuid": null,
+        "server_uuid": "00000000-0000-0000-0000-000000000001",
+        "has_slaves": false,
+        "slave_io_running": null,
+        "slave_sql_running": null
+      }
+    ]
+  }
+}
