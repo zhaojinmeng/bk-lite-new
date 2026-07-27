@@ -454,6 +454,8 @@ def test_腾讯云第二批OffsetLimit列表完整翻页(case_id, monkeypatch):
     "case_id",
     (
         "qcloud_rocketmq",
+        "qcloud_cmq",
+        "qcloud_cmq_topic",
         "qcloud_clb",
         "qcloud_eip",
         "qcloud_filesystem",

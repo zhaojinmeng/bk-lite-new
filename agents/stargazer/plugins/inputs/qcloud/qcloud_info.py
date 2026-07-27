@@ -562,22 +562,9 @@ class TencentCloudManager:
         """资源名、资源ID、标签、地域、状态、消息最大未确认时间(s)、消息接收长轮询等待时间(s)、取出消息隐藏时长(s)、消息最大长度(B)、QPS限制"""
         result = []
         for region in product_available_region_list_map.get("cmq", []):
-            try:
-                instances = self._list_cmq_offset_pages(
-                    region, "DescribeQueueDetail", "QueueSet"
-                )
-            except TencentCloudSDKException as err:
-                logger.warning(
-                    f"Skip qcloud cmq collection action=DescribeQueueDetail region={region} "
-                    f"code={err.code} requestId={getattr(err, 'requestId', None)} message={err.message}"
-                )
-                continue
-            except Exception as err:
-                logger.warning(
-                    f"Skip qcloud cmq collection action=DescribeQueueDetail region={region} "
-                    f"after transient retries exhausted: {err}"
-                )
-                continue
+            instances = self._list_cmq_offset_pages(
+                region, "DescribeQueueDetail", "QueueSet"
+            )
             result.extend(
                 [
                     {
@@ -607,22 +594,9 @@ class TencentCloudManager:
         """资源名、资源ID、标签、地域、状态、消息生命周期、消息最大长度(B)、消息过滤类型、QPS限制"""
         result = []
         for region in product_available_region_list_map.get("cmq", []):
-            try:
-                instances = self._list_cmq_offset_pages(
-                    region, "DescribeTopicDetail", "TopicSet"
-                )
-            except TencentCloudSDKException as err:
-                logger.warning(
-                    f"Skip qcloud cmq topic collection action=DescribeTopicDetail region={region} "
-                    f"code={err.code} requestId={getattr(err, 'requestId', None)} message={err.message}"
-                )
-                continue
-            except Exception as err:
-                logger.warning(
-                    f"Skip qcloud cmq topic collection action=DescribeTopicDetail region={region} "
-                    f"after transient retries exhausted: {err}"
-                )
-                continue
+            instances = self._list_cmq_offset_pages(
+                region, "DescribeTopicDetail", "TopicSet"
+            )
             result.extend(
                 [
                     {
@@ -805,6 +779,8 @@ class TencentCloudManager:
         def handle_resource(resource_func, resource_name):
             try:
                 return {resource_name: resource_func()}
+            except TencentCloudSDKException:
+                raise
             except Exception as err:
                 logger.warning(
                     f"Skip qcloud resource={resource_name} after collection error: {err}"
