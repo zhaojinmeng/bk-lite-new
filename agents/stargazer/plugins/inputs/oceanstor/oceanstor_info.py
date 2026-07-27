@@ -77,8 +77,12 @@ class OceanStorManager:
                                 verify=False, timeout=self.timeout)
             body = resp.json() or {}
             if (body.get("error") or {}).get("code", 0) != 0:
-                logger.warning(f"OceanStor fetch {path} error: {body.get('error')}")
-                break
+                error = body.get("error") or {}
+                raise RuntimeError(
+                    f"OceanStor fetch {path} error: "
+                    f"code={error.get('code')}, "
+                    f"description={error.get('description', '')}"
+                )
             batch = body.get("data", []) or []
             items.extend(batch)
             if len(batch) < self.PAGE_SIZE:
