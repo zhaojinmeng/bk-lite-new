@@ -130,6 +130,28 @@ class TencentCloudManager:
         return self.get_tencent_client(region=region).cvm.call_json("DescribeZones", {}).get("Response", {}).get(
             "ZoneSet", [])
 
+    @staticmethod
+    def _list_offset_pages(
+        client,
+        action: str,
+        collection_key: str,
+        *,
+        limit: int = 100,
+    ) -> List[Dict]:
+        """按腾讯云 API 3.0 的 Offset/Limit 契约读取完整列表。"""
+        result = []
+        offset = 0
+        while True:
+            response = client.call_json(
+                action, {"Limit": limit, "Offset": offset}
+            ).get("Response", {})
+            result.extend(response.get(collection_key, []) or [])
+            total_count = response.get("TotalCount")
+            if not isinstance(total_count, int) or offset + limit >= total_count:
+                break
+            offset += limit
+        return result
+
     @cached_property
     def available_region_list(self):
         return [region.get("Region") for region in self.list_regions() if region.get("RegionState") == "AVAILABLE"]
@@ -149,8 +171,11 @@ class TencentCloudManager:
         """
         result = []
         for region in self.available_region_list:
-            cvm_info = self.get_tencent_client(region=region).cvm.call_json("DescribeInstances", {})
-            instances = cvm_info.get("Response", {}).get("InstanceSet", [])
+            instances = self._list_offset_pages(
+                self.get_tencent_client(region=region).cvm,
+                "DescribeInstances",
+                "InstanceSet",
+            )
             result.extend([{
                 "resource_name": instance.get("InstanceName"),
                 "resource_id": instance.get("InstanceId"),
@@ -207,8 +232,11 @@ class TencentCloudManager:
         """资源名、资源ID、IP、地域、可用区、状态、硬盘大小(GB)、内存容量(MB)、付费类型"""
         result = []
         for region in self.available_region_list:
-            mysql_info = self.get_tencent_client(region=region).cdb.call_json("DescribeDBInstances", {})
-            instances = mysql_info.get("Response", {}).get("Items", [])
+            instances = self._list_offset_pages(
+                self.get_tencent_client(region=region).cdb,
+                "DescribeDBInstances",
+                "Items",
+            )
             result.extend([{
                 "resource_name": instance.get("InstanceName"),
                 "resource_id": instance.get("InstanceId"),
@@ -219,7 +247,7 @@ class TencentCloudManager:
                 "volume": instance.get("Volume"),
                 "memory_mb": instance.get("Memory"),
                 "charge_type": mysql_pay_type_map.get(instance.get("PayType"), "未知"),
-            }] for instance in instances)
+            } for instance in instances])
         return result
 
     def get_qcloud_redis_product_conf(self, region="ap-guangzhou"):
@@ -236,8 +264,11 @@ class TencentCloudManager:
 
         result = []
         for region in self.available_region_list:
-            redis_info = self.get_tencent_client(region=region).redis.call_json("DescribeInstances", {})
-            instances = redis_info.get("Response", {}).get("InstanceSet", [])
+            instances = self._list_offset_pages(
+                self.get_tencent_client(region=region).redis,
+                "DescribeInstances",
+                "InstanceSet",
+            )
             result.extend([{
                 "resource_name": instance.get("InstanceName"),
                 "resource_id": instance.get("InstanceId"),
@@ -267,8 +298,11 @@ class TencentCloudManager:
         实例内存规格(MB)、实例磁盘容量(MB)、实例从节点数、Mongod节点CPU核数、Mongod节点内存规格(MB)、Mongod节点数、付费类型"""
         result = []
         for region in self.available_region_list:
-            mongodb_info = self.get_tencent_client(region=region).mongodb.call_json("DescribeDBInstances", {})
-            instances = mongodb_info.get("Response", {}).get("InstanceDetails", [])
+            instances = self._list_offset_pages(
+                self.get_tencent_client(region=region).mongodb,
+                "DescribeDBInstances",
+                "InstanceDetails",
+            )
             result.extend([{
                 "resource_name": instance.get("InstanceName"),
                 "resource_id": instance.get("InstanceId"),
@@ -301,8 +335,11 @@ class TencentCloudManager:
         """
         result = []
         for region in self.available_region_list:
-            pgsql_info = self.get_tencent_client(region=region).postgres.call_json("DescribeDBInstances", {})
-            instances = pgsql_info.get("Response", {}).get("DBInstanceSet", [])
+            instances = self._list_offset_pages(
+                self.get_tencent_client(region=region).postgres,
+                "DescribeDBInstances",
+                "DBInstanceSet",
+            )
             result.extend([{
                 "resource_name": instance.get("DBInstanceName"),
                 "resource_id": instance.get("DBInstanceId"),
@@ -330,13 +367,16 @@ class TencentCloudManager:
         result = []
         for region in self.available_region_list:
             try:
-                pulsar_info = self.get_tencent_client(region=region).tdmq.call_json("DescribeClusters", {})
+                instances = self._list_offset_pages(
+                    self.get_tencent_client(region=region).tdmq,
+                    "DescribeClusters",
+                    "ClusterSet",
+                )
             except TencentCloudSDKException as err:
                 if err.code == "UnsupportedRegion":
                     logger.warning(f"Skip qcloud pulsar collection for unsupported region: {region}")
                     continue
                 raise
-            instances = pulsar_info.get("Response", {}).get("Instances", [])
             result.extend([{
                 "resource_name": instance.get("ClusterName"),
                 "resource_id": instance.get("ClusterId"),

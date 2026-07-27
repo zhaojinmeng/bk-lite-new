@@ -30,6 +30,19 @@ from plugins.inputs.qcloud import qcloud_info  # noqa: E402
 from plugins.inputs.qcloud.qcloud_info import TencentCloudManager  # noqa: E402
 from tencentcloud.common.exception import tencent_cloud_sdk_exception  # noqa: E402
 
+QCLOUD_SCENARIO_MATRIX = json.loads(
+    (Path(__file__).with_name("qcloud_operation_scenarios.json")).read_text(
+        encoding="utf-8"
+    )
+)
+QCLOUD_SCENARIOS = {
+    "single_page",
+    "pagination",
+    "empty",
+    "missing_optional_field",
+    "documented_error",
+}
+
 
 @pytest.fixture(autouse=True)
 def 禁止测试访问真实网络(monkeypatch):
@@ -52,6 +65,7 @@ def _qcloud_manager(monkeypatch, call_json):
         {"secret_id": "contract-id", "secret_key": "contract-key"}
     )
     manager.__dict__["available_region_list"] = ["ap-shanghai"]
+    manager.__dict__["zone_id_zone_map"] = {}
 
     def sdk_boundary(self, action, params):
         return call_json(action, params)
@@ -62,6 +76,159 @@ def _qcloud_manager(monkeypatch, call_json):
 
 def _qcloud_cvm(instance):
     return {"Response": {"TotalCount": 1, "InstanceSet": [instance]}}
+
+
+def test_腾讯云首批六项operation显式声明五态与官方来源():
+    operations = QCLOUD_SCENARIO_MATRIX["operations"]
+
+    assert {item["case_id"] for item in operations} == {
+        "qcloud_cvm",
+        "qcloud_mysql",
+        "qcloud_redis",
+        "qcloud_mongodb",
+        "qcloud_pgsql",
+        "qcloud_plusar_cluster",
+    }
+    for operation in operations:
+        assert set(operation["scenarios"]) == QCLOUD_SCENARIOS
+        assert operation["pagination"]["kind"] == "offset_limit"
+        assert operation["documentation_url"].startswith(
+            ("https://cloud.tencent.com/", "https://intl.cloud.tencent.com/")
+        )
+
+
+_QCLOUD_FIRST_BATCH = {
+    "qcloud_cvm": {
+        "method": "get_qcloud_cvm",
+        "operation": "DescribeInstances",
+        "collection": "InstanceSet",
+        "minimal": {"InstanceName": "cvm-contract", "InstanceId": "ins-001"},
+        "id": "ins-001",
+    },
+    "qcloud_mysql": {
+        "method": "get_qcloud_mysql",
+        "operation": "DescribeDBInstances",
+        "collection": "Items",
+        "minimal": {"InstanceName": "mysql-contract", "InstanceId": "cdb-001"},
+        "id": "cdb-001",
+    },
+    "qcloud_redis": {
+        "method": "get_qcloud_redis",
+        "operation": "DescribeInstances",
+        "collection": "InstanceSet",
+        "minimal": {"InstanceName": "redis-contract", "InstanceId": "crs-001"},
+        "id": "crs-001",
+    },
+    "qcloud_mongodb": {
+        "method": "get_qcloud_mongodb",
+        "operation": "DescribeDBInstances",
+        "collection": "InstanceDetails",
+        "minimal": {"InstanceName": "mongo-contract", "InstanceId": "cmgo-001"},
+        "id": "cmgo-001",
+    },
+    "qcloud_pgsql": {
+        "method": "get_qcloud_pgsql",
+        "operation": "DescribeDBInstances",
+        "collection": "DBInstanceSet",
+        "minimal": {
+            "DBInstanceName": "pgsql-contract",
+            "DBInstanceId": "postgres-001",
+            "DBInstanceMemory": 0,
+            "DBInstanceStorage": 0,
+        },
+        "id": "postgres-001",
+    },
+    "qcloud_plusar_cluster": {
+        "method": "get_qcloud_pulsar_cluster",
+        "operation": "DescribeClusters",
+        "collection": "ClusterSet",
+        "minimal": {"ClusterName": "pulsar-contract", "ClusterId": "pulsar-001"},
+        "id": "pulsar-001",
+    },
+}
+
+
+def _qcloud_page(spec, items, *, total_count):
+    return {
+        "Response": {
+            "TotalCount": total_count,
+            spec["collection"]: items,
+        }
+    }
+
+
+@pytest.mark.parametrize("case_id", tuple(_QCLOUD_FIRST_BATCH))
+def test_腾讯云首批列表API按官方OffsetLimit完整翻页(case_id, monkeypatch):
+    spec = _QCLOUD_FIRST_BATCH[case_id]
+    first = dict(spec["minimal"])
+    second = dict(spec["minimal"])
+    second_id = f"{spec['id']}-page-2"
+    if case_id == "qcloud_pgsql":
+        second["DBInstanceId"] = second_id
+    else:
+        second[
+            {
+                "qcloud_cvm": "InstanceId",
+                "qcloud_mysql": "InstanceId",
+                "qcloud_redis": "InstanceId",
+                "qcloud_mongodb": "InstanceId",
+                "qcloud_plusar_cluster": "ClusterId",
+            }[case_id]
+        ] = second_id
+    sdk_call = Mock(
+        side_effect=[
+            _qcloud_page(spec, [first], total_count=101),
+            _qcloud_page(spec, [second], total_count=101),
+        ]
+    )
+    manager = _qcloud_manager(monkeypatch, sdk_call)
+
+    result = getattr(manager, spec["method"])()
+
+    assert [item["resource_id"] for item in result] == [spec["id"], second_id]
+    assert sdk_call.call_args_list == [
+        call(spec["operation"], {"Limit": 100, "Offset": 0}),
+        call(spec["operation"], {"Limit": 100, "Offset": 100}),
+    ]
+
+
+@pytest.mark.parametrize("case_id", tuple(_QCLOUD_FIRST_BATCH))
+def test_腾讯云首批列表API空集稳定返回空列表(case_id, monkeypatch):
+    spec = _QCLOUD_FIRST_BATCH[case_id]
+    manager = _qcloud_manager(
+        monkeypatch, Mock(return_value=_qcloud_page(spec, [], total_count=0))
+    )
+
+    assert getattr(manager, spec["method"])() == []
+
+
+@pytest.mark.parametrize("case_id", tuple(_QCLOUD_FIRST_BATCH))
+def test_腾讯云首批列表API缺可选字段仍保留资源身份(case_id, monkeypatch):
+    spec = _QCLOUD_FIRST_BATCH[case_id]
+    manager = _qcloud_manager(
+        monkeypatch,
+        Mock(return_value=_qcloud_page(spec, [spec["minimal"]], total_count=1)),
+    )
+
+    result = getattr(manager, spec["method"])()
+
+    assert result[0]["resource_id"] == spec["id"]
+
+
+@pytest.mark.parametrize("case_id", tuple(_QCLOUD_FIRST_BATCH))
+def test_腾讯云首批列表API文档化鉴权错误不伪装为空集(case_id, monkeypatch):
+    spec = _QCLOUD_FIRST_BATCH[case_id]
+    sdk_error = tencent_cloud_sdk_exception.TencentCloudSDKException(
+        "AuthFailure.SignatureFailure", "signature invalid", "request-contract"
+    )
+    manager = _qcloud_manager(monkeypatch, Mock(side_effect=sdk_error))
+
+    with pytest.raises(
+        tencent_cloud_sdk_exception.TencentCloudSDKException
+    ) as exc_info:
+        getattr(manager, spec["method"])()
+
+    assert exc_info.value.code == "AuthFailure.SignatureFailure"
 
 
 def test_腾讯云单页响应映射为CVM对象(monkeypatch):
@@ -104,7 +271,9 @@ def test_腾讯云单页响应映射为CVM对象(monkeypatch):
             "charge_type": "POSTPAID_BY_HOUR",
         }
     ]
-    sdk_call.assert_called_once_with("DescribeInstances", {})
+    sdk_call.assert_called_once_with(
+        "DescribeInstances", {"Limit": 100, "Offset": 0}
+    )
 
 
 def test_腾讯云空集返回空列表(monkeypatch):

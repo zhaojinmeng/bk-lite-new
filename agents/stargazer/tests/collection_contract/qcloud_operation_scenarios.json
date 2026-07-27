@@ -1,0 +1,66 @@
+{
+  "vendor": "qcloud",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "operations": [
+    {
+      "case_id": "qcloud_cvm",
+      "service": "cvm",
+      "api_operation": "DescribeInstances",
+      "api_or_sdk_version": "2017-03-12",
+      "documentation_url": "https://cloud.tencent.com/document/product/213/15728",
+      "response_collection_path": "Response.InstanceSet",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_mysql",
+      "service": "cdb",
+      "api_operation": "DescribeDBInstances",
+      "api_or_sdk_version": "2017-03-20",
+      "documentation_url": "https://intl.cloud.tencent.com/document/product/236/15872",
+      "response_collection_path": "Response.Items",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_redis",
+      "service": "redis",
+      "api_operation": "DescribeInstances",
+      "api_or_sdk_version": "2018-04-12",
+      "documentation_url": "https://cloud.tencent.com/document/product/239/20018",
+      "response_collection_path": "Response.InstanceSet",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_mongodb",
+      "service": "mongodb",
+      "api_operation": "DescribeDBInstances",
+      "api_or_sdk_version": "2018-04-08",
+      "documentation_url": "https://cloud.tencent.com/document/product/240/35769",
+      "response_collection_path": "Response.InstanceDetails",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_pgsql",
+      "service": "postgres",
+      "api_operation": "DescribeDBInstances",
+      "api_or_sdk_version": "2017-03-12",
+      "documentation_url": "https://intl.cloud.tencent.com/document/product/409/16773",
+      "response_collection_path": "Response.DBInstanceSet",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_id": "qcloud_plusar_cluster",
+      "service": "tdmq",
+      "api_operation": "DescribeClusters",
+      "api_or_sdk_version": "2020-02-17",
+      "documentation_url": "https://cloud.tencent.com/document/api/1179/52183",
+      "response_collection_path": "Response.ClusterSet",
+      "pagination": {"kind": "offset_limit", "offset": "Offset", "limit": "Limit"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    }
+  ]
+}
