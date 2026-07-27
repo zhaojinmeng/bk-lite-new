@@ -13,6 +13,8 @@ from plugins.base_utils import convert_to_prometheus_format
 from service.collection_service import CollectionService
 from tasks.utils.nats_helper import convert_prometheus_to_influx
 
+EXECUTED_BINDING_KEYS = set()
+
 
 def _collector_config(binding):
     plugin_config = yaml.safe_load(binding.plugin_path.read_text(encoding="utf-8"))
@@ -64,6 +66,7 @@ def _assert_real_result_reaches_publish(binding, result, expected_source_models)
         ]
         assert len(matches) == 1
         assert matches[0].timestamp_ns == sample.timestamp_ms * 1_000_000
+    EXECUTED_BINDING_KEYS.add((binding.task_type, binding.supported_model_id))
 
 
 GENERIC_SSH_BINDINGS = tuple(
@@ -905,46 +908,15 @@ def test_VMware生产collector在SmartConnect边界执行并发布(monkeypatch):
     )
 
 
-EXECUTION_EVIDENCE_BY_BINDING = {
-    **{
-        (binding.task_type, binding.supported_model_id): (
-            "test_通用SSH生产collector在NATS外边界执行并发布"
-        )
-        for binding in GENERIC_SSH_BINDINGS
-    },
-    ("host", "host"): "test_HostInfo生产collector拆分主机与进程并发布",
-    ("host", "physcial_server"): ("test_PhyscialServerInfo生产collector拆分全部子对象并发布"),
-    ("protocol", "physcial_server"): ("test_PhyscialServerInfo生产collector拆分全部子对象并发布"),
-    ("cloud", "qcloud"): "test_QCloud父collector执行全部资源方法并发布",
-    ("cloud", "aliyun_account"): ("test_Aliyun父collector在官方SDK空响应边界执行全部资源并发布"),
-    ("cloud", "hwcloud"): "test_HuaweiCloud父collector执行全部资源方法并发布",
-    ("cloud", "fusioninsight"): ("test_FusionInsight父collector在HTTP边界执行全部资源并发布"),
-    ("cloud", "storage"): ("test_OceanStor父collector在HTTP边界执行全部资源并发布"),
-    ("protocol", "mysql"): "test_Mysql生产collector在PyMySQL边界执行并发布",
-    ("db", "postgresql"): ("test_Postgresql生产collector在Psycopg边界执行并发布"),
-    ("protocol", "postgresql"): ("test_Postgresql生产collector在Psycopg边界执行并发布"),
-    ("protocol", "oracle"): ("test_Oracle生产collector在OracleDB边界执行并发布"),
-    ("protocol", "mssql"): ("test_MSSQL生产collector在PyODBC边界执行并发布"),
-    ("protocol", "influxdb"): ("test_InfluxDB生产collector在HTTP边界执行并发布"),
-    ("ip", "ip"): "test_IP生产collector在ICMP边界执行并发布",
-    ("snmp", "network"): ("test_SNMP生产collector在CommandGenerator边界执行并发布"),
-    ("vm", "vmware_vc"): ("test_VMware生产collector在SmartConnect边界执行并发布"),
-}
-
-
-def test_executed_contracts覆盖全部validation_contracts():
+def test_全部validation_contracts已由本次真实collector调用登记():
     bindings_by_key = {
         (binding.task_type, binding.supported_model_id): binding
         for binding in PRODUCTION_ADAPTER_BINDINGS
     }
-    assert set(EXECUTION_EVIDENCE_BY_BINDING) == set(bindings_by_key)
-    assert all(
-        callable(globals().get(test_name))
-        for test_name in EXECUTION_EVIDENCE_BY_BINDING.values()
-    )
+    assert EXECUTED_BINDING_KEYS == set(bindings_by_key)
 
     executed_contracts = set()
-    for binding_key in EXECUTION_EVIDENCE_BY_BINDING:
+    for binding_key in EXECUTED_BINDING_KEYS:
         executed_contracts.update(bindings_by_key[binding_key].contracts)
 
     assert len(executed_contracts) == 79
