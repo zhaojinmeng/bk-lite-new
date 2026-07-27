@@ -1,0 +1,24 @@
+{
+  "mongodb": {"fixture": "mongodb.json", "source_commit": "73f9b17c9"},
+  "postgresql": {"fixture": "postgresql.json", "source_commit": "ee2987167"},
+  "redis": {"fixture": "redis.json", "source_commit": "ee2987167"},
+  "activemq": {"fixture": "activemq.json", "source_commit": "73f9b17c9"},
+  "apache": {"fixture": "apache.json", "source_commit": "73f9b17c9"},
+  "consul": {"fixture": "consul.json", "source_commit": "73f9b17c9"},
+  "etcd": {"fixture": "etcd.json", "source_commit": "73f9b17c9"},
+  "haproxy": {"fixture": "haproxy.json", "source_commit": "73f9b17c9"},
+  "kafka": {"fixture": "kafka.json", "source_commit": "73f9b17c9"},
+  "memcached": {"fixture": "memcached.json", "source_commit": "73f9b17c9"},
+  "minio": {"fixture": "minio.json", "source_commit": "73f9b17c9"},
+  "nginx": {"fixture": "nginx.json", "source_commit": "73f9b17c9"},
+  "rabbitmq": {"fixture": "rabbitmq.json", "source_commit": "73f9b17c9"},
+  "squid": {"fixture": "squid.json", "source_commit": "73f9b17c9"},
+  "tomcat": {"fixture": "tomcat.json", "source_commit": "73f9b17c9"},
+  "zookeeper": {"fixture": "zookeeper.json", "source_commit": "73f9b17c9"},
+  "influxdb": {"fixture": "influxdb.json", "source_commit": "440fae0d2"},
+  "mysql": {"fixture": "mysql.json", "source_commit": "ee2987167"},
+  "protocol_postgresql": {
+    "fixture": "postgresql.json",
+    "source_commit": "ee2987167"
+  }
+}
