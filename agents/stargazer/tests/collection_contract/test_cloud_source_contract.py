@@ -2142,7 +2142,35 @@ def test_华为云VPC_Subnet_安全组按官方marker完整翻页且防无进展
 
     assert len(requests) == 2
     assert requests == [(None, 2), ("001", 2)]
-    assert len(result["data"]) == 4
+    assert [item["resource_id"] for item in result["data"]] == ["001", "001"]
+
+    requests.clear()
+
+    def item_without_id(resource_id):
+        return {
+            key: value
+            for key, value in item_factory(resource_id).items()
+            if key != "id"
+        }
+
+    pages_without_next_marker = [
+        {collection: [item_factory("001"), item_factory("002")]},
+        {collection: [item_without_id("003"), item_without_id("004")]},
+    ]
+
+    def page_without_next_marker(self, request):
+        requests.append(
+            (getattr(request, "marker", None), getattr(request, "limit", None))
+        )
+        return _HuaweiSdkResponse(pages_without_next_marker[len(requests) - 1])
+
+    monkeypatch.setattr(
+        cw_huaweicloud.VpcClient, sdk_method, page_without_next_marker
+    )
+    result = getattr(_hwcloud_manager()._driver(), driver_method)(limit=2)
+
+    assert requests == [(None, 2), ("002", 2)]
+    assert [item["resource_id"] for item in result["data"]] == ["001", "002"]
 
 
 def _obs_response(body):
