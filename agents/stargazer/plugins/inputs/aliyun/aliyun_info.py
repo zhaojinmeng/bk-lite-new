@@ -929,9 +929,21 @@ class Aliyun(object):
         list_buckets_request.max_keys = 1000
 
         try:
-            resp = self.oss_client.list_buckets_with_options(list_buckets_request, list_buckets_header, runtime)
-            result = TeaCore.to_map(resp.body)
-            buckets = result.get("buckets", [])
+            buckets = []
+            while True:
+                resp = self.oss_client.list_buckets_with_options(
+                    list_buckets_request, list_buckets_header, runtime
+                )
+                result = TeaCore.to_map(resp.body)
+                buckets.extend(result.get("buckets", []))
+                if not result.get("isTruncated", False):
+                    break
+                next_marker = result.get("nextMarker")
+                if not next_marker:
+                    raise ValueError(
+                        "OSS ListBuckets returned isTruncated without nextMarker"
+                    )
+                list_buckets_request.marker = next_marker
             for bucket in buckets:
                 # 获取bucket详情
                 bucket_name = bucket.get("Name")

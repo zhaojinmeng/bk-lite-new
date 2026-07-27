@@ -13,6 +13,7 @@ import json
 import socket
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock, call
 
 import pytest
@@ -32,6 +33,11 @@ from tencentcloud.common.exception import tencent_cloud_sdk_exception  # noqa: E
 
 QCLOUD_SCENARIO_MATRIX = json.loads(
     (Path(__file__).with_name("qcloud_operation_scenarios.json")).read_text(
+        encoding="utf-8"
+    )
+)
+ALIYUN_SCENARIO_MATRIX = json.loads(
+    (Path(__file__).with_name("aliyun_operation_scenarios.json")).read_text(
         encoding="utf-8"
     )
 )
@@ -740,6 +746,243 @@ def test_阿里云CommonRequest分页只请求实际页数(monkeypatch):
     ]
     assert sdk_call.call_count == 2
     assert requested_pages == [1, "2"]
+
+
+ALIYUN_SCENARIOS = {
+    "single_page",
+    "pagination",
+    "empty",
+    "missing_optional_field",
+    "documented_error",
+}
+
+
+def test_阿里云八项case由七类官方operation显式声明五态():
+    operations = ALIYUN_SCENARIO_MATRIX["operations"]
+
+    assert {case_id for item in operations for case_id in item["case_ids"]} == {
+        "aliyun_bucket",
+        "aliyun_clb",
+        "aliyun_ecs",
+        "aliyun_kafka_inst",
+        "aliyun_mongodb",
+        "aliyun_mysql",
+        "aliyun_pgsql",
+        "aliyun_redis",
+    }
+    assert len(operations) == 7
+    for operation in operations:
+        assert set(operation["scenarios"]) == ALIYUN_SCENARIOS
+        assert operation["documentation_url"].startswith(
+            ("https://help.aliyun.com/", "https://www.alibabacloud.com/")
+        )
+        if operation["pagination"]["kind"] == "not_applicable":
+            assert (
+                operation["pagination"]["documentation_url"]
+                == operation["documentation_url"]
+            )
+            assert operation["pagination"]["reason"]
+
+
+def _aliyun_without_init():
+    collector = object.__new__(Aliyun)
+    collector.RegionId = "cn-hangzhou"
+    collector.cloud_type = CloudType.ALIYUN.value
+    return collector
+
+
+def _sdk_response(body):
+    return SimpleNamespace(body=body)
+
+
+def test_阿里云ECS官方SDK边界覆盖单页空集缺可选字段和错误():
+    collector = _aliyun_without_init()
+    sdk_call = Mock(
+        side_effect=[
+            json.dumps(
+                {
+                    "TotalCount": 1,
+                    "Instances": {"Instance": [_aliyun_instance("i-single")]},
+                }
+            ).encode(),
+            json.dumps({"TotalCount": 0, "Instances": {"Instance": []}}).encode(),
+            json.dumps(
+                {
+                    "TotalCount": 1,
+                    "Instances": {"Instance": [_aliyun_instance("i-minimal")]},
+                }
+            ).encode(),
+            RuntimeError("InvalidAccessKeyId.NotFound"),
+        ]
+    )
+    collector.client = SimpleNamespace(do_action_with_exception=sdk_call)
+
+    assert collector.list_vms()["data"][0]["resource_id"] == "i-single"
+    assert collector.list_vms() == {"result": True, "data": []}
+    assert collector.list_vms()["data"][0]["resource_id"] == "i-minimal"
+    error = collector.list_vms()
+    assert error["result"] is False
+    assert "InvalidAccessKeyId.NotFound" in error["message"]
+
+
+def _oss_bucket(name):
+    return {
+        "Name": name,
+        "Location": "oss-cn-hangzhou",
+        "CreationDate": "2026-01-01T00:00:00.000Z",
+    }
+
+
+def _oss_bucket_info(name):
+    return {
+        "Bucket": {
+            "Name": name,
+            "Location": "oss-cn-hangzhou",
+            "ExtranetEndpoint": "oss-cn-hangzhou.aliyuncs.com",
+            "IntranetEndpoint": "oss-cn-hangzhou-internal.aliyuncs.com",
+            "StorageClass": "Standard",
+            "CrossRegionReplication": "Disabled",
+            "BlockPublicAccess": True,
+            "CreationDate": "2026-01-01T00:00:00.000Z",
+        }
+    }
+
+
+def test_阿里云OSS_ListBuckets按官方Marker完整翻页且逐桶GetBucketInfo(monkeypatch):
+    from plugins.inputs.aliyun import aliyun_info
+
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+    collector = _aliyun_without_init()
+    list_call = Mock(
+        side_effect=[
+            _sdk_response(
+                {
+                    "buckets": [_oss_bucket("bucket-page-1")],
+                    "isTruncated": True,
+                    "nextMarker": "bucket-page-1",
+                }
+            ),
+            _sdk_response(
+                {"buckets": [_oss_bucket("bucket-page-2")], "isTruncated": False,}
+            ),
+        ]
+    )
+    info_call = Mock(
+        side_effect=[
+            _sdk_response(_oss_bucket_info("bucket-page-1")),
+            _sdk_response(_oss_bucket_info("bucket-page-2")),
+        ]
+    )
+    collector.oss_client = SimpleNamespace(
+        list_buckets_with_options=list_call, get_bucket_info_with_options=info_call,
+    )
+
+    result = collector.list_buckets()
+
+    assert [item["Name"] for item in result["data"]] == [
+        "bucket-page-1",
+        "bucket-page-2",
+    ]
+    assert list_call.call_count == 2
+    second_request = list_call.call_args_list[1].args[0]
+    assert second_request.marker == "bucket-page-1"
+    assert info_call.call_count == 2
+
+
+def test_阿里云OSS官方SDK边界覆盖单页空集缺可选字段和错误(monkeypatch):
+    from plugins.inputs.aliyun import aliyun_info
+
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+    collector = _aliyun_without_init()
+    collector.oss_client = SimpleNamespace(
+        list_buckets_with_options=Mock(
+            side_effect=[
+                _sdk_response({"buckets": [_oss_bucket("bucket-single")]}),
+                _sdk_response({"buckets": []}),
+                _sdk_response({"buckets": [_oss_bucket("bucket-minimal")]}),
+                RuntimeError("AccessDenied"),
+            ]
+        ),
+        get_bucket_info_with_options=Mock(
+            side_effect=[
+                _sdk_response(_oss_bucket_info("bucket-single")),
+                _sdk_response({"Bucket": {"Name": "bucket-minimal"}}),
+            ]
+        ),
+    )
+
+    assert collector.list_buckets()["data"][0]["Name"] == "bucket-single"
+    assert collector.list_buckets() == {"result": True, "data": []}
+    assert collector.list_buckets()["data"][0]["Name"] == "bucket-minimal"
+    error = collector.list_buckets()
+    assert error["result"] is False
+    assert "AccessDenied" in error["message"]
+
+
+@pytest.mark.parametrize("engine", ("Mysql", "PostgreSQL"))
+def test_阿里云RDS_DescribeDBInstances五态覆盖(engine, monkeypatch):
+    from plugins.inputs.aliyun import aliyun_info
+
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+    collector = _aliyun_without_init()
+    item = {
+        "DBInstanceId": f"rds-{engine.lower()}-001",
+        "DBInstanceDescription": f"{engine}-contract",
+        "Engine": engine,
+    }
+    sdk_call = Mock(
+        side_effect=[
+            _sdk_response({"Items": {"DBInstance": [item]}}),
+            _sdk_response({"Items": {"DBInstance": []}}),
+            _sdk_response({"Items": {"DBInstance": []}}),
+            _sdk_response({"Items": {"DBInstance": [item]}}),
+            _sdk_response({"Items": {"DBInstance": []}}),
+            RuntimeError("InvalidAccessKeyId.NotFound"),
+        ]
+    )
+    collector.rds_client = SimpleNamespace(describe_dbinstances_with_options=sdk_call)
+
+    result = collector.list_rds(engine=engine)
+    assert result["data"][0]["DBInstanceId"] == item["DBInstanceId"]
+    assert collector.list_rds(engine=engine) == {"result": True, "data": []}
+    assert (
+        collector.list_rds(engine=engine)["data"][0]["DBInstanceId"]
+        == item["DBInstanceId"]
+    )
+    error = collector.list_rds(engine=engine)
+    assert error["result"] is False
+    assert "InvalidAccessKeyId.NotFound" in error["message"]
+
+
+@pytest.mark.parametrize("engine", ("Mysql", "PostgreSQL"))
+def test_阿里云RDS按官方PageNumber分页直到空页(engine, monkeypatch):
+    from plugins.inputs.aliyun import aliyun_info
+
+    monkeypatch.setattr(aliyun_info.TeaCore, "to_map", lambda body: body)
+    collector = _aliyun_without_init()
+    responses = iter(
+        [
+            _sdk_response({"Items": {"DBInstance": [{"DBInstanceId": "rds-page-1"}]}}),
+            _sdk_response({"Items": {"DBInstance": [{"DBInstanceId": "rds-page-2"}]}}),
+            _sdk_response({"Items": {"DBInstance": []}}),
+        ]
+    )
+    requested_pages = []
+
+    def sdk_boundary(request, runtime):
+        requested_pages.append(request.page_number)
+        return next(responses)
+
+    sdk_call = Mock(side_effect=sdk_boundary)
+    collector.rds_client = SimpleNamespace(describe_dbinstances_with_options=sdk_call)
+
+    result = collector.list_rds(engine=engine)
+
+    assert [item["DBInstanceId"] for item in result["data"]] == [
+        "rds-page-1",
+        "rds-page-2",
+    ]
+    assert requested_pages == [1, 2, 3]
 
 
 def test_华为云SDK空集保持稳定(monkeypatch):

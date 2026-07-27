@@ -1,0 +1,82 @@
+{
+  "vendor": "aliyun",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "operations": [
+    {
+      "case_ids": ["aliyun_ecs"],
+      "service": "ecs",
+      "api_operation": "DescribeInstances",
+      "api_or_sdk_version": "2014-05-26",
+      "documentation_url": "https://help.aliyun.com/en/ecs/developer-reference/api-ecs-2014-05-26-describeinstances",
+      "response_collection_path": "Instances.Instance",
+      "pagination": {"kind": "page_number", "page_number": "PageNumber", "page_size": "PageSize"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["aliyun_bucket"],
+      "service": "oss",
+      "api_operation": "ListBuckets+GetBucketInfo",
+      "api_or_sdk_version": "OSS 2019-05-17 / REST",
+      "documentation_url": "https://help.aliyun.com/en/oss/developer-reference/listbuckets",
+      "additional_documentation_urls": ["https://help.aliyun.com/en/oss/developer-reference/getbucketinfo"],
+      "response_collection_path": "buckets",
+      "pagination": {"kind": "marker", "marker": "Marker", "next_marker": "NextMarker"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["aliyun_mysql", "aliyun_pgsql"],
+      "service": "rds",
+      "api_operation": "DescribeDBInstances",
+      "api_or_sdk_version": "2014-08-15",
+      "documentation_url": "https://help.aliyun.com/en/rds/developer-reference/api-rds-2014-08-15-describedbinstances",
+      "response_collection_path": "Items.DBInstance",
+      "pagination": {"kind": "page_number", "page_number": "PageNumber", "page_size": "PageSize"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["aliyun_redis"],
+      "service": "r-kvstore",
+      "api_operation": "DescribeInstances",
+      "api_or_sdk_version": "2015-01-01",
+      "documentation_url": "https://help.aliyun.com/en/redis/developer-reference/api-r-kvstore-2015-01-01-describeinstances-redis",
+      "response_collection_path": "Instances.KVStoreInstance",
+      "pagination": {"kind": "page_number", "page_number": "PageNumber", "page_size": "PageSize"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["aliyun_mongodb"],
+      "service": "dds",
+      "api_operation": "DescribeDBInstances",
+      "api_or_sdk_version": "2015-12-01",
+      "documentation_url": "https://help.aliyun.com/en/mongodb/developer-reference/api-dds-2015-12-01-describedbinstances",
+      "response_collection_path": "DBInstances.DBInstance",
+      "operation_scenarios": ["sharding", "replicate", "serverless"],
+      "pagination": {"kind": "page_number_per_instance_type", "page_number": "PageNumber", "page_size": "PageSize"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["aliyun_kafka_inst"],
+      "service": "alikafka",
+      "api_operation": "GetInstanceList",
+      "api_or_sdk_version": "2019-09-16",
+      "documentation_url": "https://help.aliyun.com/en/apsaramq-for-kafka/cloud-message-queue-for-kafka/developer-reference/api-alikafka-2019-09-16-getinstancelist",
+      "response_collection_path": "InstanceList.InstanceVO",
+      "pagination": {
+        "kind": "not_applicable",
+        "documentation_url": "https://help.aliyun.com/en/apsaramq-for-kafka/cloud-message-queue-for-kafka/developer-reference/api-alikafka-2019-09-16-getinstancelist",
+        "reason": "The operation documents no page number, page size, marker, or continuation-token request parameter."
+      },
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    },
+    {
+      "case_ids": ["aliyun_clb"],
+      "service": "slb",
+      "api_operation": "DescribeLoadBalancers",
+      "api_or_sdk_version": "2014-05-15",
+      "documentation_url": "https://help.aliyun.com/en/slb/classic-load-balancer/developer-reference/api-slb-2014-05-15-describeloadbalancers",
+      "response_collection_path": "LoadBalancers.LoadBalancer",
+      "pagination": {"kind": "page_number", "page_number": "PageNumber", "page_size": "PageSize"},
+      "scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+    }
+  ]
+}
