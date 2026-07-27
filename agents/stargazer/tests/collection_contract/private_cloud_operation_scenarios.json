@@ -1,0 +1,80 @@
+{
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "official_scenario_names": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"],
+  "fusioninsight": {
+    "vendor": "fusioninsight",
+    "documentation_url": "https://support.huawei.com/enterprise/en/cloud-computing/fusioninsight-pid-21277731",
+    "api_or_sdk_version": "FusionInsight Manager REST API v2 (collector declaration; official detail not publicly retrievable)",
+    "documentation_access": "华为企业支持站产品入口可定位FusionInsight文档族，但公开索引与匿名读取均未返回/api/v2/clusters和/api/v2/hosts细目。产品入口不能证明字段、分页或错误响应。",
+    "operations": [
+      {
+        "case_id": "fusioninsight_cluster",
+        "service": "fusioninsight_manager",
+        "collector_operation": "GET /web/api/v2/clusters",
+        "collector_response_collection_path": "<root>[]",
+        "collector_pagination": {"kind": "none", "request_parameters": []},
+        "collector_contract_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "error_response"],
+        "official_detail_status": "missing",
+        "missing_official_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+      },
+      {
+        "case_id": "fusioninsight_host",
+        "service": "fusioninsight_manager",
+        "collector_operation": "GET /web/api/v2/hosts?no_page=true",
+        "collector_response_collection_path": "hosts",
+        "collector_pagination": {"kind": "no_page", "parameter": "no_page", "value": true},
+        "collector_contract_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "error_response"],
+        "official_detail_status": "missing",
+        "missing_official_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+      }
+    ]
+  },
+  "oceanstor": {
+    "vendor": "fusioninsight",
+    "documentation_url": "https://support.huawei.com/enterprise/en/enterprise-storage/oceanstor-dorado-18000-v6-pid-24030083",
+    "api_or_sdk_version": "OceanStor Dorado 6.1.8 REST Interface Reference",
+    "documentation_access": "华为企业支持站产品页公开列出OceanStor Dorado 6.1.8 REST Interface Reference，但匿名页面未暴露storagepool/disk/lun条目正文。产品入口只能证明版本化REST参考存在，不能证明字段、range分页或错误码。",
+    "operations": [
+      {
+        "case_id": "storage",
+        "service": "oceanstor_devicemanager",
+        "collector_operation": "GET storagepool + GET disk + GET lun (aggregate storage)",
+        "collector_response_collection_path": "data[]",
+        "collector_pagination": {"kind": "range", "parameter": "range", "page_size": 100},
+        "collector_contract_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "error_response"],
+        "official_detail_status": "missing",
+        "missing_official_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+      },
+      {
+        "case_id": "storage_pool",
+        "service": "oceanstor_devicemanager",
+        "collector_operation": "GET /deviceManager/rest/{deviceid}/storagepool",
+        "collector_response_collection_path": "data[]",
+        "collector_pagination": {"kind": "range", "parameter": "range", "page_size": 100},
+        "collector_contract_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "error_response"],
+        "official_detail_status": "missing",
+        "missing_official_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+      },
+      {
+        "case_id": "storage_disk",
+        "service": "oceanstor_devicemanager",
+        "collector_operation": "GET /deviceManager/rest/{deviceid}/disk",
+        "collector_response_collection_path": "data[]",
+        "collector_pagination": {"kind": "range", "parameter": "range", "page_size": 100},
+        "collector_contract_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "error_response"],
+        "official_detail_status": "missing",
+        "missing_official_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+      },
+      {
+        "case_id": "storage_volume",
+        "service": "oceanstor_devicemanager",
+        "collector_operation": "GET /deviceManager/rest/{deviceid}/lun",
+        "collector_response_collection_path": "data[]",
+        "collector_pagination": {"kind": "range", "parameter": "range", "page_size": 100},
+        "collector_contract_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "error_response"],
+        "official_detail_status": "missing",
+        "missing_official_scenarios": ["single_page", "pagination", "empty", "missing_optional_field", "documented_error"]
+      }
+    ]
+  }
+}

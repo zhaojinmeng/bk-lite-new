@@ -47,6 +47,11 @@ HWCLOUD_SCENARIO_MATRIX = json.loads(
         encoding="utf-8"
     )
 )
+PRIVATE_CLOUD_SCENARIO_MATRIX = json.loads(
+    (Path(__file__).with_name("private_cloud_operation_scenarios.json")).read_text(
+        encoding="utf-8"
+    )
+)
 QCLOUD_SCENARIOS = {
     "single_page",
     "pagination",
@@ -55,6 +60,14 @@ QCLOUD_SCENARIOS = {
     "documented_error",
 }
 HWCLOUD_SCENARIOS = QCLOUD_SCENARIOS
+PRIVATE_CLOUD_SCENARIOS = QCLOUD_SCENARIOS
+PRIVATE_CLOUD_COLLECTOR_SCENARIOS = {
+    "single_page",
+    "pagination",
+    "empty",
+    "missing_optional_field",
+    "error_response",
+}
 QCLOUD_EVIDENCE_ROOT = (
     STARGAZER_ROOT.parents[1]
     / "server"
@@ -2039,3 +2052,308 @@ def test_华为云RDS与DCS按官方offset_limit完整翻页(
     id_key = "instance_id" if driver_method == "list_dcs" else "id"
     assert [item[id_key] for item in result["data"]] == list(ids)
     assert requests == [(0, 2), (2, 2)]
+
+
+def test_FusionInsight与OceanStor六项case显式区分可执行合同和官方细目缺口():
+    fusioninsight = PRIVATE_CLOUD_SCENARIO_MATRIX["fusioninsight"]
+    oceanstor = PRIVATE_CLOUD_SCENARIO_MATRIX["oceanstor"]
+
+    assert {
+        operation["case_id"]
+        for family in (fusioninsight, oceanstor)
+        for operation in family["operations"]
+    } == {
+        "fusioninsight_cluster",
+        "fusioninsight_host",
+        "storage",
+        "storage_disk",
+        "storage_pool",
+        "storage_volume",
+    }
+    for family in (fusioninsight, oceanstor):
+        assert family["documentation_url"].startswith("https://support.huawei.com/")
+        assert family["documentation_access"]
+        for operation in family["operations"]:
+            assert set(operation["collector_contract_scenarios"]) == (
+                PRIVATE_CLOUD_COLLECTOR_SCENARIOS
+            )
+            assert operation["official_detail_status"] == "missing"
+            assert set(operation["missing_official_scenarios"]) == (
+                PRIVATE_CLOUD_SCENARIOS
+            )
+
+
+class _PrivateCloudResponse:
+    def __init__(self, body, *, status_code=200):
+        self._body = body
+        self.status_code = status_code
+        self.content = json.dumps(body).encode()
+
+    def json(self):
+        return self._body
+
+
+def _fusioninsight_manager(responses):
+    from plugins.inputs.fusioninsight.fusioninsight_info import FusionInsightManager
+
+    calls = []
+
+    class Session:
+        def request(self, method, url, **kwargs):
+            calls.append((method, url, kwargs))
+            return responses.pop(0)
+
+    manager = FusionInsightManager(
+        {
+            "username": "contract-user",
+            "password": "contract-password",
+            "host": "fusioninsight.example.invalid",
+        }
+    )
+    manager._session = Session()
+    manager._authed = True
+    return manager, calls
+
+
+def test_FusionInsight_clusters五态collector合同不冒充官方细目():
+    family = PRIVATE_CLOUD_SCENARIO_MATRIX["fusioninsight"]
+    operation = next(
+        item
+        for item in family["operations"]
+        if item["case_id"] == "fusioninsight_cluster"
+    )
+    manager, calls = _fusioninsight_manager(
+        [
+            _PrivateCloudResponse([{"id": 1, "name": "cluster-contract"}]),
+            _PrivateCloudResponse([]),
+            _PrivateCloudResponse([{"id": 2}]),
+            _PrivateCloudResponse(
+                {"errorCode": "401", "errorMessage": "Unauthorized"}, status_code=401,
+            ),
+        ]
+    )
+
+    assert manager.get_clusters() == [
+        {"resource_id": "1", "resource_name": "cluster-contract"}
+    ]
+    assert manager.get_clusters() == []
+    assert manager.get_clusters() == [{"resource_id": "2", "resource_name": ""}]
+    with pytest.raises(RuntimeError, match="status_code:401"):
+        manager.get_clusters()
+    assert all(call_kwargs.get("params") is None for _, _, call_kwargs in calls)
+    assert operation["collector_pagination"]["kind"] == "none"
+    assert operation["official_detail_status"] == "missing"
+
+
+def test_FusionInsight_hosts五态collector合同且no_page不冒充官方分页依据():
+    family = PRIVATE_CLOUD_SCENARIO_MATRIX["fusioninsight"]
+    operation = next(
+        item for item in family["operations"] if item["case_id"] == "fusioninsight_host"
+    )
+    manager, calls = _fusioninsight_manager(
+        [
+            _PrivateCloudResponse(
+                {
+                    "hosts": [
+                        {
+                            "hostname": "host-contract",
+                            "ip": "192.0.2.10",
+                            "clusterId": 1,
+                        }
+                    ]
+                }
+            ),
+            _PrivateCloudResponse({"hosts": []}),
+            _PrivateCloudResponse({"hosts": [{"hostname": "host-minimal"}]}),
+            _PrivateCloudResponse(
+                {"errorCode": "401", "errorMessage": "Unauthorized"}, status_code=401,
+            ),
+        ]
+    )
+
+    assert manager.get_hosts()[0]["resource_id"] == "host-contract"
+    assert manager.get_hosts() == []
+    assert manager.get_hosts()[0] == {
+        "cluster_id": "",
+        "ip_addr": "",
+        "memory_mb": "",
+        "os_name": "",
+        "resource_id": "host-minimal",
+        "resource_name": "host-minimal",
+        "status": "",
+        "storage_gb": "",
+        "vcpus": "",
+    }
+    with pytest.raises(RuntimeError, match="status_code:401"):
+        manager.get_hosts()
+    assert [call_kwargs["params"] for _, _, call_kwargs in calls] == [
+        {"no_page": True},
+    ] * 4
+    assert operation["collector_pagination"] == {
+        "kind": "no_page",
+        "parameter": "no_page",
+        "value": True,
+    }
+    assert operation["official_detail_status"] == "missing"
+
+
+def test_FusionInsight登录只是会话前置合同(monkeypatch):
+    from plugins.inputs.fusioninsight import fusioninsight_info
+
+    calls = []
+
+    class Session:
+        def request(self, method, url, **kwargs):
+            calls.append((method, url, kwargs))
+            return _PrivateCloudResponse({})
+
+    monkeypatch.setattr(fusioninsight_info.requests, "Session", Session)
+    manager = fusioninsight_info.FusionInsightManager(
+        {
+            "username": "contract-user",
+            "password": "contract-password",
+            "host": "fusioninsight.example.invalid",
+        }
+    )
+
+    session = manager.login()
+
+    assert isinstance(session, Session)
+    assert calls[0][0:2] == (
+        "GET",
+        "https://fusioninsight.example.invalid/web/api/v2/session/status",
+    )
+    assert calls[0][2]["headers"]["Authorization"].startswith("Basic ")
+
+
+def _oceanstor_manager():
+    from plugins.inputs.oceanstor.oceanstor_info import OceanStorManager
+
+    manager = OceanStorManager(
+        {
+            "host": "oceanstor.example.invalid",
+            "username": "contract-user",
+            "password": "contract-password",
+        }
+    )
+    manager.device_id = "device-contract"
+    manager.token = "redacted"
+    return manager
+
+
+@pytest.mark.parametrize("path", ("storagepool", "disk", "lun"))
+def test_OceanStor三个资源GET按collector_range完整翻页(path, monkeypatch):
+    from plugins.inputs.oceanstor import oceanstor_info
+
+    calls = []
+    first_page = [{"ID": f"{path}-{index:03d}"} for index in range(100)]
+    responses = [
+        _PrivateCloudResponse({"error": {"code": 0}, "data": first_page}),
+        _PrivateCloudResponse({"error": {"code": 0}, "data": [{"ID": f"{path}-100"}]}),
+    ]
+
+    def get(url, **kwargs):
+        calls.append((url, kwargs))
+        return responses.pop(0)
+
+    monkeypatch.setattr(oceanstor_info.requests, "get", get)
+
+    result = _oceanstor_manager()._fetch_all(path)
+
+    assert len(result) == 101
+    assert [kwargs["params"]["range"] for _, kwargs in calls] == [
+        "[0-99]",
+        "[100-199]",
+    ]
+
+
+@pytest.mark.parametrize("path", ("storagepool", "disk", "lun"))
+def test_OceanStor三个资源GET覆盖单页空集缺可选字段与collector错误(path, monkeypatch):
+    from plugins.inputs.oceanstor import oceanstor_info
+
+    responses = [
+        _PrivateCloudResponse(
+            {"error": {"code": 0}, "data": [{"ID": f"{path}-single"}]}
+        ),
+        _PrivateCloudResponse({"error": {"code": 0}, "data": []}),
+        _PrivateCloudResponse({"error": {"code": 0}, "data": [{"ID": ""}]}),
+        _PrivateCloudResponse(
+            {
+                "error": {
+                    "code": 1077948996,
+                    "description": "The user name or password is incorrect.",
+                }
+            }
+        ),
+    ]
+    monkeypatch.setattr(
+        oceanstor_info.requests, "get", lambda *args, **kwargs: responses.pop(0)
+    )
+    manager = _oceanstor_manager()
+
+    assert manager._fetch_all(path) == [{"ID": f"{path}-single"}]
+    assert manager._fetch_all(path) == []
+    assert manager._fetch_all(path) == [{"ID": ""}]
+    with pytest.raises(RuntimeError, match="1077948996"):
+        manager._fetch_all(path)
+
+
+def test_OceanStor登录登出是资源GET的会话前后置而非资源场景(monkeypatch):
+    from plugins.inputs.oceanstor import oceanstor_info
+
+    post = Mock(
+        return_value=_PrivateCloudResponse(
+            {"data": {"iBaseToken": "redacted", "deviceid": "device-contract",}}
+        )
+    )
+    delete = Mock(return_value=_PrivateCloudResponse({"error": {"code": 0}}))
+    monkeypatch.setattr(oceanstor_info.requests, "post", post)
+    monkeypatch.setattr(oceanstor_info.requests, "delete", delete)
+    manager = _oceanstor_manager()
+    manager.device_id = None
+    manager.token = None
+
+    manager.login()
+    manager.logout()
+
+    assert post.call_args.args[0].endswith("/deviceManager/rest/xxxxx/sessions")
+    assert post.call_args.kwargs["json"]["scope"] == "0"
+    assert delete.call_args.args[0].endswith(
+        "/deviceManager/rest/device-contract/sessions"
+    )
+    assert delete.call_args.kwargs["headers"]["iBaseToken"] == "redacted"
+
+
+def test_OceanStor聚合storage覆盖空集缺可选字段与资源错误(monkeypatch):
+    from plugins.inputs.oceanstor import oceanstor_info
+
+    manager = _oceanstor_manager()
+    manager.login = Mock()
+    manager.logout = Mock()
+    manager._fetch_all = Mock(
+        side_effect=[
+            [{"NAME": "pool-contract"}],
+            [{"NAME": "disk-contract"}],
+            [{"NAME": "lun-contract"}],
+        ]
+    )
+
+    success = manager.list_all_resources()
+
+    assert success["success"] is True
+    assert success["result"]["storage"][0]["pool_count"] == "1"
+    assert success["result"]["storage"][0]["total_capacity"] == "0"
+    assert manager._fetch_all.call_args_list == [
+        call("storagepool"),
+        call("disk"),
+        call("lun"),
+    ]
+
+    manager._fetch_all = Mock(side_effect=[[], [], []])
+    empty = manager.list_all_resources()
+    assert empty["result"]["storage"][0]["volume_count"] == "0"
+
+    manager._fetch_all = Mock(side_effect=RuntimeError("OceanStor API error 1"))
+    error = manager.list_all_resources()
+    assert error["success"] is False
+    assert "OceanStor API error 1" in error["result"]["cmdb_collect_error"]
