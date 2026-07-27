@@ -15,12 +15,8 @@ EVIDENCE_ROOT = (
 
 def test_mysql真实来源经过生产转换匹配静态LaneA_Golden(monkeypatch):
     evidence = EVIDENCE_ROOT / "mysql"
-    source = json.loads(
-        (evidence / "01_source_raw.json").read_text(encoding="utf-8")
-    )
-    expected_prometheus = (evidence / "02_prometheus.txt").read_text(
-        encoding="utf-8"
-    )
+    source = json.loads((evidence / "01_source_raw.json").read_text(encoding="utf-8"))
+    expected_prometheus = (evidence / "02_prometheus.txt").read_text(encoding="utf-8")
     expected_line_protocol = (evidence / "03_line_protocol.txt").read_text(
         encoding="utf-8"
     )
@@ -34,9 +30,9 @@ def test_mysql真实来源经过生产转换匹配静态LaneA_Golden(monkeypatch
         }
     )._process_result(deepcopy(source))
     actual_prometheus = convert_to_prometheus_format(normalized)
-    assert semantics.parse_prometheus(
-        actual_prometheus
-    ) == semantics.parse_prometheus(expected_prometheus)
+    assert semantics.parse_prometheus(actual_prometheus) == semantics.parse_prometheus(
+        expected_prometheus
+    )
 
     publish_params = {
         "monitor_type": "mysql",
