@@ -5,8 +5,13 @@
       {
         "resource_name": "cfs-contract",
         "resource_id": "cfs-001",
+        "tag": null,
         "region": "ap-shanghai",
+        "zone": null,
+        "status": "未知",
         "protocol": "NFS",
+        "type": "未知",
+        "net_limit": null,
         "size_gib": 100
       }
     ]

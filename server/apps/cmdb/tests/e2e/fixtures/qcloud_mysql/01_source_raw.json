@@ -5,9 +5,13 @@
       {
         "resource_name": "mysql-contract",
         "resource_id": "cdb-001",
+        "ip_addr": null,
         "region": "ap-shanghai",
+        "zone": null,
         "status": "运行中",
-        "memory_mb": 4096
+        "volume": null,
+        "memory_mb": 4096,
+        "charge_type": "未知"
       }
     ]
   }

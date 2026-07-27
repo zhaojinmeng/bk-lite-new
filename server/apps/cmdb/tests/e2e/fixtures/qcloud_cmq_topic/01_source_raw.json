@@ -5,7 +5,12 @@
       {
         "resource_name": "topic-contract",
         "resource_id": "topic-001",
+        "tag": null,
         "region": "ap-shanghai",
+        "status": "未知",
+        "max_retention_s": null,
+        "max_message_b": null,
+        "filter_type": "未知",
         "qps": 5000
       }
     ]

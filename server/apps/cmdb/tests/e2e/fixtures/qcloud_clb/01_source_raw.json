@@ -5,9 +5,19 @@
       {
         "resource_name": "clb-contract",
         "resource_id": "lb-001",
+        "tag": null,
+        "project_id": null,
+        "security_group_id": null,
+        "vpc": null,
         "region": "ap-shanghai",
+        "master_zone": null,
+        "backup_zone": "",
+        "status": "正常运行",
+        "domain": null,
         "ip_addr": "203.0.113.10",
-        "status": "正常运行"
+        "type": "未知",
+        "isp": "未知",
+        "charge_type": null
       }
     ]
   }

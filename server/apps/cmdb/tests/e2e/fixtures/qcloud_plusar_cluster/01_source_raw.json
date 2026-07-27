@@ -5,9 +5,20 @@
       {
         "resource_name": "pulsar-contract",
         "resource_id": "pulsar-001",
+        "tag": null,
+        "project_id": null,
         "region": "ap-shanghai",
         "status": "正常",
-        "max_topic_num": 1000
+        "version": null,
+        "vpc_endpoint": null,
+        "public_endpoint": null,
+        "max_namespace_num": null,
+        "max_topic_num": 1000,
+        "max_qps": null,
+        "max_retention_s": null,
+        "max_storage_mb": null,
+        "max_delay_s": null,
+        "charge_type": "未知"
       }
     ]
   }

@@ -5,9 +5,15 @@
       {
         "resource_name": "eip-contract",
         "resource_id": "eip-001",
+        "tag": null,
         "region": "ap-shanghai",
+        "status": "已绑定",
+        "type": "未知",
         "ip_addr": "203.0.113.11",
-        "status": "已绑定"
+        "instance_type": "未知",
+        "instance_id": null,
+        "isp": "未知",
+        "charge_type": "未知"
       }
     ]
   }

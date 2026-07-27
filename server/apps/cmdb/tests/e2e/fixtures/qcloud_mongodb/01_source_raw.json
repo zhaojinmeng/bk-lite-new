@@ -5,9 +5,25 @@
       {
         "resource_name": "mongo-contract",
         "resource_id": "cmgo-001",
+        "ip_addr": null,
+        "tag": null,
+        "project_id": null,
+        "vpc": null,
         "region": "ap-shanghai",
+        "zone": null,
         "port": 27017,
-        "memory_mb": 4096
+        "status": "未知",
+        "cluster_type": "未知",
+        "machine_type": null,
+        "version": null,
+        "cpu": null,
+        "memory_mb": 4096,
+        "volume_mb": null,
+        "secondary_num": null,
+        "mongos_cpu": null,
+        "mongos_memory_mb": null,
+        "mongos_node_num": null,
+        "charge_type": "未知"
       }
     ]
   }

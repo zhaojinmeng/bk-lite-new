@@ -1,3 +1,3 @@
 # HELP qcloud_mongodb_info Auto-generated help for qcloud_mongodb_info
 # TYPE qcloud_mongodb_info gauge
-qcloud_mongodb_info{bk_obj_id="qcloud_mongodb",collect_status="success",memory_mb="4096",model_id="qcloud_mongodb",port="27017",region="ap-shanghai",resource_id="cmgo-001",resource_name="mongo-contract"} 1 1700000000123
+qcloud_mongodb_info{bk_obj_id="qcloud_mongodb",charge_type="未知",cluster_type="未知",collect_status="success",memory_mb="4096",model_id="qcloud_mongodb",port="27017",region="ap-shanghai",resource_id="cmgo-001",resource_name="mongo-contract",status="未知"} 1 1700000000123

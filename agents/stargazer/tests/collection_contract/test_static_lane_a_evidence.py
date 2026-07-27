@@ -205,7 +205,9 @@ def test_阿里云逐emitted_case只比较自身模型并匹配静态Golden(case
         expected_line_protocol
     )
     _assert_timestamp_propagation_with_influx_tag_normalization(
-        actual_prometheus_semantics, actual_line_protocol_semantics,
+        actual_prometheus_semantics,
+        actual_line_protocol_semantics,
+        overridden_labels=("instance_type",),
     )
 
 
@@ -347,7 +349,9 @@ def test_腾讯云逐emitted_case只比较自身模型并匹配静态Golden(case
         expected_line_protocol
     )
     _assert_timestamp_propagation_with_influx_tag_normalization(
-        actual_prometheus_semantics, actual_line_protocol_semantics,
+        actual_prometheus_semantics,
+        actual_line_protocol_semantics,
+        overridden_labels=("instance_type",),
     )
 
 

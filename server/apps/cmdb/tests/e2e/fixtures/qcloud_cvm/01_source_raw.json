@@ -5,9 +5,17 @@
       {
         "resource_name": "cvm-contract",
         "resource_id": "ins-001",
+        "ip_addr": "",
+        "public_ip": "",
         "region": "ap-shanghai",
+        "zone": null,
+        "vpc": null,
         "status": "RUNNING",
-        "memory_mb": 4096
+        "instance_type": null,
+        "os_name": null,
+        "vcpus": null,
+        "memory_mb": 4096,
+        "charge_type": null
       }
     ]
   }

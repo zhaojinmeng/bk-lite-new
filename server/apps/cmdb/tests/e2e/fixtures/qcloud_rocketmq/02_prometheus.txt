@@ -1,3 +1,3 @@
 # HELP qcloud_rocketmq_info Auto-generated help for qcloud_rocketmq_info
 # TYPE qcloud_rocketmq_info gauge
-qcloud_rocketmq_info{bk_obj_id="qcloud_rocketmq",collect_status="success",model_id="qcloud_rocketmq",region="ap-shanghai",resource_id="rocketmq-001",resource_name="rocketmq-contract",status="1",topic_num="10"} 1 1700000000123
+qcloud_rocketmq_info{bk_obj_id="qcloud_rocketmq",collect_status="success",model_id="qcloud_rocketmq",region="ap-shanghai",resource_id="rocketmq-001",resource_name="rocketmq-contract",status="1",topic_num="10",zone="ap-shanghai-1"} 1 1700000000123

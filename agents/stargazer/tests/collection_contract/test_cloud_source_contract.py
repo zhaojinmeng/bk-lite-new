@@ -133,11 +133,7 @@ def _assert_parent_replay_matches_case_evidence(parent_result, case_ids):
         actual_items = parent_result["result"][source_model_id]
         expected_items = expected_source["result"][source_model_id]
         assert len(actual_items) == len(expected_items)
-        projected_items = []
-        for actual, expected in zip(actual_items, expected_items):
-            assert set(expected) <= set(actual)
-            projected_items.append({key: actual[key] for key in expected})
-        assert projected_items == expected_items
+        assert actual_items == expected_items
 
 
 def test_腾讯云十四项operation显式声明五态与官方来源():

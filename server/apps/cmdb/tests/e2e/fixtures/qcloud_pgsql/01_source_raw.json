@@ -5,10 +5,21 @@
       {
         "resource_name": "pgsql-contract",
         "resource_id": "postgres-001",
+        "tag": null,
+        "project_id": null,
+        "vpc": null,
         "region": "ap-shanghai",
+        "zone": null,
+        "status": "未知",
+        "charset": null,
+        "engine": null,
+        "mode": null,
+        "version": null,
+        "kernel_version": null,
         "cpu": 2,
         "memory_mb": 4096,
-        "volume_mb": 20480
+        "volume_mb": 20480,
+        "charge_type": "未知"
       }
     ]
   }

@@ -1,3 +1,3 @@
 # HELP qcloud_pulsar_cluster_info Auto-generated help for qcloud_pulsar_cluster_info
 # TYPE qcloud_pulsar_cluster_info gauge
-qcloud_pulsar_cluster_info{bk_obj_id="qcloud_pulsar_cluster",collect_status="success",max_topic_num="1000",model_id="qcloud_pulsar_cluster",region="ap-shanghai",resource_id="pulsar-001",resource_name="pulsar-contract",status="正常"} 1 1700000000123
+qcloud_pulsar_cluster_info{bk_obj_id="qcloud_pulsar_cluster",charge_type="未知",collect_status="success",max_topic_num="1000",model_id="qcloud_pulsar_cluster",region="ap-shanghai",resource_id="pulsar-001",resource_name="pulsar-contract",status="正常"} 1 1700000000123

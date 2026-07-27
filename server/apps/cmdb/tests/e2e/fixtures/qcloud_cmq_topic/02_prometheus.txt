@@ -1,3 +1,3 @@
 # HELP qcloud_cmq_topic_info Auto-generated help for qcloud_cmq_topic_info
 # TYPE qcloud_cmq_topic_info gauge
-qcloud_cmq_topic_info{bk_obj_id="qcloud_cmq_topic",collect_status="success",model_id="qcloud_cmq_topic",qps="5000",region="ap-shanghai",resource_id="topic-001",resource_name="topic-contract"} 1 1700000000123
+qcloud_cmq_topic_info{bk_obj_id="qcloud_cmq_topic",collect_status="success",filter_type="未知",model_id="qcloud_cmq_topic",qps="5000",region="ap-shanghai",resource_id="topic-001",resource_name="topic-contract",status="未知"} 1 1700000000123

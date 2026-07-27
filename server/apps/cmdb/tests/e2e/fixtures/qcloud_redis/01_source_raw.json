@@ -5,9 +5,24 @@
       {
         "resource_name": "redis-contract",
         "resource_id": "crs-001",
+        "ip_addr": null,
+        "vpc": null,
         "region": "ap-shanghai",
+        "zone": null,
         "port": 6379,
-        "memory_mb": 1024
+        "wan_address": null,
+        "status": "未知",
+        "sub_status": "未知",
+        "engine": null,
+        "version": null,
+        "type": null,
+        "memory_mb": 1024,
+        "shard_size": null,
+        "shard_num": null,
+        "replicas_num": null,
+        "client_limit": null,
+        "net_limit": null,
+        "charge_type": null
       }
     ]
   }

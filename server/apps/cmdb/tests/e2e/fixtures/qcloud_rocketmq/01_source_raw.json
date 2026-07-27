@@ -6,8 +6,15 @@
         "resource_name": "rocketmq-contract",
         "resource_id": "rocketmq-001",
         "region": "ap-shanghai",
+        "zone": "ap-shanghai-1",
         "status": 1,
-        "topic_num": 10
+        "topic_num": 10,
+        "used_topic_num": null,
+        "tpsper_name_space": null,
+        "name_space_num": null,
+        "used_name_space_num": null,
+        "group_num": null,
+        "used_group_num": null
       }
     ]
   }
