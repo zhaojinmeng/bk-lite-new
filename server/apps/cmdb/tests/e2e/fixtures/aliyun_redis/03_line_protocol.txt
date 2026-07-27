@@ -1,0 +1,1 @@
+aliyun_redis_info,agent_id=agent-contract,bk_obj_id=aliyun_redis,capacity=4096,collect_status=success,collect_type=discovery,config_type=production-contract,instance_id=cmdb-aliyun_account,instance_type=aliyun_account,model_id=aliyun_redis,region=cn-hangzhou,resource_id=r-001,resource_name=redis-contract,status=Normal gauge=1i 1700000000123000000

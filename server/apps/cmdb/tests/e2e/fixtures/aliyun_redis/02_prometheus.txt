@@ -1,0 +1,3 @@
+# HELP aliyun_redis_info Auto-generated help for aliyun_redis_info
+# TYPE aliyun_redis_info gauge
+aliyun_redis_info{bk_obj_id="aliyun_redis",capacity="4096",collect_status="success",model_id="aliyun_redis",region="cn-hangzhou",resource_id="r-001",resource_name="redis-contract",status="Normal"} 1 1700000000123

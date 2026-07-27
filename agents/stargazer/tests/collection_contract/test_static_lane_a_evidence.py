@@ -47,6 +47,16 @@ QCLOUD_CASES = (
     "qcloud_redis",
     "qcloud_rocketmq",
 )
+ALIYUN_CASES = (
+    "aliyun_bucket",
+    "aliyun_clb",
+    "aliyun_ecs",
+    "aliyun_kafka_inst",
+    "aliyun_mongodb",
+    "aliyun_mysql",
+    "aliyun_pgsql",
+    "aliyun_redis",
+)
 
 
 def _assert_timestamp_propagation_with_influx_tag_normalization(
@@ -118,6 +128,59 @@ def test_可审计非云来源经过生产转换匹配逐case静态Golden(case_i
                 "agent_id": "agent-contract",
                 "instance_id": f"cmdb-{case_id}",
                 "instance_type": case_id,
+                "collect_type": "discovery",
+                "config_type": "production-contract",
+            },
+        },
+    )
+    expected_line_protocol = (evidence / "03_line_protocol.txt").read_text(
+        encoding="utf-8"
+    )
+    actual_line_protocol_semantics = semantics.parse_line_protocol(actual_line_protocol)
+    assert actual_line_protocol_semantics == semantics.parse_line_protocol(
+        expected_line_protocol
+    )
+    _assert_timestamp_propagation_with_influx_tag_normalization(
+        actual_prometheus_semantics, actual_line_protocol_semantics,
+    )
+
+
+@pytest.mark.parametrize("case_id", ALIYUN_CASES)
+def test_阿里云逐emitted_case只比较自身模型并匹配静态Golden(case_id, monkeypatch):
+    evidence = EVIDENCE_ROOT / case_id
+    source = json.loads((evidence / "01_source_raw.json").read_text(encoding="utf-8"))
+    provenance = json.loads(
+        (evidence / "00_provenance.json").read_text(encoding="utf-8")
+    )
+    source_model_id = provenance["source_model_id"]
+    assert provenance["emitted_case_id"] == case_id
+    assert set(source["result"]) == {source_model_id}
+
+    monkeypatch.setattr(base_utils.time, "time", lambda: 1_700_000_000.123)
+    normalized = CollectionService(
+        {
+            "plugin_name": "aliyun_info",
+            "model_id": "aliyun",
+            "host": None,
+        }
+    )._process_result(deepcopy(source))
+    actual_prometheus = convert_to_prometheus_format(normalized)
+    expected_prometheus = (evidence / "02_prometheus.txt").read_text(encoding="utf-8")
+    actual_prometheus_semantics = semantics.parse_prometheus(actual_prometheus)
+    assert actual_prometheus_semantics == semantics.parse_prometheus(
+        expected_prometheus
+    )
+
+    actual_line_protocol = convert_prometheus_to_influx(
+        actual_prometheus,
+        {
+            "monitor_type": "aliyun_account",
+            "plugin_name": "aliyun_info",
+            "model_id": "aliyun_account",
+            "tags": {
+                "agent_id": "agent-contract",
+                "instance_id": "cmdb-aliyun_account",
+                "instance_type": "aliyun_account",
                 "collect_type": "discovery",
                 "config_type": "production-contract",
             },

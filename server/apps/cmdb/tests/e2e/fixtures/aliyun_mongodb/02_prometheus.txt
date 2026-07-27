@@ -1,0 +1,3 @@
+# HELP aliyun_mongodb_info Auto-generated help for aliyun_mongodb_info
+# TYPE aliyun_mongodb_info gauge
+aliyun_mongodb_info{bk_obj_id="aliyun_mongodb",collect_status="success",model_id="aliyun_mongodb",region="cn-hangzhou",resource_id="dds-001",resource_name="mongodb-contract",status="Running",type="replicate"} 1 1700000000123

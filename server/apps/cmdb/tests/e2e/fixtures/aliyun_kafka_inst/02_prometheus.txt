@@ -1,0 +1,3 @@
+# HELP aliyun_kafka_inst_info Auto-generated help for aliyun_kafka_inst_info
+# TYPE aliyun_kafka_inst_info gauge
+aliyun_kafka_inst_info{bk_obj_id="aliyun_kafka_inst",collect_status="success",model_id="aliyun_kafka_inst",region="cn-hangzhou",resource_id="alikafka-001",resource_name="kafka-contract",status="5",storage_gb="3600"} 1 1700000000123

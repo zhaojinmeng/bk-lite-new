@@ -784,6 +784,44 @@ def test_阿里云八项case由七类官方operation显式声明五态():
             assert operation["pagination"]["reason"]
 
 
+@pytest.mark.parametrize(
+    ("case_id", "operation"),
+    tuple(
+        (case_id, operation)
+        for operation in ALIYUN_SCENARIO_MATRIX["operations"]
+        for case_id in operation["case_ids"]
+    ),
+    ids=lambda value: value if isinstance(value, str) else None,
+)
+def test_阿里云逐case_provenance与operation矩阵严格一致(case_id, operation):
+    evidence = QCLOUD_EVIDENCE_ROOT / case_id
+    provenance = json.loads(
+        (evidence / "00_provenance.json").read_text(encoding="utf-8")
+    )
+    source = json.loads((evidence / "01_source_raw.json").read_text(encoding="utf-8"))
+
+    assert {
+        key: provenance[key]
+        for key in (
+            "vendor",
+            "service",
+            "api_operation",
+            "api_or_sdk_version",
+            "documentation_url",
+            "read_at",
+        )
+    } == {
+        "vendor": ALIYUN_SCENARIO_MATRIX["vendor"],
+        "service": operation["service"],
+        "api_operation": operation["api_operation"],
+        "api_or_sdk_version": operation["api_or_sdk_version"],
+        "documentation_url": operation["documentation_url"],
+        "read_at": ALIYUN_SCENARIO_MATRIX["read_at"],
+    }
+    assert provenance["emitted_case_id"] == case_id
+    assert set(source["result"]) == {provenance["source_model_id"]}
+
+
 def _aliyun_without_init():
     collector = object.__new__(Aliyun)
     collector.RegionId = "cn-hangzhou"

@@ -1,0 +1,1 @@
+aliyun_clb_info,agent_id=agent-contract,bk_obj_id=aliyun_clb,collect_status=success,collect_type=discovery,config_type=production-contract,instance_id=cmdb-aliyun_account,instance_type=aliyun_account,ip_addr=192.0.2.10,model_id=aliyun_clb,region=cn-hangzhou,resource_id=lb-001,resource_name=clb-contract,status=active gauge=1i 1700000000123000000

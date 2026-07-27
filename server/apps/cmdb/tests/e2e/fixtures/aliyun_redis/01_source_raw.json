@@ -1,0 +1,1 @@
+{"success":true,"result":{"aliyun_redis":[{"resource_name":"redis-contract","resource_id":"r-001","region":"cn-hangzhou","capacity":4096,"status":"Normal"}]}}
