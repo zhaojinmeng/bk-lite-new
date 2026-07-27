@@ -9,23 +9,24 @@
   https://support.huaweicloud.com/intl/en-us/api-ecs/ecs-api-pdf.pdf
 """
 
+import json
 import socket
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import Mock, call
 
 import pytest
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[5]
-STARGAZER_ROOT = REPOSITORY_ROOT / "agents" / "stargazer"
+STARGAZER_ROOT = Path(__file__).resolve().parents[2]
 if str(STARGAZER_ROOT) not in sys.path:
     sys.path.insert(0, str(STARGAZER_ROOT))
 
 from aliyunsdkcore.request import CommonRequest  # noqa: E402
 from common.cmp.cloud_apis.constant import CloudType  # noqa: E402
 from plugins.inputs.aliyun.aliyun_info import Aliyun  # noqa: E402
+from common.cmp.cloud_apis.resource_apis import cw_huaweicloud  # noqa: E402
 from plugins.inputs.hwcloud.huaweicloud_info import HuaweiCloudManager  # noqa: E402
+from plugins.inputs.qcloud import qcloud_info  # noqa: E402
 from plugins.inputs.qcloud.qcloud_info import TencentCloudManager  # noqa: E402
 from tencentcloud.common.exception import tencent_cloud_sdk_exception  # noqa: E402
 
@@ -51,11 +52,11 @@ def _qcloud_manager(monkeypatch, call_json):
         {"secret_id": "contract-id", "secret_key": "contract-key"}
     )
     manager.__dict__["available_region_list"] = ["ap-shanghai"]
-    proxy = SimpleNamespace(
-        cvm=SimpleNamespace(call_json=call_json),
-        tdmq=SimpleNamespace(call_json=call_json),
-    )
-    monkeypatch.setattr(manager, "get_tencent_client", lambda region: proxy)
+
+    def sdk_boundary(self, action, params):
+        return call_json(action, params)
+
+    monkeypatch.setattr(qcloud_info.CommonClient, "call_json", sdk_boundary)
     return manager
 
 
@@ -236,7 +237,17 @@ def test_阿里云PageNumber分页只请求实际页数(monkeypatch):
             {"TotalCount": 51, "Instances": {"Instance": []}},
         ]
     )
-    monkeypatch.setattr(collector, "_get_result", sdk_call)
+    requested_pages = []
+
+    def sdk_boundary(request):
+        requested_pages.append(request.get_PageNumber())
+        return json.dumps(sdk_call()).encode()
+
+    collector.client = type(
+        "SdkClientBoundary",
+        (),
+        {"do_action_with_exception": lambda self, request: sdk_boundary(request)},
+    )()
 
     result = collector.list_vms()
 
@@ -246,6 +257,7 @@ def test_阿里云PageNumber分页只请求实际页数(monkeypatch):
         "i-page-2",
     ]
     assert sdk_call.call_count == 2
+    assert requested_pages == [1, "2"]
 
 
 def test_阿里云CommonRequest分页只请求实际页数(monkeypatch):
@@ -265,7 +277,17 @@ def test_阿里云CommonRequest分页只请求实际页数(monkeypatch):
             {"TotalCount": 51, "Instances": {"Instance": []}},
         ]
     )
-    monkeypatch.setattr(collector, "_get_result_c", sdk_call)
+    requested_pages = []
+
+    def sdk_boundary(request):
+        requested_pages.append(request.get_query_params()["PageNumber"])
+        return json.dumps(sdk_call()).encode()
+
+    collector.client = type(
+        "SdkClientBoundary",
+        (),
+        {"do_action": lambda self, request: sdk_boundary(request)},
+    )()
 
     result = collector._handle_list_request_with_page_c("vm", CommonRequest())
 
@@ -275,16 +297,19 @@ def test_阿里云CommonRequest分页只请求实际页数(monkeypatch):
         "i-common-2",
     ]
     assert sdk_call.call_count == 2
+    assert requested_pages == [1, "2"]
 
 
-def test_华为云驱动空集与缺可选字段保持稳定(monkeypatch):
-    driver = SimpleNamespace(
-        list_vms=Mock(
-            return_value={
-                "result": True,
-                "data": [{"id": "ecs-minimal", "name": "minimal"}],
-            }
-        )
+def test_华为云SDK空集保持稳定(monkeypatch):
+    class FakeSdkResponse:
+        status_code = 200
+
+        def to_dict(self):
+            return {"count": 0, "servers": []}
+
+    sdk_call = Mock(return_value=FakeSdkResponse())
+    monkeypatch.setattr(
+        cw_huaweicloud.EcsClient, "list_servers_details", sdk_call
     )
     manager = HuaweiCloudManager(
         {
@@ -294,18 +319,18 @@ def test_华为云驱动空集与缺可选字段保持稳定(monkeypatch):
             "project_id": "project-001",
         }
     )
-    monkeypatch.setattr(manager, "_driver", lambda: driver)
-
     result = manager.get_ecs()
 
-    assert result[0]["resource_id"] == "ecs-minimal"
-    assert result[0]["ip_addr"] == ""
-    assert result[0]["memory_mb"] == ""
+    assert result == []
+    assert sdk_call.call_count == 1
 
 
-def test_华为云驱动错误转换为明确异常(monkeypatch):
-    driver = SimpleNamespace(
-        list_vms=Mock(return_value={"result": False, "message": "APIGW.0101"})
+def test_华为云SDK错误转换为明确异常(monkeypatch):
+    def sdk_error(self, request):
+        raise RuntimeError("APIGW.0101")
+
+    monkeypatch.setattr(
+        cw_huaweicloud.EcsClient, "list_servers_details", sdk_error
     )
     manager = HuaweiCloudManager(
         {
@@ -314,7 +339,5 @@ def test_华为云驱动错误转换为明确异常(monkeypatch):
             "project_id": "project-001",
         }
     )
-    monkeypatch.setattr(manager, "_driver", lambda: driver)
-
     with pytest.raises(RuntimeError, match="APIGW.0101"):
         manager.get_ecs()

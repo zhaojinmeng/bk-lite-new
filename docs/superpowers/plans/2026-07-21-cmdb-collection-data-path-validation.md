@@ -404,10 +404,15 @@ Run:
 
 ```bash
 cd agents/stargazer && uv run pytest -q tests/collection_contract
-cd server && MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/e2e/test_cloud_source_contract.py apps/cmdb/tests/e2e/test_collection_contract_manifest.py apps/cmdb/tests/e2e/test_contract_evidence.py
+cd server && MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=test MINIO_SECRET_KEY=test MINIO_USE_HTTPS=false INSTALL_APPS=system_mgmt,node_mgmt,cmdb uv run pytest -q -o addopts='' apps/cmdb/tests/e2e/test_collection_contract_manifest.py apps/cmdb/tests/e2e/test_contract_evidence.py
 ```
 
 Expected: Lane A 覆盖集合与可测试生产三元组集合完全相等；K8s 生产豁免单列且不计入通过数。
+
+云 SDK/API 来源合同属于 Stargazer 的运行依赖与采集边界，统一在
+`agents/stargazer/tests/collection_contract/test_cloud_source_contract.py`
+执行。Server 侧只读取静态 manifest、evidence 和 schema，不导入 Stargazer
+或安装云厂商 SDK。
 
 **Step 5: Commit**
 
