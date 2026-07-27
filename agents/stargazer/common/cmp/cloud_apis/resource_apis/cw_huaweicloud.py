@@ -1473,18 +1473,32 @@ class Huaweicloud(PublicCloudManage):
         try:
             resp = self.obs_client.listBuckets()
             resp = resp["body"]["buckets"]
-            capacity = 0
             policy = ""
             data = []
             for i in resp:
-                try:
-                    list_objects = self.obs_client.listObjects(i.get("name", ""))["body"]["contents"]
-                except TypeError:
-                    continue
+                bucket_name = i.get("name", "")
+                marker = None
+                list_objects = []
+                while True:
+                    body = self.obs_client.listObjects(
+                        bucket_name, marker=marker
+                    )["body"]
+                    page_objects = body.get("contents") or []
+                    list_objects.extend(page_objects)
+                    is_truncated = bool(
+                        body.get("isTruncated") or body.get("is_truncated")
+                    )
+                    if not is_truncated:
+                        break
+                    next_marker = body.get("nextMarker") or body.get("next_marker")
+                    if not next_marker or next_marker == marker:
+                        break
+                    marker = next_marker
                 object_num = len(list_objects)
-                bucket_type = list_objects[0].get("storageClass", "")
-                for j in list_objects:
-                    capacity += j.get("size", "")
+                bucket_type = (
+                    list_objects[0].get("storageClass", "") if list_objects else ""
+                )
+                capacity = sum(j.get("size", 0) or 0 for j in list_objects)
                 capacity = round(float(capacity) / 1024 / 1024, 2)
                 i["object_num"] = object_num
                 i["capacity"] = capacity
@@ -2045,18 +2059,34 @@ class Huaweicloud(PublicCloudManage):
         if resource_id:
             return self.get_eip_detail(resource_id)
         request = ListPublicipsRequest()
-        request.limit = 1000
+        request.limit = int(kwargs.get("limit", 1000))
         request.ip_version = 4
 
-        @exception_handler
         def list_publicips():
-            return self.get_client(EipClient, EipRegion).list_publicips(request)
+            @exception_handler
+            def request_page():
+                return self.get_client(EipClient, EipRegion).list_publicips(request)
 
-        response = list_publicips
+            return request_page
+
+        response = list_publicips()
         if not response["result"]:
             logger.error(response["message"])
             return fail("弹性公网IP列表获取失败")
-        eip_list = response["data"]["publicips"]
+        eip_list = list(response["data"]["publicips"])
+        while len(response["data"]["publicips"]) == request.limit:
+            next_marker = response["data"]["publicips"][-1].get("id")
+            if not next_marker or next_marker == getattr(request, "marker", None):
+                break
+            request.marker = next_marker
+            response = list_publicips()
+            if not response["result"]:
+                logger.error(response["message"])
+                return fail("弹性公网IP列表获取失败")
+            page_eips = response["data"]["publicips"]
+            if not page_eips:
+                break
+            eip_list.extend(page_eips)
         data = []
         for eip in eip_list:
             res = self.supplement_eip_attr(eip)
@@ -2541,6 +2571,7 @@ class Huaweicloud(PublicCloudManage):
         if ids:
             return self.get_load_balancer_spec(ids[0])
         request = ListLoadBalancersRequest()
+        request.limit = int(kwargs.get("limit", 1000))
         list_optional_params = [
             "id",
             "name",
@@ -2570,18 +2601,35 @@ class Huaweicloud(PublicCloudManage):
         ]
         request = set_optional_params_huawei(list_optional_params, kwargs, request)
 
-        @exception_handler
         def list_load_balancers():
-            return self.get_client(ElbClient, ElbRegion).list_load_balancers(request)
+            @exception_handler
+            def request_page():
+                return self.get_client(ElbClient, ElbRegion).list_load_balancers(request)
 
-        response = list_load_balancers
+            return request_page
+
+        response = list_load_balancers()
         if not response["result"]:
             logger.error(response["message"])
             return fail("查询负载均衡列表失败")
+        load_balancers = list(response["data"]["loadbalancers"])
+        while len(response["data"]["loadbalancers"]) == request.limit:
+            next_marker = response["data"]["loadbalancers"][-1].get("id")
+            if not next_marker or next_marker == getattr(request, "marker", None):
+                break
+            request.marker = next_marker
+            response = list_load_balancers()
+            if not response["result"]:
+                logger.error(response["message"])
+                return fail("查询负载均衡列表失败")
+            page_load_balancers = response["data"]["loadbalancers"]
+            if not page_load_balancers:
+                break
+            load_balancers.extend(page_load_balancers)
         return success(
             format_resource(
                 CloudResourceType.LOAD_BALANCER.value,
-                response["data"]["loadbalancers"],
+                load_balancers,
                 self.region_id,
                 self.project_id,
             )
@@ -3402,13 +3450,24 @@ class Huaweicloud(PublicCloudManage):
         from huaweicloudsdkrds.v3 import ListInstancesRequest as _ListRdsInstancesRequest
 
         request = _ListRdsInstancesRequest()
+        request.offset = 0
+        request.limit = int(kwargs.get("limit", 100))
         client = self.get_client(RdsClient, RdsRegion)
-        try:
-            response = client.list_instances(request)
-        except Exception as e:
-            logger.exception("调用华为云查询RDS实例列表接口失败{}".format(e))
-            return {"result": False, "message": str(e)}
-        return {"result": True, "data": response.to_dict().get("instances", []) or []}
+        instances = []
+        while True:
+            try:
+                response = client.list_instances(request)
+            except Exception as e:
+                logger.exception("调用华为云查询RDS实例列表接口失败{}".format(e))
+                return {"result": False, "message": str(e)}
+            body = response.to_dict()
+            page_instances = body.get("instances", []) or []
+            instances.extend(page_instances)
+            total_count = int(body.get("total_count", len(instances)))
+            if not page_instances or len(instances) >= total_count:
+                break
+            request.offset = len(instances)
+        return {"result": True, "data": instances}
 
     def list_dcs(self, ids=None, **kwargs):
         """查询分布式缓存 DCS(Redis) 实例列表。
@@ -3420,13 +3479,24 @@ class Huaweicloud(PublicCloudManage):
         from huaweicloudsdkdcs.v2 import ListInstancesRequest as _ListDcsInstancesRequest
 
         request = _ListDcsInstancesRequest()
+        request.offset = 0
+        request.limit = int(kwargs.get("limit", 1000))
         client = self.get_client(DcsClient, DcsRegion)
-        try:
-            response = client.list_instances(request)
-        except Exception as e:
-            logger.exception("调用华为云查询DCS实例列表接口失败{}".format(e))
-            return {"result": False, "message": str(e)}
-        return {"result": True, "data": response.to_dict().get("instances", []) or []}
+        instances = []
+        while True:
+            try:
+                response = client.list_instances(request)
+            except Exception as e:
+                logger.exception("调用华为云查询DCS实例列表接口失败{}".format(e))
+                return {"result": False, "message": str(e)}
+            body = response.to_dict()
+            page_instances = body.get("instances", []) or []
+            instances.extend(page_instances)
+            instance_num = int(body.get("instance_num", len(instances)))
+            if not page_instances or len(instances) >= instance_num:
+                break
+            request.offset = len(instances)
+        return {"result": True, "data": instances}
 
     def get_mysql_spec(self, version="", spec_code="", database="MySQL"):
         """
