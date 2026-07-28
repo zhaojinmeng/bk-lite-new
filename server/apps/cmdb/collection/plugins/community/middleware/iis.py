@@ -9,7 +9,7 @@ class IisCollectionPlugin(BaseMiddlewareCollectionPlugin):
     metric_names = ("iis_info_gauge",)
     field_mapping = {
         "inst_name": MiddlewareCollectMetrics.get_inst_name,
-        "ip_addr": "ip_addr",
+        "ip_addr": MiddlewareCollectMetrics.get_ip_addr,
         "port": MiddlewareCollectMetrics.get_port,
         "version": "version",
         "webapp": "webapp",
@@ -19,7 +19,7 @@ class IisCollectionPlugin(BaseMiddlewareCollectionPlugin):
         "website": partial(MiddlewareCollectMetrics.pick_value, keys=("website", "server_name")),
         "apppool_count": "apppool_count",
         "webapp_count": "webapp_count",
-        "phys_path": "phys_path",
+        "phys_path": partial(MiddlewareCollectMetrics.pick_value, keys=("phys_path", "physical_path")),
         "server_name": "server_name",
         "max_concur_connect": "max_concur_connect",
     }

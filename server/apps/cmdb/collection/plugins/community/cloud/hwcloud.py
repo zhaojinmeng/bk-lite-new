@@ -25,6 +25,7 @@ class HwCloudCollectionPlugin(AutoRegisterCollectionPluginMixin, HwCloudCollectM
 
     field_mappings = {
         "hwcloud": {
+            "inst_name": HwCloudCollectMetrics.set_account_inst_name,
             "endpoint": "endpoint",
         },
         "hwcloud_ecs": {

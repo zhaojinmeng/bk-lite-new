@@ -1,3 +1,4 @@
+from apps.cmdb.collection.collect_plugin.protocol import ProtocolCollectMetrics
 from apps.cmdb.collection.plugins.community.protocol.base import BaseProtocolCollectionPlugin
 
 
@@ -14,5 +15,5 @@ class OracleCollectionPlugin(BaseProtocolCollectionPlugin):
         "ip_addr": "ip_addr",
         "port": "port",
         "service_name": "service_name",
-        "inst_name": lambda self, data: f"{data['ip_addr']}-oracle",
+        "inst_name": ProtocolCollectMetrics.get_inst_name,
     }

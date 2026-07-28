@@ -1,4 +1,5 @@
 from apps.cmdb.collection.collect_plugin.protocol import ProtocolCollectMetrics
+from apps.cmdb.collection.plugins.base import bind_collection_mapping
 from apps.cmdb.collection.plugins.community.protocol.base import BaseProtocolCollectionPlugin
 
 
@@ -33,7 +34,7 @@ class PhysicalServerIPMICollectionPlugin(BaseProtocolCollectionPlugin):
 
     @property
     def model_field_mapping(self):
-        return {self.model_id: self.field_mapping}
+        return {self.model_id: bind_collection_mapping(self, self.field_mapping)}
 
     def format_data(self, data):
         if not isinstance(data, dict):

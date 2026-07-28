@@ -21,6 +21,7 @@ class OceanStorCollectionPlugin(AutoRegisterCollectionPluginMixin, OceanStorColl
     field_mappings = {
         # 主对象：采集器已产出设备级字段与聚合容量/数量
         "storage": {
+            "inst_name": OceanStorCollectMetrics.self_device,
             "device_sn": "device_sn",
             "model": "model",
             "brand": "brand",

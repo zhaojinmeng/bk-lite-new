@@ -86,7 +86,10 @@ class AliyunCollectMetrics(CollectBase):
                 data = {}
                 for field, key_or_func in mapping.items():
                     if isinstance(key_or_func, tuple):
-                        data[field] = key_or_func[0](index_data[key_or_func[1]])
+                        raw = index_data.get(key_or_func[1])
+                        if raw in (None, ""):
+                            continue
+                        data[field] = key_or_func[0](raw)
                     elif callable(key_or_func):
                         data[field] = key_or_func(index_data, model_id=model_id)
                     else:

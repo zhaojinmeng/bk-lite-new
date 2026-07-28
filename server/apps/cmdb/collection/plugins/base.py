@@ -11,6 +11,14 @@ def _bind_collection_callable(instance, value):
     if not callable(value) or not hasattr(value, "__get__"):
         return value
 
+    # 映射表中的匿名函数不会作为类属性暴露，无法通过函数名在 MRO 中回查。
+    # 其首参明确声明为 self 时仍应绑定到当前采集器，否则运行时只传 data
+    # 会触发 “missing 1 required positional argument: data”。
+    if inspect.isfunction(value):
+        parameters = tuple(inspect.signature(value).parameters.values())
+        if parameters and parameters[0].name == "self":
+            return value.__get__(instance, instance.__class__)
+
     func_name = getattr(value, "__name__", "")
     if not func_name:
         return value

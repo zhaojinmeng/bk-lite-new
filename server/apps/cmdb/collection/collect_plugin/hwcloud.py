@@ -40,6 +40,9 @@ class HwCloudCollectMetrics(CollectBase):
     def set_instance_inst_name(data, *args, **kwargs):
         return f"{data['resource_name']}_{data['resource_id']}"
 
+    def set_account_inst_name(self, data, *args, **kwargs):
+        return self.inst_name
+
     def set_asso_instances(self, data, *args, **kwargs):
         model_id = kwargs["model_id"]
         return [

@@ -181,8 +181,6 @@ class HostCollectMetrics(CollectBase):
 
     def set_component_inst_name(self, data, *args, **kwargs):
         """设置实例名称"""
-        if self.inst_name:
-            return self.inst_name
         result_data = data
         self_device = result_data.get("self_device", "")
         if data['model_id'] == 'nic' and self_device:
