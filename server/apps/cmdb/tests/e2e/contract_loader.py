@@ -192,6 +192,7 @@ class Evidence:
             raise EvidenceValidationError(f"{self.case_id}: read_at 必须包含时区")
         _validate_provenance_source(self.case_id, provenance)
         _validate_source_revision(self.case_id, provenance)
+        _validate_scenario_support(self.case_id, provenance)
 
     def assert_no_secrets(self) -> None:
         self.validate_complete()
@@ -439,6 +440,42 @@ def _validate_source_revision(case_id: str, provenance: dict[str, Any]) -> None:
         raise EvidenceValidationError(
             f"{case_id}: source_commit={source_commit} 不包含 source_path={source_path}"
         )
+
+
+def _validate_scenario_support(case_id: str, provenance: dict[str, Any]) -> None:
+    scenarios = provenance.get("scenario_contract")
+    if scenarios is None:
+        return
+    if (
+        not isinstance(scenarios, list)
+        or not scenarios
+        or any(not isinstance(item, str) or not item.strip() for item in scenarios)
+        or len(scenarios) != len(set(scenarios))
+    ):
+        raise EvidenceValidationError(
+            f"{case_id}: scenario_contract 必须是非空且不重复的字符串列表"
+        )
+    support = provenance.get("scenario_support")
+    if not isinstance(support, dict) or set(support) != set(scenarios):
+        raise EvidenceValidationError(
+            f"{case_id}: scenario_support 必须逐项且仅覆盖 scenario_contract"
+        )
+    for scenario, declaration in support.items():
+        if not isinstance(declaration, dict):
+            raise EvidenceValidationError(
+                f"{case_id}: scenario_support.{scenario} 必须是对象"
+            )
+        status = declaration.get("status")
+        basis = declaration.get("basis")
+        if status not in {"covered", "not_applicable"}:
+            raise EvidenceValidationError(
+                f"{case_id}: scenario_support.{scenario}.status "
+                "必须是 covered 或 not_applicable"
+            )
+        if not isinstance(basis, str) or not basis.strip():
+            raise EvidenceValidationError(
+                f"{case_id}: scenario_support.{scenario}.basis 必须是非空字符串"
+            )
 
 
 def _load_archive_reasons(path: Path) -> dict[str, str]:

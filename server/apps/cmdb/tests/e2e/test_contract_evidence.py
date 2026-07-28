@@ -532,6 +532,41 @@ def test_qcloud官方文档域名拒绝旧www重定向域名(complete_evidence):
         load_evidence(complete_evidence.case_id, root=complete_evidence.root).validate_provenance()
 
 
+@pytest.mark.parametrize("case_id", ["mssql", "oracle"])
+def test_数据库边界场景逐项声明覆盖或不适用且给出依据(case_id):
+    evidence = load_lane_a_evidence(case_id)
+    provenance = evidence.read_json("00_provenance.json")
+
+    evidence.validate_provenance()
+    assert set(provenance["scenario_support"]) == set(provenance["scenario_contract"])
+    assert provenance["scenario_support"]["multi_record"]["status"] == "not_applicable"
+    assert "fetchone" in provenance["scenario_support"]["multi_record"]["basis"]
+    assert "分页" in provenance["scenario_support"]["multi_record"]["basis"]
+
+
+@pytest.mark.parametrize(
+    "scenario_support",
+    [
+        {},
+        {"normal_non_empty": {"status": "unknown", "basis": "有依据"}},
+        {"normal_non_empty": {"status": "covered", "basis": ""}},
+    ],
+)
+def test_provenance_拒绝场景支持缺失_未知状态或空依据(
+    complete_evidence, scenario_support
+):
+    _update_provenance(
+        complete_evidence,
+        scenario_contract=["normal_non_empty"],
+        scenario_support=scenario_support,
+    )
+
+    with pytest.raises(EvidenceValidationError, match="scenario_support"):
+        load_evidence(
+            complete_evidence.case_id, root=complete_evidence.root
+        ).validate_provenance()
+
+
 def test_qcloud十四个三元组LaneA_evidence全部ready():
     audit = audit_lane_a_evidence(load_manifest())
     qcloud_items = [item for item in audit.validation if item.contract_id[1] == "qcloud"]

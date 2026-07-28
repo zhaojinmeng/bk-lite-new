@@ -23,6 +23,28 @@
     "multi_record",
     "protocol_error"
   ],
+  "scenario_support": {
+    "normal_non_empty": {
+      "status": "covered",
+      "basis": "真实 OracleInfo 在最外层 oracledb 协议返回边界接收六条 SQL 的非空聚合结果，并继续运行清洗、formatter 与发布转换"
+    },
+    "empty": {
+      "status": "covered",
+      "basis": "最外层 oracledb 协议返回空聚合值，真实采集器保持实例级记录结构"
+    },
+    "missing_optional": {
+      "status": "covered",
+      "basis": "最外层 oracledb 协议返回缺失可选值，真实字段清洗与 formatter 继续运行"
+    },
+    "multi_record": {
+      "status": "not_applicable",
+      "basis": "生产 _exec_sql 对每条实例级聚合 SQL 使用 fetchone()；该采集接口没有列表分页语义，因此不存在 multi_record 场景"
+    },
+    "protocol_error": {
+      "status": "covered",
+      "basis": "最外层 oracledb 连接或执行异常由真实 OracleInfo 错误路径处理"
+    }
+  },
   "review_basis": {
     "source_commit": "79b6bb418",
     "scalar_labels": "逐字段复核 OracleInfo 六条 SQL 的聚合结果",
