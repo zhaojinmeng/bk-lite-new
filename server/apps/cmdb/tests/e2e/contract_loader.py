@@ -96,7 +96,7 @@ _ASSIGNMENT = re.compile(
             os\.environ\[\s*['"][A-Za-z_][A-Za-z0-9_]*['"]\s*\]
             |
             os\.getenv\(\s*['"][A-Za-z_][A-Za-z0-9_]*['"]\s*\)
-        )[^\s,}]*
+        )[^\n,}]*
         |
         [^\s,}]+
     )

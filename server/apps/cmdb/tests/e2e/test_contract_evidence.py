@@ -367,6 +367,7 @@ def test_敏感信息门禁允许凭据只从环境变量引用(complete_evidenc
     [
         "os.getenv(DB_PASSWORD)clear-secret",
         'os.getenv("DB_PASSWORD")+"clear-secret"',
+        'os.getenv("DB_PASSWORD") + "clear-secret"',
         'os.environ["DB_PASSWORD"]clear-secret',
         'os.environ[DB_PASSWORD]',
     ],

@@ -1,4 +1,5 @@
 import json
+from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -180,7 +181,10 @@ def _value_matches_model_type(value, attr_type):
         if not isinstance(value, str):
             return False
         try:
-            return isinstance(json.loads(value), list)
+            rows = json.loads(value)
+            return isinstance(rows, list) and all(
+                isinstance(row, dict) for row in rows
+            )
         except json.JSONDecodeError:
             return False
     if attr_type == "tag":
@@ -200,6 +204,7 @@ def _value_matches_model_type(value, attr_type):
     [
         ([{"name": "disk-a"}], "table", True),
         ('[{"name": "disk-a"}]', "table", True),
+        ("[1]", "table", False),
         ("not-json", "table", False),
         (["blue"], "tag", True),
         ([1], "tag", False),
@@ -339,6 +344,43 @@ def test_LaneB静态制品覆盖不得落后于LaneA_ready集合():
         if item.status == "ready"
     }
     assert not (lane_a_ready & set(lane_b_incomplete())), lane_b_incomplete()
+
+
+def _canonical_vm_row(row):
+    return json.dumps(row, ensure_ascii=False, sort_keys=True)
+
+
+def test_共享父采集器的全部LineProtocol与VM响应逐行精确相等():
+    response_groups = defaultdict(list)
+    for entry in LANE_B_READY_ENTRIES:
+        evidence = load_lane_b_evidence(entry.case_id)
+        vm_response = evidence.read_json("04_vm_response.json")
+        response_key = json.dumps(
+            vm_response, ensure_ascii=False, sort_keys=True
+        )
+        response_groups[response_key].append(evidence)
+
+    for response_key, evidences in response_groups.items():
+        actual_response = json.loads(response_key)
+        actual_rows = Counter(
+            _canonical_vm_row(row)
+            for row in actual_response["data"]["result"]
+        )
+        generated_rows = Counter()
+        for evidence in evidences:
+            generated_response = build_vm_response_from_line_protocol(
+                (evidence.fixture_dir / "03_line_protocol.txt").read_text(
+                    encoding="utf-8"
+                )
+            )
+            generated_rows.update(
+                _canonical_vm_row(row)
+                for row in generated_response["data"]["result"]
+            )
+        assert actual_rows == generated_rows, (
+            "共享父采集器的 04 VM 响应必须且只能来自所属 case 的 "
+            f"03 Line Protocol；cases={[item.case_id for item in evidences]}"
+        )
 
 
 @pytest.mark.parametrize(
