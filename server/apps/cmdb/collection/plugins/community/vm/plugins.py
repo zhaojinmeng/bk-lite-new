@@ -9,6 +9,7 @@ VMWARE_MODEL_FIELD_MAPPING = {
     "vmware_vc": {
         "vc_version": "vc_version",
         "inst_name": CollectVmwareMetrics.set_vc_inst_name,
+        "ip_addr": CollectVmwareMetrics.set_vc_ip_addr,
     },
     "vmware_vm": {
         "inst_name": "inst_name",

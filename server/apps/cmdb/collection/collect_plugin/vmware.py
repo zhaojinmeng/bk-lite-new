@@ -93,6 +93,15 @@ class CollectVmwareMetrics(CollectBase):
         inst_name = "_".join(inst_id.split("_")[1:])
         return inst_name
 
+    def set_vc_ip_addr(self, *args, **kwargs):
+        instances = self.get_collect_inst().instances
+        if not isinstance(instances, list) or not instances:
+            return ""
+        first_instance = instances[0]
+        if not isinstance(first_instance, dict):
+            return ""
+        return str(first_instance.get("ip_addr") or "")
+
     def set_data_disks(self, *args, **kwargs):
         data = args[0]
         if data.get('data_disks'):

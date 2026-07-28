@@ -10,7 +10,6 @@ class KeepalivedCollectionPlugin(BaseMiddlewareCollectionPlugin):
     field_mapping = {
         "inst_name": MiddlewareCollectMetrics.get_keepalived_inst_name,
         "ip_addr": "ip_addr",
-        "bk_obj_id": "bk_obj_id",
         "version": "version",
         "priority": "priority",
         "state": "state",

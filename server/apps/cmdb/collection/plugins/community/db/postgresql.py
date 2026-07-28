@@ -9,9 +9,9 @@ class PostgreSQLCollectionPlugin(BaseDBCollectionPlugin):
         "ip_addr": "ip_addr",
         "port": "port",
         "version": "version",
-        "conf": "conf_path",
+        "config": "conf_path",
         "data_path": "data_path",
-        "max_conn": "max_conn",
+        "max_connect": "max_conn",
         "shared_buffer": "cache_memory_mb",
         "log_directory": "log_path",
     }

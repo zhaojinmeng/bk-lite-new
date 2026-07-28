@@ -313,12 +313,14 @@ class HostCollectMetrics(CollectBase):
                     try:
                         if isinstance(key_or_func, tuple):
                             field_name = key_or_func[1]
-                            if field_name in index_data:
+                            if index_data.get(field_name) not in (None, ""):
                                 data[field] = key_or_func[0](
                                     index_data[field_name])
-                            else:
+                            elif field in ["cpu_core", "memory", "disk"]:
                                 data[field] = 0 if field in [
                                     "cpu_core", "memory", "disk"] else ""
+                            else:
+                                continue
                         elif callable(key_or_func):
                             try:
                                 data[field] = key_or_func(index_data, model_id=model_id)
@@ -327,8 +329,8 @@ class HostCollectMetrics(CollectBase):
                         else:
                             data[field] = index_data.get(key_or_func, "")
                     except (KeyError, ValueError, TypeError):
-                        data[field] = 0 if field in [
-                            "cpu_core", "memory", "disk"] else ""
+                        if field in ["cpu_core", "memory", "disk"]:
+                            data[field] = 0
                 if data:
                     result.append(data)
             self.result[model_id] = result

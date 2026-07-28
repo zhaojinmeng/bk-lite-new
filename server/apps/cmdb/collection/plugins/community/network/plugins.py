@@ -13,7 +13,6 @@ NETWORK_DEVICE_MAPPING = {
     "model": "model",
     "brand": "brand",
     "sys_desc": "sysdescr",
-    "model_id": "model_id",
 }
 
 NETWORK_INTERFACE_MAPPING = {
