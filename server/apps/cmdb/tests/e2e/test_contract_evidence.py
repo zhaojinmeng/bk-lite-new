@@ -399,6 +399,33 @@ def test_敏感信息门禁扫描provenance引用的原始source_fixture(complet
         ).assert_no_secrets()
 
 
+def test_敏感信息门禁扫描attempt的argv与清理输出(complete_evidence):
+    attempt = complete_evidence.root / "docker_attempt.json"
+    attempt.write_text(
+        json.dumps(
+            {
+                "command": ["docker", "run", "--env", "password=clear"],
+                "stdout": "",
+                "stderr": "",
+                "cleanup": {
+                    "stdout": "token=clear",
+                    "stderr": "",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    _update_provenance(
+        complete_evidence,
+        attempt_artifact=str(attempt),
+    )
+
+    with pytest.raises(EvidenceValidationError, match="password|token"):
+        load_evidence(
+            complete_evidence.case_id, root=complete_evidence.root
+        ).assert_no_secrets()
+
+
 @pytest.mark.parametrize(
     "hostname",
     (

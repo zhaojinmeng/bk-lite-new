@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "case_id",
+    "kind",
+    "started_at",
+    "finished_at",
+    "command",
+    "image",
+    "platform",
+    "image_digest",
+    "resource_identifier",
+    "container_id",
+    "stdout",
+    "stderr",
+    "exit_code",
+    "outcome",
+    "failure_stage",
+    "sanitized",
+    "cleanup"
+  ],
+  "properties": {
+    "case_id": {"type": "string", "minLength": 1},
+    "kind": {
+      "enum": [
+        "image_pull",
+        "collector_cli",
+        "service_and_collector",
+        "network_boundary"
+      ]
+    },
+    "started_at": {"type": "string", "format": "date-time"},
+    "finished_at": {"type": "string", "format": "date-time"},
+    "command": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "image": {"type": "string", "minLength": 1},
+    "platform": {"type": "string", "minLength": 1},
+    "image_digest": {"type": ["string", "null"]},
+    "resource_identifier": {"type": "string", "minLength": 1},
+    "container_id": {"type": ["string", "null"]},
+    "stdout": {"type": "string"},
+    "stderr": {"type": "string"},
+    "exit_code": {"type": "integer", "not": {"const": 0}},
+    "outcome": {"const": "failed"},
+    "failure_stage": {
+      "enum": [
+        "image_pull",
+        "container_start",
+        "service_install",
+        "service_ready",
+        "collector",
+        "network_protocol"
+      ]
+    },
+    "sanitized": {"const": true},
+    "cleanup": {
+      "type": "object",
+      "required": [
+        "command",
+        "exit_code",
+        "stdout",
+        "stderr",
+        "residual_query",
+        "residual_count"
+      ],
+      "properties": {
+        "command": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "exit_code": {"type": "integer"},
+        "stdout": {"type": "string"},
+        "stderr": {"type": "string"},
+        "residual_query": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "residual_count": {"const": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

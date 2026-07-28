@@ -1,0 +1,43 @@
+{
+  "case_id": "hbase",
+  "kind": "image_pull",
+  "started_at": "2026-07-28T03:40:21.779389Z",
+  "finished_at": "2026-07-28T03:40:36.260436Z",
+  "command": [
+    "docker",
+    "pull",
+    "harisekhon/hbase:2.1"
+  ],
+  "image": "harisekhon/hbase:2.1",
+  "platform": "linux/arm64",
+  "image_digest": null,
+  "resource_identifier": "cmdb-task5-hbase",
+  "container_id": null,
+  "stdout": "",
+  "stderr": "Error response from daemon: Get \"https://registry-1.docker.io/v2/harisekhon/hbase/manifests/sha256:c65ce56799f59fab86eb8995a628c878c28c03189c0fd27285c6ebef4cb016fa\": EOF\n",
+  "exit_code": 1,
+  "outcome": "failed",
+  "failure_stage": "image_pull",
+  "sanitized": true,
+  "cleanup": {
+    "command": [
+      "docker",
+      "rm",
+      "-f",
+      "cmdb-task5-hbase"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "Error response from daemon: No such container: cmdb-task5-hbase\n",
+    "residual_query": [
+      "docker",
+      "ps",
+      "-aq",
+      "--filter",
+      "id=cmdb-task5-hbase",
+      "--filter",
+      "name=cmdb-task5-hbase"
+    ],
+    "residual_count": 0
+  }
+}

@@ -196,18 +196,20 @@ class Evidence:
                 document = self.read_json(filename)
                 findings.extend(_scan_json(filename, document))
         provenance = self.read_json("00_provenance.json")
-        source_fixture = provenance.get("source_fixture")
-        if isinstance(source_fixture, str) and source_fixture.strip():
-            source_fixture_path = Path(source_fixture)
+        for reference_field in ("source_fixture", "attempt_artifact"):
+            referenced_path = provenance.get(reference_field)
+            if not isinstance(referenced_path, str) or not referenced_path.strip():
+                continue
+            source_fixture_path = Path(referenced_path)
             if not source_fixture_path.is_absolute():
                 source_fixture_path = REPOSITORY_ROOT / source_fixture_path
             try:
                 content = source_fixture_path.read_text(encoding="utf-8")
             except OSError as error:
                 raise EvidenceValidationError(
-                    f"{self.case_id}: source_fixture 不可读取: {source_fixture}: {error}"
+                    f"{self.case_id}: {reference_field} 不可读取: {referenced_path}: {error}"
                 ) from error
-            label = f"source_fixture:{source_fixture}"
+            label = f"{reference_field}:{referenced_path}"
             findings.extend(_scan_text(label, content))
             try:
                 document = json.loads(content)
