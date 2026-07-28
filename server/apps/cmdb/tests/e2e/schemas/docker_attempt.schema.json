@@ -68,14 +68,21 @@
     "cleanup": {
       "type": "object",
       "required": [
+        "action",
         "command",
         "exit_code",
         "stdout",
         "stderr",
         "residual_query",
+        "residual_exit_code",
+        "residual_stdout",
+        "residual_stderr",
         "residual_count"
       ],
       "properties": {
+        "action": {
+          "enum": ["remove_container", "verify_absent"]
+        },
         "command": {
           "type": "array",
           "minItems": 1,
@@ -86,11 +93,66 @@
         "stderr": {"type": "string"},
         "residual_query": {
           "type": "array",
-          "minItems": 1,
-          "items": {"type": "string", "minLength": 1}
+          "minItems": 5,
+          "maxItems": 5,
+          "prefixItems": [
+            {"const": "docker"},
+            {"const": "ps"},
+            {"const": "-aq"},
+            {"const": "--filter"},
+            {"type": "string", "pattern": "^(id=[0-9a-f]{12,64}|name=\\^/[A-Za-z0-9][A-Za-z0-9_.-]*\\$)$"}
+          ]
         },
+        "residual_exit_code": {"const": 0},
+        "residual_stdout": {"type": "string"},
+        "residual_stderr": {"type": "string"},
         "residual_count": {"const": 0}
       },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"action": {"const": "remove_container"}},
+            "required": ["action"]
+          },
+          "then": {
+            "properties": {
+              "command": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "prefixItems": [
+                  {"const": "docker"},
+                  {"const": "rm"},
+                  {"const": "-f"},
+                  {"type": "string", "minLength": 1}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {"action": {"const": "verify_absent"}},
+            "required": ["action"]
+          },
+          "then": {
+            "properties": {
+              "command": {
+                "type": "array",
+                "minItems": 5,
+                "maxItems": 5,
+                "prefixItems": [
+                  {"const": "docker"},
+                  {"const": "ps"},
+                  {"const": "-aq"},
+                  {"const": "--filter"},
+                  {"type": "string", "pattern": "^(id=[0-9a-f]{12,64}|name=\\^/[A-Za-z0-9][A-Za-z0-9_.-]*\\$)$"}
+                ]
+              }
+            }
+          }
+        }
+      ],
       "additionalProperties": false
     }
   },

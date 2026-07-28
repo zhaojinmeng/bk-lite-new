@@ -22,15 +22,17 @@
   "failure_stage": "container_start",
   "sanitized": true,
   "cleanup": {
+    "action": "verify_absent",
     "command": [
       "docker",
-      "rm",
-      "-f",
-      "cmdb-task5-mssql"
+      "ps",
+      "-aq",
+      "--filter",
+      "name=^/cmdb-task5-mssql$"
     ],
     "exit_code": 0,
     "stdout": "",
-    "stderr": "Error response from daemon: No such container: cmdb-task5-mssql\n",
+    "stderr": "",
     "residual_query": [
       "docker",
       "ps",
@@ -38,6 +40,9 @@
       "--filter",
       "name=^/cmdb-task5-mssql$"
     ],
+    "residual_exit_code": 0,
+    "residual_stdout": "",
+    "residual_stderr": "",
     "residual_count": 0
   }
 }

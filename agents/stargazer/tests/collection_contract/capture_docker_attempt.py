@@ -99,17 +99,32 @@ def cleanup_docker_resource(
     cwd: Path,
     runner=subprocess.run,
 ) -> dict[str, object]:
-    cleanup_command = ["docker", "rm", "-f", resource_identifier]
-    cleanup = runner(
-        cleanup_command,
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-    )
     residual_query = build_residual_query(
         container_id=container_id,
         resource_identifier=resource_identifier,
     )
+    before_cleanup = runner(
+        residual_query,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+    )
+    existing_ids = [
+        item for item in before_cleanup.stdout.splitlines() if item.strip()
+    ]
+    if before_cleanup.returncode == 0 and existing_ids:
+        action = "remove_container"
+        cleanup_command = ["docker", "rm", "-f", resource_identifier]
+        cleanup = runner(
+            cleanup_command,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+        )
+    else:
+        action = "verify_absent"
+        cleanup_command = residual_query
+        cleanup = before_cleanup
     residual = runner(
         residual_query,
         cwd=cwd,
@@ -120,13 +135,52 @@ def cleanup_docker_resource(
         item for item in residual.stdout.splitlines() if item.strip()
     ]
     return {
+        "action": action,
         "command": cleanup_command,
         "exit_code": cleanup.returncode,
         "stdout": _sanitize(cleanup.stdout),
         "stderr": _sanitize(cleanup.stderr),
         "residual_query": residual_query,
+        "residual_exit_code": residual.returncode,
+        "residual_stdout": _sanitize(residual.stdout),
+        "residual_stderr": _sanitize(residual.stderr),
         "residual_count": len(residual_ids),
     }
+
+
+def ensure_cleanup_complete(
+    case_id: str, cleanup: dict[str, object]
+) -> None:
+    if (
+        cleanup["exit_code"] != 0
+        or cleanup["residual_exit_code"] != 0
+        or cleanup["residual_count"] != 0
+    ):
+        raise RuntimeError(
+            f"{case_id}: Docker 清理不完整: {cleanup}"
+        )
+
+
+def repair_cleanup_artifact(
+    artifact_path: Path,
+    *,
+    cwd: Path = REPOSITORY_ROOT,
+    runner=subprocess.run,
+) -> dict[str, object]:
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    cleanup = cleanup_docker_resource(
+        container_id=artifact["container_id"],
+        resource_identifier=artifact["resource_identifier"],
+        cwd=cwd,
+        runner=runner,
+    )
+    ensure_cleanup_complete(artifact["case_id"], cleanup)
+    artifact["cleanup"] = cleanup
+    artifact_path.write_text(
+        json.dumps(artifact, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return artifact
 
 
 def capture(args: argparse.Namespace) -> Path:
@@ -201,10 +255,7 @@ def capture(args: argparse.Namespace) -> Path:
         json.dumps(artifact, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    if cleanup["exit_code"] != 0 or cleanup["residual_count"] != 0:
-        raise RuntimeError(
-            f"{args.case_id}: Docker 清理不完整: {cleanup}"
-        )
+    ensure_cleanup_complete(args.case_id, cleanup)
     print(destination)
     return destination
 

@@ -24,15 +24,17 @@
   "failure_stage": "image_pull",
   "sanitized": true,
   "cleanup": {
+    "action": "verify_absent",
     "command": [
       "docker",
-      "rm",
-      "-f",
-      "cmdb-task5-network"
+      "ps",
+      "-aq",
+      "--filter",
+      "name=^/cmdb-task5-network$"
     ],
     "exit_code": 0,
     "stdout": "",
-    "stderr": "Error response from daemon: No such container: cmdb-task5-network\n",
+    "stderr": "",
     "residual_query": [
       "docker",
       "ps",
@@ -40,6 +42,9 @@
       "--filter",
       "name=^/cmdb-task5-network$"
     ],
+    "residual_exit_code": 0,
+    "residual_stdout": "",
+    "residual_stderr": "",
     "residual_count": 0
   }
 }

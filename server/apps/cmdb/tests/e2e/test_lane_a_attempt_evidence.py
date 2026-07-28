@@ -39,7 +39,19 @@ def test_降级对象保留机器可审的真实Docker尝试(case_id):
     assert attempt["case_id"] == case_id
     assert attempt["exit_code"] != 0
     assert attempt["cleanup"]["exit_code"] == 0
+    assert attempt["cleanup"]["residual_exit_code"] == 0
     assert attempt["cleanup"]["residual_count"] == 0
+    assert attempt["cleanup"]["residual_count"] == len(
+        [
+            item
+            for item in attempt["cleanup"]["residual_stdout"].splitlines()
+            if item.strip()
+        ]
+    )
+    assert "No such container" not in attempt["cleanup"]["stderr"]
+    assert "No such container" not in attempt["cleanup"]["residual_stderr"]
+    assert attempt["cleanup"]["stderr"] == ""
+    assert attempt["cleanup"]["residual_stderr"] == ""
     resource_identifier = attempt["resource_identifier"]
     assert any(
         resource_identifier in argument
@@ -60,6 +72,20 @@ def test_降级对象保留机器可审的真实Docker尝试(case_id):
             "-aq",
             "--filter",
             f"name=^/{resource_identifier}$",
+        ]
+    if attempt["cleanup"]["action"] == "verify_absent":
+        assert (
+            attempt["cleanup"]["command"]
+            == attempt["cleanup"]["residual_query"]
+        )
+        assert attempt["cleanup"]["stdout"] == ""
+    else:
+        assert attempt["cleanup"]["action"] == "remove_container"
+        assert attempt["cleanup"]["command"] == [
+            "docker",
+            "rm",
+            "-f",
+            resource_identifier,
         ]
     started_at = datetime.fromisoformat(
         attempt["started_at"].replace("Z", "+00:00")
@@ -116,6 +142,56 @@ def test_attempt_schema拒绝成功退出伪装成降级证据():
 def test_attempt_schema拒绝cleanup失败冒充已清理():
     attempt = _load_attempt("hbase")
     attempt["cleanup"]["exit_code"] = 1
+
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.Draft202012Validator(ATTEMPT_SCHEMA).validate(attempt)
+
+
+def test_attempt_schema拒绝残留查询失败冒充零残留():
+    attempt = _load_attempt("hbase")
+    attempt["cleanup"].update(
+        residual_exit_code=1,
+        residual_stderr="Cannot connect to the Docker daemon",
+    )
+
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.Draft202012Validator(ATTEMPT_SCHEMA).validate(attempt)
+
+
+@pytest.mark.parametrize(
+    "missing_field",
+    ["residual_exit_code", "residual_stdout", "residual_stderr"],
+)
+def test_attempt_schema要求残留查询完整原始结果(missing_field):
+    attempt = _load_attempt("hbase")
+    attempt["cleanup"].pop(missing_field, None)
+
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.Draft202012Validator(ATTEMPT_SCHEMA).validate(attempt)
+
+
+@pytest.mark.parametrize(
+    ("action", "command"),
+    [
+        (
+            "verify_absent",
+            ["docker", "rm", "-f", "cmdb-task5-hbase"],
+        ),
+        (
+            "remove_container",
+            [
+                "docker",
+                "ps",
+                "-aq",
+                "--filter",
+                "name=^/cmdb-task5-hbase$",
+            ],
+        ),
+    ],
+)
+def test_attempt_schema按cleanup_action约束真实命令形态(action, command):
+    attempt = _load_attempt("hbase")
+    attempt["cleanup"].update(action=action, command=command)
 
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.Draft202012Validator(ATTEMPT_SCHEMA).validate(attempt)

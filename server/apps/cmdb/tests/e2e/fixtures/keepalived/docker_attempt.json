@@ -25,15 +25,17 @@
   "failure_stage": "service_install",
   "sanitized": true,
   "cleanup": {
+    "action": "verify_absent",
     "command": [
       "docker",
-      "rm",
-      "-f",
-      "40a9f4c5f492"
+      "ps",
+      "-aq",
+      "--filter",
+      "id=40a9f4c5f492"
     ],
     "exit_code": 0,
     "stdout": "",
-    "stderr": "Error response from daemon: No such container: 40a9f4c5f492\n",
+    "stderr": "",
     "residual_query": [
       "docker",
       "ps",
@@ -41,6 +43,9 @@
       "--filter",
       "id=40a9f4c5f492"
     ],
+    "residual_exit_code": 0,
+    "residual_stdout": "",
+    "residual_stderr": "",
     "residual_count": 0
   }
 }
