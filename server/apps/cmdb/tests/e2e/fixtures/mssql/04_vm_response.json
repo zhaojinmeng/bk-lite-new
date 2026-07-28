@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "mssql",
+          "boot_account": "LocalSystem",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "fill_factor": "90",
+          "host": "mssql.example.invalid",
+          "inst_name": "mssql.example.invalid",
+          "instance_id": "cmdb-mssql",
+          "instance_type": "mssql",
+          "ip_addr": "192.0.2.75",
+          "max_conn": "100",
+          "max_mem_mb": "2048",
+          "model_id": "mssql",
+          "order_rule": "Latin1_General_CI_AS",
+          "port": "1433",
+          "version": "16.0",
+          "__name__": "mssql_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

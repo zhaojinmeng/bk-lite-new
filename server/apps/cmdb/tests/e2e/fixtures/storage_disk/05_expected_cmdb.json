@@ -1,0 +1,14 @@
+{
+  "model_id": "storage_disk",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "storage-contract/DAE000.A|SSD-CONTRACT",
+    "self_device": "storage-contract",
+    "slot": "DAE000.A",
+    "disk_type": "SSD",
+    "disk_capacity": 2,
+    "rotate_speed": 0,
+    "running_status": "running"
+  },
+  "review_basis": "独立审阅OceanStor磁盘槽位复合身份、容量换算与转速零值"
+}

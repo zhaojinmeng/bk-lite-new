@@ -1,0 +1,12 @@
+{
+  "model_id": "aliyun_kafka_inst",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "kafka-contract(alikafka-001)",
+    "resource_name": "kafka-contract",
+    "resource_id": "alikafka-001",
+    "storage_gb": 3600,
+    "status": "5"
+  },
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+}

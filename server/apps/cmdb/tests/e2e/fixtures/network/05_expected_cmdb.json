@@ -1,0 +1,13 @@
+{
+  "model_id": "switch",
+  "source_contract_model_id": "network",
+  "write_mode": "dynamic_model_entity",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "192.0.2.76-switch",
+    "ip_addr": "192.0.2.76",
+    "soid": "1.3.6.1.4.1.8072.3.2.10",
+    "sys_desc": "Contract SNMP device"
+  },
+  "review_basis": "独立审阅：network 是源合同名，未知 OID 按真实默认策略动态写入 switch 模型"
+}

@@ -1,0 +1,12 @@
+{
+  "model_id": "hwcloud_eip",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "eip-eip-001_eip-001",
+    "resource_name": "eip-eip-001",
+    "resource_id": "eip-001",
+    "bandwidth": 5,
+    "status": "BIND"
+  },
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+}

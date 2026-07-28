@@ -1,0 +1,9 @@
+{
+  "model_id": "vmware_vc",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "vcenter.example.invalid",
+    "vc_version": "8.0"
+  },
+  "review_basis": "独立审阅vCenter任务身份与版本字段"
+}

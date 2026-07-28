@@ -1,0 +1,32 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "NAME": "pool-contract",
+          "RUNNINGSTATUS": "27",
+          "SECTORSIZE": "512",
+          "USAGETYPE": "1",
+          "USERCONSUMEDCAPACITY": "2097152",
+          "USERFREECAPACITY": "2097152",
+          "USERTOTALCAPACITY": "4194304",
+          "agent_id": "agent-contract",
+          "bk_obj_id": "storage_pool",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb-storage",
+          "instance_type": "storage",
+          "model_id": "storage_pool",
+          "__name__": "storage_pool_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

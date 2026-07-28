@@ -16,5 +16,6 @@
     "vcpus": 2,
     "memory_mb": 2048,
     "charge_type": "POSTPAID_BY_HOUR"
-  }
+  },
+  "review_basis": "静态字面量；由冻结 VM 输入人工复核后提交"
 }

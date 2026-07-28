@@ -10,7 +10,7 @@
   "additionalProperties": false,
   "properties": {
     "model_id": {
-      "const": "qcloud_cvm"
+      "const": "hwcloud_subnet"
     },
     "source_contract_model_id": {
       "type": "string",

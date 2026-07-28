@@ -1,0 +1,30 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "aliyun_mongodb",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb-aliyun_account",
+          "instance_type": "aliyun_account",
+          "model_id": "aliyun_mongodb",
+          "region": "cn-hangzhou",
+          "resource_id": "dds-001",
+          "resource_name": "mongodb-contract",
+          "status": "Running",
+          "type": "replicate",
+          "__name__": "aliyun_mongodb_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

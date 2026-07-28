@@ -1,0 +1,12 @@
+{
+  "model_id": "openresty",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "192.0.2.72-openresty-80",
+    "ip_addr": "192.0.2.72",
+    "port": "80",
+    "version": "1.21.4.2",
+    "openresty_path": "/usr/local/openresty/nginx/sbin/nginx"
+  },
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+}

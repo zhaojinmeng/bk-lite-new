@@ -1,0 +1,12 @@
+{
+  "model_id": "postgresql",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "127.0.0.1-pg-15432",
+    "ip_addr": "127.0.0.1",
+    "port": "15432",
+    "version": "16.14",
+    "data_path": "/var/lib/postgresql/data"
+  },
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+}

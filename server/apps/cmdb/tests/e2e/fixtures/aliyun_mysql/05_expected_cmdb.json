@@ -1,0 +1,12 @@
+{
+  "model_id": "aliyun_mysql",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "mysql-contract(rm-001)",
+    "resource_name": "mysql-contract",
+    "resource_id": "rm-001",
+    "engine": "MySQL",
+    "status": "Running"
+  },
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+}

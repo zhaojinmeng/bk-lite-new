@@ -1,0 +1,12 @@
+{
+  "model_id": "qcloud_cmq_topic",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "topic-contract_topic-001",
+    "resource_name": "topic-contract",
+    "resource_id": "topic-001",
+    "qps": "5000",
+    "status": "未知"
+  },
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+}

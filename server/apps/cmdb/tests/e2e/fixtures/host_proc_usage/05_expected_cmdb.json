@@ -1,0 +1,18 @@
+{
+  "model_id": "host",
+  "source_contract_model_id": "host_proc_usage",
+  "write_mode": "embedded_host_field",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "192.0.2.60[contract-cloud]",
+    "ip_addr": "192.0.2.60"
+  },
+  "expected_process_subset": {
+    "pid": "1",
+    "name": "sleep",
+    "arg": "sleep 300",
+    "exe": "/usr/bin/sleep",
+    "cwd": "/"
+  },
+  "review_basis": "独立审阅：host_proc_usage 不创建独立图库模型，进程字段应嵌入 host.proc JSON"
+}

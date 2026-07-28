@@ -10,7 +10,7 @@
   "additionalProperties": false,
   "properties": {
     "model_id": {
-      "const": "qcloud_cvm"
+      "const": "memcached"
     },
     "source_contract_model_id": {
       "type": "string",

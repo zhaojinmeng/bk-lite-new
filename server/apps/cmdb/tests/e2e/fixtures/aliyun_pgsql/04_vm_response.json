@@ -1,0 +1,30 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "aliyun_pgsql",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "engine": "PostgreSQL",
+          "instance_id": "cmdb-aliyun_account",
+          "instance_type": "aliyun_account",
+          "model_id": "aliyun_pgsql",
+          "region": "cn-hangzhou",
+          "resource_id": "pg-001",
+          "resource_name": "pgsql-contract",
+          "status": "Running",
+          "__name__": "aliyun_pgsql_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

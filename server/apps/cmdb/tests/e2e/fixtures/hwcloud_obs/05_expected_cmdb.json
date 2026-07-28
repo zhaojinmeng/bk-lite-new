@@ -1,0 +1,12 @@
+{
+  "model_id": "hwcloud_obs",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "obs-contract_obs-contract",
+    "resource_name": "obs-contract",
+    "resource_id": "obs-contract",
+    "bucket_type": "STANDARD",
+    "region": "cn-south-1"
+  },
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+}

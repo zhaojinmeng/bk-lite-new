@@ -1,0 +1,12 @@
+{
+  "model_id": "hwcloud_dcs",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "dcs-dcs-001_dcs-001",
+    "resource_name": "dcs-dcs-001",
+    "resource_id": "dcs-001",
+    "port": 6379,
+    "capacity_gb": 0
+  },
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+}

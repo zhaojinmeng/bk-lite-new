@@ -1,0 +1,11 @@
+{
+  "model_id": "memory",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "DIMM-A1-192.0.2.80",
+    "self_device": "192.0.2.80",
+    "mem_locator": "DIMM-A1",
+    "mem_size": 16
+  },
+  "review_basis": "独立审阅内存插槽复合身份与容量单位整数转换"
+}

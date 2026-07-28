@@ -1,0 +1,10 @@
+{
+  "model_id": "iis",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "192.0.2.81",
+    "ip_addr": "192.0.2.81",
+    "phys_path": "C:inetpubwwwroot"
+  },
+  "review_basis": "独立审阅 IIS 模型字段：host 回退为实例/IP，physical_path 清洗对齐到 phys_path"
+}

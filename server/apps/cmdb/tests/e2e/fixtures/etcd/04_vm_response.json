@@ -1,0 +1,107 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "etcd",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "data_dir": "/var/lib/etcd",
+          "host": "etcd.example.invalid",
+          "inst_name": "etcd.example.invalid-etcd-2379",
+          "install_path": "/usr/bin",
+          "instance_id": "cmdb-etcd",
+          "instance_type": "etcd",
+          "ip_addr": "192.0.2.22",
+          "model_id": "etcd",
+          "obj_id": "etcd",
+          "peer_port": "2380",
+          "port": "2379",
+          "version": "3.3.25",
+          "__name__": "etcd_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "etcd",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "data_dir": "default.etcd",
+          "host": "etcd.example.invalid",
+          "inst_name": "etcd.example.invalid-etcd-2379",
+          "install_path": "/usr/bin",
+          "instance_id": "cmdb-etcd",
+          "instance_type": "etcd",
+          "ip_addr": "192.0.2.22",
+          "model_id": "etcd",
+          "obj_id": "etcd",
+          "peer_port": "2380",
+          "port": "2379",
+          "__name__": "etcd_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "etcd",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "data_dir": "default.etcd",
+          "host": "etcd.example.invalid",
+          "inst_name": "etcd.example.invalid-etcd-2379",
+          "instance_id": "cmdb-etcd",
+          "instance_type": "etcd",
+          "ip_addr": "192.0.2.22",
+          "model_id": "etcd",
+          "obj_id": "etcd",
+          "peer_port": "2380",
+          "port": "2379",
+          "__name__": "etcd_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "etcd",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "data_dir": "default.etcd",
+          "host": "etcd.example.invalid",
+          "inst_name": "etcd.example.invalid-etcd-2379",
+          "instance_id": "cmdb-etcd",
+          "instance_type": "etcd",
+          "ip_addr": "192.0.2.22",
+          "model_id": "etcd",
+          "obj_id": "etcd",
+          "peer_port": "2380",
+          "port": "2379",
+          "__name__": "etcd_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "model_id": "fusioninsight_cluster",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "cluster-contract_1",
+    "resource_name": "cluster-contract",
+    "resource_id": "1"
+  },
+  "review_basis": "独立审阅私有API Mock资源身份与集群命名规则"
+}

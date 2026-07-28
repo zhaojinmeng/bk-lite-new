@@ -1,0 +1,31 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "aliyun_clb",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "create_time": "2026-01-02 11:04:00",
+          "instance_id": "cmdb-aliyun_account",
+          "instance_type": "aliyun_account",
+          "ip_addr": "192.0.2.10",
+          "model_id": "aliyun_clb",
+          "region": "cn-hangzhou",
+          "resource_id": "lb-001",
+          "resource_name": "clb-contract",
+          "status": "active",
+          "__name__": "aliyun_clb_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

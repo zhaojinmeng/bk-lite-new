@@ -1,0 +1,12 @@
+{
+  "model_id": "aliyun_clb",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "clb-contract(lb-001)",
+    "resource_name": "clb-contract",
+    "resource_id": "lb-001",
+    "region": "cn-hangzhou",
+    "status": "active"
+  },
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+}

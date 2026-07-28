@@ -1,0 +1,12 @@
+{
+  "model_id": "consul",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "192.0.2.22-consul-8500",
+    "ip_addr": "192.0.2.22",
+    "port": "8500",
+    "version": "2.0.1",
+    "role": "Leader"
+  },
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+}

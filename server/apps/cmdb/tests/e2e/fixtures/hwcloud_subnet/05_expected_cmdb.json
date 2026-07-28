@@ -1,0 +1,12 @@
+{
+  "model_id": "hwcloud_subnet",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "subnet-contract_subnet-001",
+    "resource_name": "subnet-contract",
+    "resource_id": "subnet-001",
+    "cidr": "192.0.2.0/28",
+    "gateway": "192.0.2.1"
+  },
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+}

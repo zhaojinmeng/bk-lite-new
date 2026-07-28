@@ -1,0 +1,11 @@
+{
+  "model_id": "disk",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "sda-192.0.2.80",
+    "self_device": "192.0.2.80",
+    "disk": 100,
+    "disk_type": "SSD"
+  },
+  "review_basis": "独立审阅物理磁盘组件复合身份、disk_size别名与整数单位转换"
+}

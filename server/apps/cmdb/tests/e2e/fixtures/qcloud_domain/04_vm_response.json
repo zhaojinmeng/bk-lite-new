@@ -1,0 +1,30 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "qcloud_domain",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "expired_time": "2027-01-01",
+          "instance_id": "cmdb-qcloud",
+          "instance_type": "qcloud",
+          "model_id": "qcloud_domain",
+          "resource_id": "domain-001",
+          "resource_name": "example.invalid",
+          "status": "正常",
+          "tld": "com",
+          "__name__": "qcloud_domain_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

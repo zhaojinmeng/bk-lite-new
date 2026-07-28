@@ -1,0 +1,29 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "memory",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "host": "192.0.2.80",
+          "instance_id": "cmdb-physcial_server",
+          "instance_type": "physcial_server",
+          "mem_locator": "DIMM-A1",
+          "mem_size": "16",
+          "model_id": "memory",
+          "self_device": "192.0.2.80",
+          "__name__": "memory_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

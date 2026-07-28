@@ -1,0 +1,11 @@
+{
+  "model_id": "kafka",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "192.0.2.23-kafka-9092",
+    "ip_addr": "192.0.2.23",
+    "port": "9092",
+    "version": "3.6.0"
+  },
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+}

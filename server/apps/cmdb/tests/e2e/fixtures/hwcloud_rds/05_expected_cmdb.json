@@ -1,0 +1,12 @@
+{
+  "model_id": "hwcloud_rds",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "rds-rds-001_rds-001",
+    "resource_name": "rds-rds-001",
+    "resource_id": "rds-001",
+    "port": 3306,
+    "volume_size": 100
+  },
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+}

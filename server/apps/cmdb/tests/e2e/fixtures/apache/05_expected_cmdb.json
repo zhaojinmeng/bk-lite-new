@@ -1,0 +1,12 @@
+{
+  "model_id": "apache",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "192.0.2.24-apache-80",
+    "ip_addr": "192.0.2.24",
+    "port": "80",
+    "version": "2.4.52",
+    "httpd_conf_path": "/etc/apache2/apache2.conf"
+  },
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+}

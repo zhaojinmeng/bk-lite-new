@@ -1,0 +1,40 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "architecture_type": "cluster",
+          "bandwidth": "10",
+          "bk_obj_id": "aliyun_redis",
+          "capacity": "4096",
+          "charge_type": "PostPaid",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "connection_domain": "redis.example.invalid",
+          "engine_version": "6.0",
+          "instance_class": "redis.master.small.default",
+          "instance_id": "cmdb-aliyun_account",
+          "instance_type": "aliyun_account",
+          "model_id": "aliyun_redis",
+          "network_type": "VPC",
+          "package_type": "standard",
+          "port": "6379",
+          "qps": "1000",
+          "region": "cn-hangzhou",
+          "resource_id": "r-001",
+          "resource_name": "redis-contract",
+          "zone": "cn-hangzhou-h",
+          "__name__": "aliyun_redis_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

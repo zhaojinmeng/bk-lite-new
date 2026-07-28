@@ -10,7 +10,7 @@
   "additionalProperties": false,
   "properties": {
     "model_id": {
-      "const": "qcloud_cvm"
+      "const": "kafka"
     },
     "source_contract_model_id": {
       "type": "string",

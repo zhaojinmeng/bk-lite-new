@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "access_log": "directives",
+          "agent_id": "agent-contract",
+          "bk_inst_name": "squid.example.invalid-squid-instead.",
+          "bk_obj_id": "squid",
+          "cache_dir": "lines",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_file_path": "/etc/squid/squid.conf",
+          "config_type": "production-contract",
+          "error_log": "/var/log/squid/cache.log",
+          "host": "squid.example.invalid",
+          "install_path": ".",
+          "instance_id": "cmdb-squid",
+          "instance_type": "squid",
+          "ip_addr": "192.0.2.23",
+          "model_id": "squid",
+          "port": "instead.",
+          "visible_hostname": "is",
+          "__name__": "squid_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

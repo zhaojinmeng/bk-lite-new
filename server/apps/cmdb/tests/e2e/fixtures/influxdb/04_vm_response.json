@@ -1,0 +1,29 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "influxdb",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "host": "influxdb.example.invalid",
+          "https_enabled": "false",
+          "instance_id": "cmdb-influxdb",
+          "instance_type": "influxdb",
+          "ip_addr": "127.0.0.1",
+          "model_id": "influxdb",
+          "port": "18086",
+          "__name__": "influxdb_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "model_id": "fusioninsight_host",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "host-contract_host-contract",
+    "resource_name": "host-contract",
+    "resource_id": "host-contract",
+    "ip_addr": "192.0.2.110",
+    "vcpus": "16",
+    "memory_mb": "65536",
+    "storage_gb": "1024",
+    "status": "running",
+    "os_name": "EulerOS"
+  },
+  "review_basis": "独立审阅私有API Mock主机身份、容量与状态字段"
+}

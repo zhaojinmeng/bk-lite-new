@@ -1,0 +1,31 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "hbase",
+          "cluster_distributed": "false",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "host": "hbase.example.invalid",
+          "inst_name": "hbase.example.invalid",
+          "instance_id": "cmdb-hbase",
+          "instance_type": "hbase",
+          "ip_addr": "192.0.2.70",
+          "model_id": "hbase",
+          "port": "16000",
+          "version": "2.5.8",
+          "__name__": "hbase_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

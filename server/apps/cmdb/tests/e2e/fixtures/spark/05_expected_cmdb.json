@@ -1,0 +1,12 @@
+{
+  "model_id": "spark",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "192.0.2.74-spark-7077",
+    "ip_addr": "192.0.2.74",
+    "port": "7077",
+    "version": "3.5.1",
+    "webui_port": "8080"
+  },
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+}

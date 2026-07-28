@@ -1,0 +1,31 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "qcloud_cmq_topic",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "filter_type": "未知",
+          "instance_id": "cmdb-qcloud",
+          "instance_type": "qcloud",
+          "model_id": "qcloud_cmq_topic",
+          "qps": "5000",
+          "region": "ap-shanghai",
+          "resource_id": "topic-001",
+          "resource_name": "topic-contract",
+          "status": "未知",
+          "__name__": "qcloud_cmq_topic_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "model_id": "physcial_server",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "SN-CONTRACT-001",
+    "serial_number": "SN-CONTRACT-001",
+    "brand": "ContractVendor"
+  },
+  "review_basis": "独立审阅IPMI路径序列号优先身份与厂商品牌字段"
+}

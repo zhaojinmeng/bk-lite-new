@@ -1,0 +1,11 @@
+{
+  "model_id": "redis",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "127.0.0.1-redis-6379",
+    "ip_addr": "127.0.0.1",
+    "port": "6379",
+    "version": "7.4.9"
+  },
+  "review_basis": "独立审阅 Redis 模型字段；源 topo_mode 尚未建模，仅进入 drift，不写入图库"
+}

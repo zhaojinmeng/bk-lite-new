@@ -1,0 +1,14 @@
+{
+  "model_id": "storage_volume",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "storage-contract/volume-contract",
+    "self_device": "storage-contract",
+    "parent_pool": "pool-contract",
+    "volume_capacity": 1,
+    "alloc_capacity": 0,
+    "alloc_type": "thin",
+    "running_status": "running"
+  },
+  "review_basis": "独立审阅OceanStor卷父池、容量换算与小于1GB整数截断"
+}

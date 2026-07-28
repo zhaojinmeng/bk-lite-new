@@ -1,0 +1,12 @@
+{
+  "model_id": "tomcat",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "192.0.2.23-tomcat-8080",
+    "ip_addr": "192.0.2.23",
+    "port": "8080",
+    "version": "9.0.58 (Ubuntu)",
+    "java_version": "11.0.31"
+  },
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+}

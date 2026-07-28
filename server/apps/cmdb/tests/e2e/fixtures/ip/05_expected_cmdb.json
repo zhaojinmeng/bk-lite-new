@@ -1,0 +1,11 @@
+{
+  "model_id": "ip",
+  "source_contract_model_id": "ip",
+  "write_mode": "ipam_service",
+  "instance_count_min": 0,
+  "expected_vm_metric_subset": {
+    "ip": "127.0.0.1",
+    "collect_status": "success"
+  },
+  "review_basis": "独立审阅：IP 发现使用 IPAM 自定义回写服务，不进入通用图库实例列表"
+}

@@ -1,0 +1,15 @@
+{
+  "model_id": "host",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "192.0.2.60[contract-cloud]",
+    "ip_addr": "192.0.2.60",
+    "hostname": "host.example.invalid",
+    "os_type": "1",
+    "cpu_core": 8,
+    "memory": 7,
+    "disk": 58,
+    "cpu_arch": "arm64"
+  },
+  "review_basis": "独立审阅Host IP/云区域命名、枚举与浮点到整数转换"
+}

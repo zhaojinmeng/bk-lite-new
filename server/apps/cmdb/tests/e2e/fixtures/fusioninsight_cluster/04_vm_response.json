@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "fusioninsight_cluster",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb-fusioninsight",
+          "instance_type": "fusioninsight",
+          "model_id": "fusioninsight_cluster",
+          "resource_id": "1",
+          "resource_name": "cluster-contract",
+          "__name__": "fusioninsight_cluster_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

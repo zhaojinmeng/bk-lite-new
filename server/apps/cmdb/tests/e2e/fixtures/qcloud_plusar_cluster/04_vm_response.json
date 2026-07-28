@@ -1,0 +1,31 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "qcloud_pulsar_cluster",
+          "charge_type": "未知",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb-qcloud",
+          "instance_type": "qcloud",
+          "max_topic_num": "1000",
+          "model_id": "qcloud_pulsar_cluster",
+          "region": "ap-shanghai",
+          "resource_id": "pulsar-001",
+          "resource_name": "pulsar-contract",
+          "status": "正常",
+          "__name__": "qcloud_pulsar_cluster_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

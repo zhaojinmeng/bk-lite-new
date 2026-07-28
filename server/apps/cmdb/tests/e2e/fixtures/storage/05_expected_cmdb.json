@@ -1,0 +1,13 @@
+{
+  "model_id": "storage",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "storage-contract",
+    "device_sn": "device-contract",
+    "brand": "huawei",
+    "total_capacity": 2,
+    "available_capacity": 1,
+    "running_status": "running"
+  },
+  "review_basis": "独立审阅OceanStor设备身份、容量整数转换与状态码27"
+}

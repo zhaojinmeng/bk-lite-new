@@ -1,0 +1,12 @@
+{
+  "model_id": "aliyun_redis",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "redis-contract(r-001)",
+    "resource_name": "redis-contract",
+    "resource_id": "r-001",
+    "port": 6379,
+    "bandwidth": 10
+  },
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+}

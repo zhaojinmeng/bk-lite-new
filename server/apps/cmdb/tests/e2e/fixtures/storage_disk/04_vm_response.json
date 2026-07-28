@@ -1,0 +1,34 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "DISKTYPE": "SSD",
+          "LOCATION": "DAE000.A",
+          "MANUFACTURER": "Huawei",
+          "MODEL": "SSD-CONTRACT",
+          "RUNNINGSTATUS": "27",
+          "SECTORS": "4194304",
+          "SECTORSIZE": "512",
+          "SERIALNUMBER": "DISK-CONTRACT-001",
+          "SPEEDRPM": "0",
+          "agent_id": "agent-contract",
+          "bk_obj_id": "storage_disk",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb-storage",
+          "instance_type": "storage",
+          "model_id": "storage_disk",
+          "__name__": "storage_disk_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

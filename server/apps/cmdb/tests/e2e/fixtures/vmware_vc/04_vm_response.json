@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "vmware_vc",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "inst_name": "vcenter.example.invalid",
+          "instance_id": "cmdb-vmware_vc",
+          "instance_type": "vmware_vc",
+          "model_id": "vmware_vc",
+          "vc_version": "8.0",
+          "__name__": "vmware_vc_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}

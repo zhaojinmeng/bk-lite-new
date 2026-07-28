@@ -5,12 +5,14 @@
     "model_id",
     "instance_count_min",
     "review_basis",
-    "expected_instance_subset"
+    "source_contract_model_id",
+    "write_mode",
+    "expected_vm_metric_subset"
   ],
   "additionalProperties": false,
   "properties": {
     "model_id": {
-      "const": "qcloud_cvm"
+      "const": "ip"
     },
     "source_contract_model_id": {
       "type": "string",
@@ -27,7 +29,7 @@
     },
     "instance_count_min": {
       "type": "integer",
-      "minimum": 1
+      "minimum": 0
     },
     "expected_instance_subset": {
       "type": "object",

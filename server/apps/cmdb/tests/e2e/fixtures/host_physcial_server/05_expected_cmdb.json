@@ -1,0 +1,9 @@
+{
+  "model_id": "physcial_server",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "physical.example.invalid",
+    "serial_number": "SN-CONTRACT-001"
+  },
+  "review_basis": "独立审阅SSH物理服务器任务身份与序列号"
+}

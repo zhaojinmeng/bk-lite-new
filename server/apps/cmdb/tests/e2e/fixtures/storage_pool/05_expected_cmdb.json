@@ -1,0 +1,14 @@
+{
+  "model_id": "storage_pool",
+  "instance_count_min": 1,
+  "expected_instance_subset": {
+    "inst_name": "storage-contract/pool-contract",
+    "self_device": "storage-contract",
+    "pool_type": "1",
+    "total_capacity": 2,
+    "used_capacity": 1,
+    "available_capacity": 1,
+    "running_status": "running"
+  },
+  "review_basis": "独立审阅OceanStor池名称、扇区容量换算与父设备身份"
+}

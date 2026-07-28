@@ -51,6 +51,14 @@ def test_query_applies_time_range_to_entire_union_expression():
     assert post.call_args.kwargs["data"]["query"] == (
         "last_over_time((metric_a or metric_b)[1h:])"
     )
+    assert post.call_args.kwargs["timeout"] == 60
+
+
+def test_query_propagates_explicit_timeout():
+    with mock.patch(f"{MODULE}.requests.post", return_value=_ok_response()) as post:
+        Collection().query("up", timeout=17, retries=1)
+
+    assert post.call_args.kwargs["timeout"] == 17
 
 
 def test_query_retries_on_5xx_then_succeeds():

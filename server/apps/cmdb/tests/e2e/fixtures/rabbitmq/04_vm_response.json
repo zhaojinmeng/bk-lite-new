@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "allport": "25672(clustering),5672(amqp)",
+          "bk_obj_id": "rabbitmq",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "enabled_plugin_file": "/etc/rabbitmq/enabled_plugins",
+          "erlang_version": "24",
+          "host": "rabbitmq.example.invalid",
+          "inst_name": "rabbitmq.example.invalid-rabbitmq-5672",
+          "instance_id": "cmdb-rabbitmq",
+          "instance_type": "rabbitmq",
+          "ip_addr": "192.0.2.22",
+          "log_path": "/var/log/rabbitmq/rabbit@node.example.invalid.log,/var/log/rabbitmq/rabbit@node.example.invalid_upgrade.log,stdout>",
+          "model_id": "rabbitmq",
+          "node_name": "rabbit@node.example.invalid",
+          "port": "5672",
+          "version": "3.9.27",
+          "__name__": "rabbitmq_info_gauge"
+        },
+        "value": [
+          9999999999,
+          "1"
+        ]
+      }
+    ]
+  }
+}
