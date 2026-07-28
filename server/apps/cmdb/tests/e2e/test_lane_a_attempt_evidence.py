@@ -119,3 +119,19 @@ def test_attempt_schema拒绝cleanup失败冒充已清理():
 
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.Draft202012Validator(ATTEMPT_SCHEMA).validate(attempt)
+
+
+def test_Network_attempt必须从声明镜像的真实Docker命令开始():
+    attempt = _load_attempt("network")
+
+    assert attempt["command"][:2] in (
+        ["docker", "pull"],
+        ["docker", "run"],
+    )
+    assert attempt["image"] in attempt["command"]
+    assert attempt["platform"] in attempt["command"]
+    assert attempt["failure_stage"] in {
+        "image_pull",
+        "container_start",
+        "network_protocol",
+    }

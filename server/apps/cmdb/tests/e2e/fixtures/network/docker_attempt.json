@@ -1,25 +1,27 @@
 {
   "case_id": "network",
   "kind": "network_boundary",
-  "started_at": "2026-07-28T03:49:16.546838Z",
-  "finished_at": "2026-07-28T03:49:17.995427Z",
+  "started_at": "2026-07-28T04:05:58.732737Z",
+  "finished_at": "2026-07-28T04:07:28.974897Z",
   "command": [
-    ".venv/bin/python",
-    "-c",
-    "import json,sys; from plugins.inputs.network.snmp_facts import SnmpFacts; result=SnmpFacts({\"host\":\"127.0.0.1\",\"version\":\"v2c\",\"community\":\"public\",\"timeout\":1,\"retries\":0,\"snmp_port\":1161}).list_all_resources(); print(json.dumps(result,ensure_ascii=False)); sys.exit(0 if result.get(\"success\") else 1)"
+    "docker",
+    "pull",
+    "--platform",
+    "linux/arm64",
+    "polinux/snmpd:latest"
   ],
-  "working_directory": "agents/stargazer",
+  "working_directory": ".",
   "docker_context": "desktop-linux",
   "image": "polinux/snmpd:latest",
   "platform": "linux/arm64",
   "image_digest": null,
   "resource_identifier": "cmdb-task5-network",
   "container_id": null,
-  "stdout": "{\"result\": {\"cmdb_collect_error\": \"Error during SNMP system information collection: SNMP getCmd failed: No SNMP response received before timeout\"}, \"success\": false}\n",
-  "stderr": "snmp_facts collect error! Traceback (most recent call last):\n  File \"<HOME>/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests/agents/stargazer/plugins/inputs/network/snmp_facts.py\", line 189, in collect\n    raise RuntimeError(f\"SNMP getCmd failed: {errorIndication}\")\nRuntimeError: SNMP getCmd failed: No SNMP response received before timeout\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"<HOME>/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests/agents/stargazer/plugins/inputs/network/snmp_facts.py\", line 274, in list_all_resources\n    snmp_data = self.collect()\n                ^^^^^^^^^^^^^^\n  File \"<HOME>/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests/agents/stargazer/plugins/inputs/network/snmp_facts.py\", line 214, in collect\n    raise RuntimeError(\nRuntimeError: Error during SNMP system information collection: SNMP getCmd failed: No SNMP response received before timeout\n\n",
-  "exit_code": 1,
+  "stdout": "latest: Pulling from polinux/snmpd\n469cfcc7a4b3: Pulling fs layer\n9520dcb81f4a: Pulling fs layer\n6314ea748750: Pulling fs layer\n6314ea748750: Verifying Checksum\n6314ea748750: Download complete\n9520dcb81f4a: Verifying Checksum\n9520dcb81f4a: Download complete\n",
+  "stderr": "\ncommand timed out after 90s",
+  "exit_code": 124,
   "outcome": "failed",
-  "failure_stage": "network_protocol",
+  "failure_stage": "image_pull",
   "sanitized": true,
   "cleanup": {
     "command": [
