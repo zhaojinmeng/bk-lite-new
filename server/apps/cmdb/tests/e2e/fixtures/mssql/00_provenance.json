@@ -34,5 +34,6 @@
     "record_count": 1
   },
   "source_commit": "25cf2f4b2",
-  "source_path": "agents/stargazer/plugins/inputs/mssql/mssql_info.py"
+  "source_path": "agents/stargazer/plugins/inputs/mssql/mssql_info.py",
+  "attempt_artifact": "server/apps/cmdb/tests/e2e/fixtures/mssql/docker_attempt.json"
 }

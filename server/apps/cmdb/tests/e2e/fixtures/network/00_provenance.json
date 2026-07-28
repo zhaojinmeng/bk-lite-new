@@ -33,5 +33,6 @@
     "record_count": 1
   },
   "source_commit": "25cf2f4b2",
-  "source_path": "agents/stargazer/plugins/inputs/network/snmp_facts.py"
+  "source_path": "agents/stargazer/plugins/inputs/network/snmp_facts.py",
+  "attempt_artifact": "server/apps/cmdb/tests/e2e/fixtures/network/docker_attempt.json"
 }

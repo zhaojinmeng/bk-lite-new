@@ -33,5 +33,6 @@
     "record_count": 1
   },
   "source_commit": "25cf2f4b2",
-  "source_path": "agents/stargazer/plugins/inputs/spark/spark_default_discover.sh"
+  "source_path": "agents/stargazer/plugins/inputs/spark/spark_default_discover.sh",
+  "attempt_artifact": "server/apps/cmdb/tests/e2e/fixtures/spark/docker_attempt.json"
 }

@@ -33,5 +33,6 @@
     "record_count": 1
   },
   "source_commit": "79b6bb418",
-  "source_path": "agents/stargazer/plugins/inputs/oracle/oracle_info.py"
+  "source_path": "agents/stargazer/plugins/inputs/oracle/oracle_info.py",
+  "attempt_artifact": "server/apps/cmdb/tests/e2e/fixtures/oracle/docker_attempt.json"
 }
