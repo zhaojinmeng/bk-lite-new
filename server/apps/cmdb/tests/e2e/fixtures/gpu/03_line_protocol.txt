@@ -1,0 +1,1 @@
+gpu_info,agent_id=agent-contract,bk_obj_id=gpu,collect_status=success,collect_type=discovery,config_type=production-contract,gpu_memory=24,gpu_name=GPU-0,host=192.0.2.80,instance_id=cmdb-physcial_server,instance_type=physcial_server,model_id=gpu,self_device=192.0.2.80 gauge=1i 1700000000123000000

@@ -1,0 +1,1 @@
+nic_info,agent_id=agent-contract,bk_obj_id=nic,collect_status=success,collect_type=discovery,config_type=production-contract,host=192.0.2.80,instance_id=cmdb-physcial_server,instance_type=physcial_server,mac=02:00:00:00:00:01,model_id=nic,nic_name=eth0,nic_pci_addr=0000:01:00.0,self_device=192.0.2.80 gauge=1i 1700000000123000000

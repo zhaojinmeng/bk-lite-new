@@ -1,0 +1,3 @@
+# HELP nic_info Auto-generated help for nic_info
+# TYPE nic_info gauge
+nic_info{bk_obj_id="nic",collect_status="success",host="192.0.2.80",mac="02:00:00:00:00:01",model_id="nic",nic_name="eth0",nic_pci_addr="0000:01:00.0",self_device="192.0.2.80"} 1 1700000000123

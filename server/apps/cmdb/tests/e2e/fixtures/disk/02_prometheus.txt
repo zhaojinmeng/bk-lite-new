@@ -1,0 +1,3 @@
+# HELP disk_info Auto-generated help for disk_info
+# TYPE disk_info gauge
+disk_info{bk_obj_id="disk",collect_status="success",disk_name="sda",disk_size="100",disk_type="SSD",host="192.0.2.80",model_id="disk",self_device="192.0.2.80"} 1 1700000000123

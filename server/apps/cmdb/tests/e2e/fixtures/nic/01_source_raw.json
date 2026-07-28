@@ -1,0 +1,1 @@
+{"success":true,"result":{"nic":[{"nic_pci_addr":"0000:01:00.0","nic_name":"eth0","mac":"02:00:00:00:00:01","self_device":"192.0.2.80"}]}}

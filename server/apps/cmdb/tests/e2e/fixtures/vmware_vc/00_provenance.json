@@ -1,0 +1,22 @@
+{
+  "source_type": "sanitized_real_environment",
+  "source_kind": "boundary_mock",
+  "vendor": "vmware",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "sanitization": "pyVmomi对象边界仅使用保留域名与合成托管对象，不含真实vCenter凭据或环境标识。",
+  "evidence_boundary": "仅Mock SmartConnect返回的pyVmomi网络/对象边界，真实运行VmwareManage全部公开采集流程与格式转换。",
+  "source_model_id": "vmware_vc",
+  "emitted_case_id": "vmware_vc",
+  "scenario_contract": "覆盖正常非空、可选字段缺失、多虚拟机记录和鉴权错误；成功认证的vCenter必然产生自身identity，父对象空结果不适用。",
+  "review_basis": {
+    "normal_non_empty": true,
+    "empty": "not_applicable: authenticated vCenter always emits its own identity",
+    "missing_optional_field": true,
+    "multi_record_or_pagination": true,
+    "authentication_or_protocol_error": true
+  }
+}

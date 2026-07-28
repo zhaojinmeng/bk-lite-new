@@ -19,6 +19,8 @@ class PhyscialServerInfo(SSHPlugin):
         model_id = self.model_id or "physcial_server"
         try:
             data = await super().list_all_resources(need_raw=True)
+            if not data.get("success"):
+                return data
             if "===" in data.get("result", ''):
                 parsed_data = parse_server_info(data.get("result", ''))
                 self_device = self.host

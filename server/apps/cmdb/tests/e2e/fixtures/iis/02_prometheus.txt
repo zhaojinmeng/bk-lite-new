@@ -1,0 +1,3 @@
+# HELP iis_info Auto-generated help for iis_info
+# TYPE iis_info gauge
+iis_info{bk_obj_id="iis",collect_status="success",host="192.0.2.81",inst_name="iis.example.invalid",model_id="iis",physical_path="C:\\inetpub\\wwwroot",site_id="1",state="Started"} 1 1700000000123

@@ -1,0 +1,1 @@
+iis_info,agent_id=agent-contract,bk_obj_id=iis,collect_status=success,collect_type=discovery,config_type=production-contract,host=192.0.2.81,inst_name=iis.example.invalid,instance_id=cmdb-iis,instance_type=iis,model_id=iis,physical_path=C:\inetpub\wwwroot,site_id=1,state=Started gauge=1i 1700000000123000000

@@ -1,0 +1,3 @@
+# HELP physcial_server_info Auto-generated help for physcial_server_info
+# TYPE physcial_server_info gauge
+physcial_server_info{bk_obj_id="physcial_server",brand="ContractVendor",collect_status="success",host="192.0.2.80",inst_name="physical.example.invalid",model_id="physcial_server",serial_number="SN-CONTRACT-001"} 1 1700000000123

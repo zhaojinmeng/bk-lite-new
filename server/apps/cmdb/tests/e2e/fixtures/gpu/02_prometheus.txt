@@ -1,0 +1,3 @@
+# HELP gpu_info Auto-generated help for gpu_info
+# TYPE gpu_info gauge
+gpu_info{bk_obj_id="gpu",collect_status="success",gpu_memory="24",gpu_name="GPU-0",host="192.0.2.80",model_id="gpu",self_device="192.0.2.80"} 1 1700000000123

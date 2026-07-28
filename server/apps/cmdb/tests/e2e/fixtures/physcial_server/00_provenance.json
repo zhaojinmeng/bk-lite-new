@@ -1,0 +1,22 @@
+{
+  "source_type": "sanitized_real_environment",
+  "source_kind": "boundary_mock",
+  "vendor": "generic_linux",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "sanitization": "SSH命令边界使用RFC 5737地址与合成硬件标识，不含真实凭据或环境标识。",
+  "evidence_boundary": "仅Mock nats-executor的SSH命令响应，真实运行PhyscialServerInfo父采集器、解析器与格式转换；该case对应protocol任务三元组。",
+  "source_model_id": "physcial_server",
+  "emitted_case_id": "physcial_server",
+  "scenario_contract": "同一父采集覆盖正常非空、空结果、可选字段缺失、多记录、SSH鉴权或协议错误。",
+  "review_basis": {
+    "normal_non_empty": true,
+    "empty": true,
+    "missing_optional_field": true,
+    "multi_record_or_pagination": true,
+    "authentication_or_protocol_error": true
+  }
+}

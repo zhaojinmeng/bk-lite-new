@@ -1,0 +1,1 @@
+disk_info,agent_id=agent-contract,bk_obj_id=disk,collect_status=success,collect_type=discovery,config_type=production-contract,disk_name=sda,disk_size=100,disk_type=SSD,host=192.0.2.80,instance_id=cmdb-physcial_server,instance_type=physcial_server,model_id=disk,self_device=192.0.2.80 gauge=1i 1700000000123000000

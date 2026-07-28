@@ -1,0 +1,22 @@
+{
+  "source_type": "sanitized_real_environment",
+  "source_kind": "boundary_mock",
+  "vendor": "microsoft",
+  "service": "not_applicable",
+  "api_operation": "not_applicable",
+  "api_or_sdk_version": "not_applicable",
+  "documentation_url": "not_applicable",
+  "read_at": "2026-07-27T00:00:00+08:00",
+  "sanitization": "PowerShell执行边界使用RFC 5737地址、保留站点名称和示例路径，不含真实凭据或环境标识。",
+  "evidence_boundary": "仅Mock nats-executor的PowerShell/SSH响应，真实读取iis_default_discover.ps1并运行SSHPlugin与格式转换。",
+  "source_model_id": "iis",
+  "emitted_case_id": "iis",
+  "scenario_contract": "覆盖正常非空、空结果、可选字段缺失、多记录、WinRM/SSH鉴权或协议错误。",
+  "review_basis": {
+    "normal_non_empty": true,
+    "empty": true,
+    "missing_optional_field": true,
+    "multi_record_or_pagination": true,
+    "authentication_or_protocol_error": true
+  }
+}
