@@ -14,7 +14,12 @@
   "source_commit": "9fc6d6913",
   "image": "alpine:3.18",
   "image_digest": "alpine@sha256:de0eb0b3f2a47ba1eb89389859a9bd88b28e82f5826b6969ad604979713c2d4f",
-  "container_meta": {"runtime": "Docker 28.0.1", "architecture": "arm64", "port_mapping": "18081->8080/tcp", "removed_after_capture": true},
+  "container_meta": {
+    "runtime": "Docker 28.0.1",
+    "architecture": "arm64",
+    "port_mapping": "18081->8080/tcp",
+    "removed_after_capture": true
+  },
   "review_basis": {
     "source_commit": "9fc6d6913",
     "scalar_labels": "逐字段核对真实 TCP 探活结果",
@@ -25,5 +30,6 @@
     "formatter": "运行真实 CollectionService._process_result",
     "timestamp": "固定为 1700000000123 毫秒",
     "record_count": 1
-  }
+  },
+  "source_path": "agents/stargazer/plugins/inputs/ip/ip_discovery_scanner.py"
 }

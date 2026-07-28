@@ -1,6 +1,7 @@
 import json
 import ipaddress
 import re
+import subprocess
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,7 @@ import jsonschema
 from apps.cmdb.tests.e2e.contract_manifest import Contract, ContractEntry, ContractManifest, load_manifest
 
 E2E_ROOT = Path(__file__).parent
+REPOSITORY_ROOT = E2E_ROOT.parents[4]
 FIXTURE_ROOT = E2E_ROOT / "fixtures"
 SCHEMA_ROOT = E2E_ROOT / "schemas"
 
@@ -45,6 +47,8 @@ PROVENANCE_FIELDS = (
     "documentation_url",
     "read_at",
     "sanitization",
+    "source_commit",
+    "source_path",
 )
 SOURCE_TYPE_SANITIZED_REAL_ENVIRONMENT = "sanitized_real_environment"
 SOURCE_TYPE_OFFICIAL_CLOUD_API_DOCUMENTATION = "official_cloud_api_documentation"
@@ -179,6 +183,7 @@ class Evidence:
         if read_at.tzinfo is None:
             raise EvidenceValidationError(f"{self.case_id}: read_at 必须包含时区")
         _validate_provenance_source(self.case_id, provenance)
+        _validate_source_revision(self.case_id, provenance)
 
     def assert_no_secrets(self) -> None:
         self.validate_complete()
@@ -190,6 +195,26 @@ class Evidence:
             if path.suffix == ".json":
                 document = self.read_json(filename)
                 findings.extend(_scan_json(filename, document))
+        provenance = self.read_json("00_provenance.json")
+        source_fixture = provenance.get("source_fixture")
+        if isinstance(source_fixture, str) and source_fixture.strip():
+            source_fixture_path = Path(source_fixture)
+            if not source_fixture_path.is_absolute():
+                source_fixture_path = REPOSITORY_ROOT / source_fixture_path
+            try:
+                content = source_fixture_path.read_text(encoding="utf-8")
+            except OSError as error:
+                raise EvidenceValidationError(
+                    f"{self.case_id}: source_fixture 不可读取: {source_fixture}: {error}"
+                ) from error
+            label = f"source_fixture:{source_fixture}"
+            findings.extend(_scan_text(label, content))
+            try:
+                document = json.loads(content)
+            except json.JSONDecodeError:
+                document = None
+            if document is not None:
+                findings.extend(_scan_json(label, document))
         if findings:
             raise EvidenceValidationError(f"{self.case_id}: 敏感信息门禁失败: " + "; ".join(sorted(set(findings))))
 
@@ -372,6 +397,40 @@ def _is_allowed_documentation_url(url: str, allowed_hosts: frozenset[str]) -> bo
     )
 
 
+def _validate_source_revision(case_id: str, provenance: dict[str, Any]) -> None:
+    source_commit = provenance["source_commit"]
+    source_path = provenance["source_path"]
+    if not re.fullmatch(r"[0-9a-fA-F]{7,40}", source_commit):
+        raise EvidenceValidationError(
+            f"{case_id}: source_commit 必须是 7-40 位 Git 提交 SHA"
+        )
+    path = Path(source_path)
+    if path.is_absolute() or ".." in path.parts or not source_path.strip():
+        raise EvidenceValidationError(
+            f"{case_id}: source_path 必须是仓库内相对路径"
+        )
+    commit_check = subprocess.run(
+        ["git", "cat-file", "-e", f"{source_commit}^{{commit}}"],
+        cwd=REPOSITORY_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if commit_check.returncode != 0:
+        raise EvidenceValidationError(
+            f"{case_id}: source_commit 不是可复核的提交: {source_commit}"
+        )
+    path_check = subprocess.run(
+        ["git", "ls-tree", "--name-only", source_commit, "--", source_path],
+        cwd=REPOSITORY_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if path_check.returncode != 0 or source_path not in path_check.stdout.splitlines():
+        raise EvidenceValidationError(
+            f"{case_id}: source_commit={source_commit} 不包含 source_path={source_path}"
+        )
+
+
 def _load_archive_reasons(path: Path) -> dict[str, str]:
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
@@ -451,4 +510,14 @@ def _is_unredacted_hostname(value: Any) -> bool:
             ipaddress.ip_network("203.0.113.0/24"),
         )
         return not (address.is_loopback or any(address in network for network in documentation_networks))
-    return not any(reserved in lowered for reserved in ("example.invalid", "example.com", "example.net", "example.org"))
+    hostname = lowered.rstrip(".")
+    reserved_suffixes = ("example", "invalid", "test", "localhost")
+    reserved_names = ("example.com", "example.net", "example.org")
+    is_reserved = any(
+        hostname == suffix or hostname.endswith(f".{suffix}")
+        for suffix in reserved_suffixes
+    ) or any(
+        hostname == name or hostname.endswith(f".{name}")
+        for name in reserved_names
+    )
+    return not is_reserved

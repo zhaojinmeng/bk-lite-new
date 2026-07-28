@@ -15,5 +15,7 @@
     "common_tags": "人工核对五个发布公共 tag。",
     "timestamp": "1700000000123 毫秒转换为 1700000000123000000 纳秒。"
   },
-  "source_kind": "docker_real"
+  "source_kind": "docker_real",
+  "source_commit": "73f9b17c9",
+  "source_path": "agents/stargazer/plugins/inputs/kafka/kafka_default_discover.sh"
 }

@@ -382,6 +382,65 @@ def test_敏感信息门禁仍拒绝真实私网host地址(complete_evidence):
         ).assert_no_secrets()
 
 
+def test_敏感信息门禁扫描provenance引用的原始source_fixture(complete_evidence):
+    source_fixture = complete_evidence.root / "source_capture.json"
+    source_fixture.write_text(
+        json.dumps({"raw_stdout": [{"host": "10.10.40.189"}]}),
+        encoding="utf-8",
+    )
+    _update_provenance(
+        complete_evidence,
+        source_fixture=str(source_fixture),
+    )
+
+    with pytest.raises(EvidenceValidationError, match="10.10.40.189"):
+        load_evidence(
+            complete_evidence.case_id, root=complete_evidence.root
+        ).assert_no_secrets()
+
+
+@pytest.mark.parametrize(
+    "hostname",
+    (
+        "notexample.com",
+        "notinvalid",
+        "service.notlocalhost",
+    ),
+)
+def test_敏感信息门禁拒绝伪装成保留域后缀的真实主机名(
+    complete_evidence, hostname
+):
+    source_path = (
+        complete_evidence.root
+        / "fixtures"
+        / complete_evidence.case_id
+        / "01_source_raw.json"
+    )
+    source_path.write_text(json.dumps({"host": hostname}), encoding="utf-8")
+
+    with pytest.raises(EvidenceValidationError, match=hostname):
+        load_evidence(
+            complete_evidence.case_id, root=complete_evidence.root
+        ).assert_no_secrets()
+
+
+def test_provenance_source_commit必须包含被执行的生产source_path(
+    complete_evidence
+):
+    evidence = load_evidence(
+        complete_evidence.case_id, root=complete_evidence.root
+    )
+
+    evidence.validate_provenance()
+
+    _update_provenance(
+        complete_evidence,
+        source_path="agents/stargazer/plugins/inputs/not-found/collector.py",
+    )
+    with pytest.raises(EvidenceValidationError, match="source_path"):
+        evidence.validate_provenance()
+
+
 def test_生产缺口与非生产归档状态由结构化_audit_返回():
     manifest = load_manifest()
 

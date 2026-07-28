@@ -33,5 +33,6 @@
     "line_protocol": "静态 Golden 由 Prometheus 语义独立复核",
     "timestamp": "固定为 1700000000123 毫秒",
     "record_count": 1
-  }
+  },
+  "source_path": "agents/stargazer/plugins/inputs/docker/docker_default_discover.sh"
 }

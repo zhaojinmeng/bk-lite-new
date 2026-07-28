@@ -20,5 +20,7 @@
     "timestamp": true,
     "record_count": 1
   },
-  "source_kind": "official_sdk_mock"
+  "source_kind": "official_sdk_mock",
+  "source_commit": "b7be9756a",
+  "source_path": "agents/stargazer/plugins/inputs/aliyun/aliyun_info.py"
 }

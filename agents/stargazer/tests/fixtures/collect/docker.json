@@ -26,7 +26,7 @@
     }
   ],
   "sanitization": {
-    "inst_name": "10.10.40.189_1f5b1b6af7aa -> docker.example.invalid",
-    "ip_addr": "10.10.40.189 -> 192.0.2.50"
+    "inst_name": "original host identifier -> docker.example.invalid",
+    "ip_addr": "original host address -> 192.0.2.50"
   }
 }

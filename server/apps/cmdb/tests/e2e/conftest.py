@@ -3,6 +3,7 @@
 复用上层 apps/cmdb/tests/conftest.py 的 fake_graph fixture（pytest 自动继承）。
 """
 import json
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Tuple
@@ -27,6 +28,14 @@ def complete_evidence(tmp_path):
     fixture_dir.mkdir(parents=True)
     schema_dir.mkdir(parents=True)
 
+    repository_root = E2E_ROOT.parents[4]
+    source_commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repository_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
     documents = {
         "00_provenance.json": {
             "source_type": "sanitized_real_environment",
@@ -38,6 +47,8 @@ def complete_evidence(tmp_path):
             "documentation_url": "not_applicable",
             "read_at": "2026-07-21T10:30:00+08:00",
             "sanitization": "仅含保留域名与人工边界值，无真实环境标识",
+            "source_commit": source_commit,
+            "source_path": "agents/stargazer/plugins/inputs/docker/docker_default_discover.sh",
         },
         "01_source_raw.json": {
             "zero": 0,

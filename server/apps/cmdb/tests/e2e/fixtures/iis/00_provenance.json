@@ -18,5 +18,7 @@
     "missing_optional_field": true,
     "multi_record_or_pagination": true,
     "authentication_or_protocol_error": true
-  }
+  },
+  "source_commit": "bc854e01a",
+  "source_path": "agents/stargazer/plugins/inputs/iis/iis_default_discover.ps1"
 }

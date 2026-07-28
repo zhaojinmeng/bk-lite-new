@@ -31,5 +31,7 @@
     "common_tags": "发布公共 tags 使用 production-contract 固定值",
     "timestamp": "固定为 1700000000123 毫秒",
     "record_count": 1
-  }
+  },
+  "source_commit": "25cf2f4b2",
+  "source_path": "agents/stargazer/plugins/inputs/rocketmq/rocketmq_default_discover.sh"
 }

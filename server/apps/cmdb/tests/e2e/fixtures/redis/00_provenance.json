@@ -15,5 +15,7 @@
     "common_tags": "人工核对 agent_id/instance_id/instance_type/collect_type/config_type。",
     "timestamp": "1700000000123 毫秒转换为 1700000000123000000 纳秒。"
   },
-  "source_kind": "docker_real"
+  "source_kind": "docker_real",
+  "source_commit": "ee2987167",
+  "source_path": "agents/stargazer/plugins/inputs/redis/redis_default_discover.sh"
 }

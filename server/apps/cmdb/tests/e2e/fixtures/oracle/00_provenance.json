@@ -16,7 +16,13 @@
     "result": "两次实际拉取均在部分 layer 下载后长时间无进展；为避免后台阻塞终止，未创建容器"
   },
   "mock_boundary": "仅替换 oracledb connect/cursor 返回；真实 OracleInfo 查询、字段清洗、formatter 与发布转换继续运行",
-  "scenario_contract": ["normal_non_empty", "empty", "missing_optional", "multi_record", "protocol_error"],
+  "scenario_contract": [
+    "normal_non_empty",
+    "empty",
+    "missing_optional",
+    "multi_record",
+    "protocol_error"
+  ],
   "review_basis": {
     "source_commit": "79b6bb418",
     "scalar_labels": "逐字段复核 OracleInfo 六条 SQL 的聚合结果",
@@ -25,5 +31,7 @@
     "common_tags": "发布公共 tags 使用 production-contract 固定值",
     "timestamp": "固定为 1700000000123 毫秒",
     "record_count": 1
-  }
+  },
+  "source_commit": "79b6bb418",
+  "source_path": "agents/stargazer/plugins/inputs/oracle/oracle_info.py"
 }

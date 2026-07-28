@@ -16,5 +16,7 @@
     "common_tags": "四条均核对五个发布公共 tag。",
     "timestamp": "四条均由 1700000000123 毫秒转换为 1700000000123000000 纳秒，Counter 保留重复次数。"
   },
-  "source_kind": "docker_real"
+  "source_kind": "docker_real",
+  "source_commit": "73f9b17c9",
+  "source_path": "agents/stargazer/plugins/inputs/etcd/etcd_default_discover.sh"
 }

@@ -22,5 +22,7 @@
     "formatter": "真实CollectionService._process_result",
     "line_protocol": "静态Golden经Prometheus语义逐字段复核",
     "timestamp": "固定为1700000000123毫秒"
-  }
+  },
+  "source_commit": "b7be9756a",
+  "source_path": "agents/stargazer/plugins/inputs/oceanstor/oceanstor_info.py"
 }
