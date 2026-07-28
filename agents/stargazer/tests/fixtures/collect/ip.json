@@ -1,19 +1,19 @@
 {
   "model_id": "ip",
-  "captured_at": "2026-07-27T06:52:57Z",
+  "captured_at": "2026-07-28T09:05:14Z",
   "image": "alpine:3.18",
   "image_digest": "alpine@sha256:de0eb0b3f2a47ba1eb89389859a9bd88b28e82f5826b6969ad604979713c2d4f",
   "container_meta": {
-    "container_id": "d61af2dbab63",
+    "container_id": "6c123a02081fd00fabb9f9d94a4c9b47b6398e362fe1b09a998a75fefda4b357",
     "image": "alpine:3.18",
     "image_id": "sha256:de2b9975f8fd4ab0d5ea39f52592791fadff62c0592a6e7db5640dc0d6469a01",
     "architecture": "arm64",
-    "port_mapping": "18081->8080/tcp"
+    "port_mapping": "127.0.0.1:64298->8080/tcp"
   },
-  "collector": "IPDiscoveryScanner(scan_method=tcp, targets=[127.0.0.1], ports=[18081])",
+  "collector": "IPDiscoveryScanner(scan_method=tcp, subnets=[{subnet_id:42,cidr:127.0.0.1/32}], ports=[64298])",
   "raw_stdout": {
     "success": true,
-    "result": {"ip": [{"ip": "127.0.0.1", "mac": ""}]}
+    "result": {"ip": [{"auto_collect": "true", "ip_addr": "127.0.0.1", "ip_status": "online", "mac": "", "scan_method": "tcp", "subnet_cidr": "127.0.0.1/32", "subnet_id": "42"}]}
   },
   "sanitization": "回环地址与临时容器 ID，不含真实环境标识"
 }

@@ -1,3 +1,3 @@
 # HELP ip_info Auto-generated help for ip_info
 # TYPE ip_info gauge
-ip_info{bk_obj_id="ip",collect_status="success",ip="127.0.0.1",mac="",model_id="ip"} 1 1700000000123
+ip_info{auto_collect="true",bk_obj_id="ip",collect_status="success",ip_addr="127.0.0.1",ip_status="online",mac="",model_id="ip",scan_method="tcp",subnet_cidr="127.0.0.1/32",subnet_id="42"} 1 1700000000123

@@ -40,10 +40,25 @@ def test_controller_notifies_collect_enterprise_extension(monkeypatch):
     monkeypatch.setattr(management, "delete_inst", lambda inst_list: {"success": inst_list, "failed": []})
     monkeypatch.setattr(management, "add_inst", lambda inst_list: {"success": inst_list, "failed": []})
     monkeypatch.setattr(management, "update_inst", lambda inst_list: {"success": inst_list, "failed": []})
+    monkeypatch.setattr(
+        management,
+        "refresh_heartbeat",
+        lambda inst_list: {
+            "success": [
+                {"inst_info": item, "assos_result": {}, "heartbeat": True}
+                for item in inst_list
+            ],
+            "failed": [],
+        },
+    )
 
     result = management.controller()
 
-    assert calls == [(management, result)]
+    assert len(calls) == 1
+    assert calls[0][0] is management
+    assert calls[0][1]["add"] == result["add"]
+    assert calls[0][1]["update"] == {"success": [], "failed": []}
+    assert calls[0][1]["delete"] == result["delete"]
 
 
 def test_update_notifies_collect_enterprise_extension(monkeypatch):
@@ -61,8 +76,8 @@ def test_update_notifies_collect_enterprise_extension(monkeypatch):
         organization=["org-a"],
         inst_name="collect-task",
         model_id="host",
-        old_data=[{"_id": "old-1", "inst_name": "same"}],
-        new_data=[{"inst_name": "same"}],
+        old_data=[{"_id": "old-1", "inst_name": "same", "status": "old"}],
+        new_data=[{"inst_name": "same", "status": "new"}],
         unique_keys=["inst_name"],
         collect_time="2026-06-11T00:00:00+00:00",
         task_id="task-1",

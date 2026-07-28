@@ -1,1 +1,1 @@
-{"success":true,"result":{"ip":[{"ip":"127.0.0.1","mac":""}]}}
+{"success":true,"result":{"ip":[{"auto_collect":"true","ip_addr":"127.0.0.1","ip_status":"online","mac":"","scan_method":"tcp","subnet_cidr":"127.0.0.1/32","subnet_id":"42"}]}}

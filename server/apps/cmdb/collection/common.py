@@ -1,3 +1,5 @@
+import json
+
 from dotenv import load_dotenv
 
 from apps.cmdb.collect.extensions import get_collect_enterprise_extension
@@ -81,7 +83,24 @@ class Management:
         for field, new_value in new_info.items():
             if field in cls.RUNTIME_FIELDS or field.startswith("_"):
                 continue
-            if old_info.get(field) != new_value:
+            old_value = old_info.get(field)
+            if old_value == new_value:
+                continue
+            # 图驱动会把 table JSON 字符串反序列化为 list/dict；采集插件仍可能
+            # 返回其稳定 JSON 文本。两者语义相同时不能误判为业务更新。
+            if isinstance(old_value, (list, dict)) and isinstance(new_value, str):
+                try:
+                    if old_value == json.loads(new_value):
+                        continue
+                except json.JSONDecodeError:
+                    pass
+            if isinstance(new_value, (list, dict)) and isinstance(old_value, str):
+                try:
+                    if new_value == json.loads(old_value):
+                        continue
+                except json.JSONDecodeError:
+                    pass
+            if old_value != new_value:
                 return True
         return False
 
@@ -358,6 +377,8 @@ class Management:
             }
             for operator in ("add", "update", "delete")
         }
+        if not any(items for operation in business_result.values() for items in operation.values()):
+            return
         write_collect_instance_change_records(self, business_result)
         get_collect_enterprise_extension().on_collect_instances_applied(
             management=self, result=business_result

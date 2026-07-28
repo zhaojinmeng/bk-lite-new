@@ -33,7 +33,7 @@ def test_IP真实Docker_TCP探活来源匹配静态LaneA_Golden(monkeypatch):
         ).read_text(encoding="utf-8")
     )
     assert capture["raw_stdout"] == source
-    assert capture["container_meta"]["port_mapping"] == "18081->8080/tcp"
+    assert capture["container_meta"]["port_mapping"] == "127.0.0.1:64298->8080/tcp"
 
     monkeypatch.setattr(base_utils.time, "time", lambda: 1_700_000_000.123)
     actual_prometheus = convert_to_prometheus_format(

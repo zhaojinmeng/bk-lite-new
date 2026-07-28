@@ -297,7 +297,7 @@ def test_controller_heartbeat_is_reported_but_excluded_from_audit(monkeypatch):
     result = m.controller()
     assert len(result["update"]["success"]) == 1
     assert result["update"]["success"][0]["heartbeat"] is True
-    assert audited[0]["update"]["success"] == []
+    assert audited == []
 
 
 # --------------------------------------------------------------------------

@@ -6,14 +6,19 @@
       {
         "metric": {
           "agent_id": "agent-contract",
+          "auto_collect": "true",
           "bk_obj_id": "ip",
           "collect_status": "success",
           "collect_type": "discovery",
           "config_type": "production-contract",
           "instance_id": "cmdb_258236",
           "instance_type": "ip",
-          "ip": "127.0.0.1",
+          "ip_addr": "127.0.0.1",
+          "ip_status": "online",
           "model_id": "ip",
+          "scan_method": "tcp",
+          "subnet_cidr": "127.0.0.1/32",
+          "subnet_id": "42",
           "__name__": "ip_info_gauge"
         },
         "value": [
