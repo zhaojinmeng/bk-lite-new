@@ -5,7 +5,6 @@
     "result": [
       {
         "metric": {
-          "__name__": "es_info_gauge",
           "active_shards": "0",
           "agent_id": "agent-contract",
           "bin_path": "/usr/share/elasticsearch/bin",
@@ -18,9 +17,9 @@
           "config_type": "production-contract",
           "host": "es.example.invalid",
           "inst_name": "es.example.invalid",
-          "instance_id": "cmdb-es",
+          "instance_id": "cmdb_212435",
           "instance_type": "es",
-          "ip_addr": "172.17.0.4",
+          "ip_addr": "192.0.2.41",
           "lucene_version": "9.12.2",
           "model_id": "es",
           "number_of_nodes": "1",
@@ -30,10 +29,11 @@
           "status": "green",
           "unassigned_shards": "0",
           "user": "elasticsearch",
-          "version": "8.19.18"
+          "version": "8.19.18",
+          "__name__": "es_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

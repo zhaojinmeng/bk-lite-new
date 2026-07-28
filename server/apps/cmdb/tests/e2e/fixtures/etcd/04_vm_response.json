@@ -12,9 +12,9 @@
           "config_type": "production-contract",
           "data_dir": "/var/lib/etcd",
           "host": "etcd.example.invalid",
-          "inst_name": "etcd.example.invalid-etcd-2379",
+          "inst_name": "etcd-etcd-2379.example.invalid",
           "install_path": "/usr/bin",
-          "instance_id": "cmdb-etcd",
+          "instance_id": "cmdb_403585",
           "instance_type": "etcd",
           "ip_addr": "192.0.2.22",
           "model_id": "etcd",
@@ -25,7 +25,7 @@
           "__name__": "etcd_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       },
@@ -38,9 +38,9 @@
           "config_type": "production-contract",
           "data_dir": "default.etcd",
           "host": "etcd.example.invalid",
-          "inst_name": "etcd.example.invalid-etcd-2379",
+          "inst_name": "etcd-etcd-2379.example.invalid",
           "install_path": "/usr/bin",
-          "instance_id": "cmdb-etcd",
+          "instance_id": "cmdb_403585",
           "instance_type": "etcd",
           "ip_addr": "192.0.2.22",
           "model_id": "etcd",
@@ -50,7 +50,7 @@
           "__name__": "etcd_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       },
@@ -63,8 +63,8 @@
           "config_type": "production-contract",
           "data_dir": "default.etcd",
           "host": "etcd.example.invalid",
-          "inst_name": "etcd.example.invalid-etcd-2379",
-          "instance_id": "cmdb-etcd",
+          "inst_name": "etcd-etcd-2379.example.invalid",
+          "instance_id": "cmdb_403585",
           "instance_type": "etcd",
           "ip_addr": "192.0.2.22",
           "model_id": "etcd",
@@ -74,7 +74,7 @@
           "__name__": "etcd_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       },
@@ -87,8 +87,8 @@
           "config_type": "production-contract",
           "data_dir": "default.etcd",
           "host": "etcd.example.invalid",
-          "inst_name": "etcd.example.invalid-etcd-2379",
-          "instance_id": "cmdb-etcd",
+          "inst_name": "etcd-etcd-2379.example.invalid",
+          "instance_id": "cmdb_403585",
           "instance_type": "etcd",
           "ip_addr": "192.0.2.22",
           "model_id": "etcd",
@@ -98,7 +98,7 @@
           "__name__": "etcd_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

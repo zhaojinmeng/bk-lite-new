@@ -14,8 +14,8 @@
           "enabled_plugin_file": "/etc/rabbitmq/enabled_plugins",
           "erlang_version": "24",
           "host": "rabbitmq.example.invalid",
-          "inst_name": "rabbitmq.example.invalid-rabbitmq-5672",
-          "instance_id": "cmdb-rabbitmq",
+          "inst_name": "rabbitmq-rabbitmq-5672.example.invalid",
+          "instance_id": "cmdb_341774",
           "instance_type": "rabbitmq",
           "ip_addr": "192.0.2.22",
           "log_path": "/var/log/rabbitmq/rabbit@node.example.invalid.log,/var/log/rabbitmq/rabbit@node.example.invalid_upgrade.log,stdout>",
@@ -26,7 +26,7 @@
           "__name__": "rabbitmq_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

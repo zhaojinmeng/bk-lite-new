@@ -14,7 +14,7 @@
           "db_name": "ORCL",
           "host": "oracle.example.invalid",
           "inst_name": "oracle.example.invalid",
-          "instance_id": "cmdb-oracle",
+          "instance_id": "cmdb_441765",
           "instance_type": "oracle",
           "ip_addr": "192.0.2.77",
           "max_conn": "100",
@@ -27,7 +27,7 @@
           "__name__": "oracle_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

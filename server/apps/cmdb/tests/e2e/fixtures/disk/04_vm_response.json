@@ -14,14 +14,99 @@
           "disk_size": "100",
           "disk_type": "SSD",
           "host": "192.0.2.80",
-          "instance_id": "cmdb-physcial_server",
+          "instance_id": "cmdb_780268",
           "instance_type": "physcial_server",
           "model_id": "disk",
           "self_device": "192.0.2.80",
           "__name__": "disk_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "gpu",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "gpu_memory": "24",
+          "gpu_name": "GPU-0",
+          "host": "192.0.2.80",
+          "instance_id": "cmdb_780268",
+          "instance_type": "physcial_server",
+          "model_id": "gpu",
+          "self_device": "192.0.2.80",
+          "__name__": "gpu_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "memory",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "host": "192.0.2.80",
+          "instance_id": "cmdb_780268",
+          "instance_type": "physcial_server",
+          "mem_locator": "DIMM-A1",
+          "mem_size": "16",
+          "model_id": "memory",
+          "self_device": "192.0.2.80",
+          "__name__": "memory_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "nic",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "host": "192.0.2.80",
+          "instance_id": "cmdb_780268",
+          "instance_type": "physcial_server",
+          "mac": "02:00:00:00:00:01",
+          "model_id": "nic",
+          "nic_name": "eth0",
+          "nic_pci_addr": "0000:01:00.0",
+          "self_device": "192.0.2.80",
+          "__name__": "nic_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "physcial_server",
+          "brand": "ContractVendor",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "host": "192.0.2.80",
+          "inst_name": "physical.example.invalid",
+          "instance_id": "cmdb_780268",
+          "instance_type": "physcial_server",
+          "model_id": "physcial_server",
+          "serial_number": "SN-CONTRACT-001",
+          "__name__": "physcial_server_info_gauge"
+        },
+        "value": [
+          1700000000.123,
           "1"
         ]
       }

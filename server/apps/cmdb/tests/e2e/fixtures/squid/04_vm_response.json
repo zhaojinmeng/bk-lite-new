@@ -17,7 +17,7 @@
           "error_log": "/var/log/squid/cache.log",
           "host": "squid.example.invalid",
           "install_path": ".",
-          "instance_id": "cmdb-squid",
+          "instance_id": "cmdb_562431",
           "instance_type": "squid",
           "ip_addr": "192.0.2.23",
           "model_id": "squid",
@@ -26,7 +26,7 @@
           "__name__": "squid_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

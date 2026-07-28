@@ -5,12 +5,15 @@ from unittest import mock
 
 import openpyxl
 import pytest
+from jsonschema import ValidationError, validate
 
 from apps.cmdb.collection.collect_plugin.base import CollectBase
 from apps.cmdb.collection.plugins import get_collection_plugin
 from apps.cmdb.tests.e2e.contract_loader import audit_lane_a_evidence
 from apps.cmdb.tests.e2e.lane_b_loader import (
     LaneBValidationError,
+    build_case_vm_schema,
+    build_vm_response_from_line_protocol,
     lane_b_entries,
     lane_b_incomplete,
     load_lane_b_evidence,
@@ -131,6 +134,52 @@ def test_生产模型反射拒绝非空短行而不静默吞格式错误():
     )
     with pytest.raises(LaneBValidationError, match="列数不足"):
         parse_model_field_rows(rows, model_id="sample")
+
+
+def test_LineProtocol到VM严格传播指标身份_值与纳秒时间():
+    line = (
+        r"sample_info,instance_id=cmdb_123456,model_id=sample,"
+        r"inst_name=node.example.invalid value=7i 1700000000123000000"
+    )
+    vm_response = build_vm_response_from_line_protocol(line)
+    row = vm_response["data"]["result"][0]
+    assert row == {
+        "metric": {
+            "instance_id": "cmdb_123456",
+            "model_id": "sample",
+            "inst_name": "node.example.invalid",
+            "__name__": "sample_info_value",
+        },
+        "value": [1700000000.123, "7"],
+    }
+    schema = build_case_vm_schema(vm_response, emitted_model_id="sample")
+    target_metric_schema = schema["properties"]["data"]["properties"]["result"][
+        "contains"
+    ]["properties"]["metric"]["properties"]
+    assert target_metric_schema["instance_id"] == {"const": "cmdb_123456"}
+    validate(vm_response, schema)
+
+    for field, drifted_value in (
+        ("__name__", "wrong_info_value"),
+        ("model_id", "wrong"),
+        ("instance_id", "cmdb_999999"),
+    ):
+        drifted = json.loads(json.dumps(vm_response))
+        drifted["data"]["result"][0]["metric"][field] = drifted_value
+        with pytest.raises(ValidationError):
+            validate(drifted, schema)
+
+    invalid_time = json.loads(json.dumps(vm_response))
+    invalid_time["data"]["result"][0]["value"][0] = 9_999_999_999
+    with pytest.raises(ValidationError):
+        validate(invalid_time, schema)
+
+
+def test_LineProtocol到VM拒绝非纳秒时间与身份漂移():
+    with pytest.raises(LaneBValidationError, match="19位纳秒"):
+        build_vm_response_from_line_protocol(
+            "sample,instance_id=cmdb-invalid value=1i 9999999999"
+        )
 
 
 LANE_B_READY_ENTRIES = tuple(

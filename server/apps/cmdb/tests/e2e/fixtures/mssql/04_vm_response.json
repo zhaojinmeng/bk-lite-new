@@ -14,7 +14,7 @@
           "fill_factor": "90",
           "host": "mssql.example.invalid",
           "inst_name": "mssql.example.invalid",
-          "instance_id": "cmdb-mssql",
+          "instance_id": "cmdb_494832",
           "instance_type": "mssql",
           "ip_addr": "192.0.2.75",
           "max_conn": "100",
@@ -26,7 +26,7 @@
           "__name__": "mssql_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

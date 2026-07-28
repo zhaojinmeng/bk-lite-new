@@ -13,8 +13,8 @@
           "config": "/usr/share/activemq/conf/activemq.xml",
           "config_type": "production-contract",
           "host": "activemq.example.invalid",
-          "inst_name": "activemq.example.invalid-activemq-61616",
-          "instance_id": "cmdb-activemq",
+          "inst_name": "activemq-activemq-61616.example.invalid",
+          "instance_id": "cmdb_756434",
           "instance_type": "activemq",
           "ip_addr": "192.0.2.23",
           "listening_ports": "1883,5672,61613,61616,8161",
@@ -28,7 +28,7 @@
           "__name__": "activemq_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

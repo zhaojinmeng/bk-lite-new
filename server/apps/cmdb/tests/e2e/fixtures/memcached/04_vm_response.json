@@ -14,7 +14,7 @@
           "config_type": "production-contract",
           "host": "memcached.example.invalid",
           "install_path": ".",
-          "instance_id": "cmdb-memcached",
+          "instance_id": "cmdb_592915",
           "instance_type": "memcached",
           "ip_addr": "192.0.2.22",
           "model_id": "memcached",
@@ -23,7 +23,7 @@
           "__name__": "memcached_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       },
@@ -37,7 +37,7 @@
           "config_type": "production-contract",
           "host": "memcached.example.invalid",
           "install_path": "/usr/bin",
-          "instance_id": "cmdb-memcached",
+          "instance_id": "cmdb_592915",
           "instance_type": "memcached",
           "ip_addr": "192.0.2.22",
           "model_id": "memcached",
@@ -45,7 +45,7 @@
           "__name__": "memcached_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       },
@@ -59,14 +59,14 @@
           "config_type": "production-contract",
           "host": "memcached.example.invalid",
           "install_path": ".",
-          "instance_id": "cmdb-memcached",
+          "instance_id": "cmdb_592915",
           "instance_type": "memcached",
           "ip_addr": "192.0.2.22",
           "model_id": "memcached",
           "__name__": "memcached_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

@@ -15,7 +15,7 @@
           "defaults_mode": "http",
           "host": "haproxy.example.invalid",
           "install_path": "haproxy",
-          "instance_id": "cmdb-haproxy",
+          "instance_id": "cmdb_214243",
           "instance_type": "haproxy",
           "ip_addr": "192.0.2.23",
           "model_id": "haproxy",
@@ -24,7 +24,7 @@
           "__name__": "haproxy_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

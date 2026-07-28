@@ -15,8 +15,8 @@
           "config": "/opt/kafka/config/kraft/server.properties",
           "config_type": "production-contract",
           "host": "kafka.example.invalid",
-          "inst_name": "kafka.example.invalid-kafka-9092",
-          "instance_id": "cmdb-kafka",
+          "inst_name": "kafka-kafka-9092.example.invalid",
+          "instance_id": "cmdb_733094",
           "instance_type": "kafka",
           "ip_addr": "192.0.2.23",
           "model_id": "kafka",
@@ -29,7 +29,7 @@
           "__name__": "kafka_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

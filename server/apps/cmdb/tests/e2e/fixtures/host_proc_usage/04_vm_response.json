@@ -16,7 +16,7 @@
           "disk_gb": "58.4",
           "host": "192.0.2.60",
           "hostname": "host.example.invalid",
-          "instance_id": "cmdb-host",
+          "instance_id": "cmdb_270208",
           "instance_type": "host",
           "ip_addr": "192.0.2.60",
           "mac_address": "unknown",
@@ -29,7 +29,7 @@
           "__name__": "host_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       },
@@ -44,7 +44,7 @@
           "cwd": "/",
           "exe": "/usr/bin/sleep",
           "host": "192.0.2.60",
-          "instance_id": "cmdb-host",
+          "instance_id": "cmdb_270208",
           "instance_type": "host",
           "ip_addr": "192.0.2.60",
           "model_id": "host_proc_usage",
@@ -54,7 +54,7 @@
           "__name__": "host_proc_usage_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       },
@@ -69,7 +69,7 @@
           "cwd": "/",
           "exe": "/usr/bin/bash",
           "host": "192.0.2.60",
-          "instance_id": "cmdb-host",
+          "instance_id": "cmdb_270208",
           "instance_type": "host",
           "ip_addr": "192.0.2.60",
           "model_id": "host_proc_usage",
@@ -79,7 +79,7 @@
           "__name__": "host_proc_usage_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       },
@@ -94,7 +94,7 @@
           "cwd": "/",
           "exe": "/usr/bin/bash",
           "host": "192.0.2.60",
-          "instance_id": "cmdb-host",
+          "instance_id": "cmdb_270208",
           "instance_type": "host",
           "ip_addr": "192.0.2.60",
           "model_id": "host_proc_usage",
@@ -104,7 +104,7 @@
           "__name__": "host_proc_usage_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       },
@@ -117,7 +117,7 @@
           "collect_type": "discovery",
           "config_type": "production-contract",
           "host": "192.0.2.60",
-          "instance_id": "cmdb-host",
+          "instance_id": "cmdb_270208",
           "instance_type": "host",
           "ip_addr": "192.0.2.60",
           "model_id": "host_proc_usage",
@@ -127,7 +127,7 @@
           "__name__": "host_proc_usage_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

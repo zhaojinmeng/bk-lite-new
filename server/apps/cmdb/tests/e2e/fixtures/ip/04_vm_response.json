@@ -10,14 +10,14 @@
           "collect_status": "success",
           "collect_type": "discovery",
           "config_type": "production-contract",
-          "instance_id": "cmdb-ip",
+          "instance_id": "cmdb_258236",
           "instance_type": "ip",
           "ip": "127.0.0.1",
           "model_id": "ip",
           "__name__": "ip_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

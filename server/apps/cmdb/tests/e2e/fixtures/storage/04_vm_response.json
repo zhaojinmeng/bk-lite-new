@@ -15,7 +15,7 @@
           "config_type": "production-contract",
           "device_sn": "device-contract",
           "disk_count": "1",
-          "instance_id": "cmdb-storage",
+          "instance_id": "cmdb_260741",
           "instance_type": "storage",
           "model_id": "storage",
           "pool_count": "1",
@@ -27,7 +27,82 @@
           "__name__": "storage_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "DISKTYPE": "SSD",
+          "LOCATION": "DAE000.A",
+          "MANUFACTURER": "Huawei",
+          "MODEL": "SSD-CONTRACT",
+          "RUNNINGSTATUS": "27",
+          "SECTORS": "4194304",
+          "SECTORSIZE": "512",
+          "SERIALNUMBER": "DISK-CONTRACT-001",
+          "SPEEDRPM": "0",
+          "agent_id": "agent-contract",
+          "bk_obj_id": "storage_disk",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb_260741",
+          "instance_type": "storage",
+          "model_id": "storage_disk",
+          "__name__": "storage_disk_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "NAME": "pool-contract",
+          "RUNNINGSTATUS": "27",
+          "SECTORSIZE": "512",
+          "USAGETYPE": "1",
+          "USERCONSUMEDCAPACITY": "2097152",
+          "USERFREECAPACITY": "2097152",
+          "USERTOTALCAPACITY": "4194304",
+          "agent_id": "agent-contract",
+          "bk_obj_id": "storage_pool",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb_260741",
+          "instance_type": "storage",
+          "model_id": "storage_pool",
+          "__name__": "storage_pool_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "ALLOCCAPACITY": "1048576",
+          "ALLOCTYPE": "thin",
+          "CAPACITY": "2097152",
+          "NAME": "volume-contract",
+          "PARENTNAME": "pool-contract",
+          "RUNNINGSTATUS": "27",
+          "SECTORSIZE": "512",
+          "WWN": "60000000000000000000000000000001",
+          "agent_id": "agent-contract",
+          "bk_obj_id": "storage_volume",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb_260741",
+          "instance_type": "storage",
+          "model_id": "storage_volume",
+          "__name__": "storage_volume_info_gauge"
+        },
+        "value": [
+          1700000000.123,
           "1"
         ]
       }

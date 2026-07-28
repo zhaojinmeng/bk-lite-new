@@ -13,14 +13,14 @@
           "config_type": "production-contract",
           "host": "192.0.2.80",
           "inst_name": "physical.example.invalid",
-          "instance_id": "cmdb-physcial_server",
+          "instance_id": "cmdb_371885",
           "instance_type": "physcial_server",
           "model_id": "physcial_server",
           "serial_number": "SN-CONTRACT-001",
           "__name__": "physcial_server_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

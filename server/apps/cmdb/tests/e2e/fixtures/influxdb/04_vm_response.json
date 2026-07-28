@@ -12,7 +12,7 @@
           "config_type": "production-contract",
           "host": "influxdb.example.invalid",
           "https_enabled": "false",
-          "instance_id": "cmdb-influxdb",
+          "instance_id": "cmdb_587190",
           "instance_type": "influxdb",
           "ip_addr": "127.0.0.1",
           "model_id": "influxdb",
@@ -20,7 +20,7 @@
           "__name__": "influxdb_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

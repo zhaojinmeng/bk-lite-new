@@ -12,7 +12,7 @@
           "config_type": "production-contract",
           "host": "192.0.2.81",
           "inst_name": "iis.example.invalid",
-          "instance_id": "cmdb-iis",
+          "instance_id": "cmdb_114424",
           "instance_type": "iis",
           "model_id": "iis",
           "physical_path": "C:inetpubwwwroot",
@@ -21,7 +21,7 @@
           "__name__": "iis_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

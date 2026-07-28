@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "required": [
     "status",
@@ -36,25 +36,34 @@
                 "type": "object",
                 "required": [
                   "__name__",
-                  "collect_status",
+                  "model_id",
+                  "bk_obj_id",
                   "instance_id",
-                  "model_id"
+                  "agent_id",
+                  "config_type",
+                  "collect_status"
                 ],
                 "properties": {
                   "__name__": {
-                    "type": "string",
-                    "pattern": "_info_gauge$"
-                  },
-                  "collect_status": {
-                    "const": "success"
-                  },
-                  "instance_id": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                   },
                   "model_id": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
+                  },
+                  "bk_obj_id": {
+                    "type": "string"
+                  },
+                  "instance_id": {
+                    "type": "string"
+                  },
+                  "agent_id": {
+                    "type": "string"
+                  },
+                  "config_type": {
+                    "type": "string"
+                  },
+                  "collect_status": {
+                    "type": "string"
                   }
                 },
                 "additionalProperties": {
@@ -63,22 +72,88 @@
               },
               "value": {
                 "type": "array",
-                "items": [
+                "minItems": 2,
+                "maxItems": 2,
+                "prefixItems": [
                   {
-                    "type": [
-                      "integer",
-                      "number"
-                    ]
+                    "type": "number",
+                    "minimum": 1000000000,
+                    "maximum": 4102444800
                   },
                   {
                     "type": "string"
                   }
                 ],
-                "minItems": 2,
-                "maxItems": 2
+                "items": false
               }
             }
-          }
+          },
+          "contains": {
+            "type": "object",
+            "required": [
+              "metric",
+              "value"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "metric": {
+                "type": "object",
+                "required": [
+                  "__name__",
+                  "model_id",
+                  "bk_obj_id",
+                  "instance_id",
+                  "agent_id",
+                  "config_type",
+                  "collect_status"
+                ],
+                "properties": {
+                  "__name__": {
+                    "const": "docker_info_gauge"
+                  },
+                  "model_id": {
+                    "const": "docker"
+                  },
+                  "bk_obj_id": {
+                    "const": "docker"
+                  },
+                  "instance_id": {
+                    "const": "cmdb_433404"
+                  },
+                  "agent_id": {
+                    "const": "agent-contract"
+                  },
+                  "config_type": {
+                    "const": "production-contract"
+                  },
+                  "collect_status": {
+                    "const": "success"
+                  }
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "value": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number",
+                    "minimum": 1000000000,
+                    "maximum": 4102444800
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "items": false
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
         }
       }
     }

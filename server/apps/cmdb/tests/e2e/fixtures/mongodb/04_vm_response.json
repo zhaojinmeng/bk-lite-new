@@ -14,8 +14,8 @@
           "config_type": "production-contract",
           "db_path": "/var/lib/mongodb",
           "host": "mongodb.example.invalid",
-          "inst_name": "mongodb.example.invalid-mongodb-27017",
-          "instance_id": "cmdb-mongodb",
+          "inst_name": "mongodb-mongodb-27017.example.invalid",
+          "instance_id": "cmdb_816738",
           "instance_type": "mongodb",
           "ip_addr": "192.0.2.23",
           "max_incoming_conn": "default:819",
@@ -27,7 +27,7 @@
           "__name__": "mongodb_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

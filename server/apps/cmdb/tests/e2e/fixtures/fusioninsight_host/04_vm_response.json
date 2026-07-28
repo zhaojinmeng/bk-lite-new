@@ -6,12 +6,31 @@
       {
         "metric": {
           "agent_id": "agent-contract",
+          "bk_obj_id": "fusioninsight_cluster",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb_194382",
+          "instance_type": "fusioninsight",
+          "model_id": "fusioninsight_cluster",
+          "resource_id": "1",
+          "resource_name": "cluster-contract",
+          "__name__": "fusioninsight_cluster_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
           "bk_obj_id": "fusioninsight_host",
           "cluster_id": "1",
           "collect_status": "success",
           "collect_type": "discovery",
           "config_type": "production-contract",
-          "instance_id": "cmdb-fusioninsight",
+          "instance_id": "cmdb_194382",
           "instance_type": "fusioninsight",
           "ip_addr": "192.0.2.110",
           "memory_mb": "65536",
@@ -25,7 +44,7 @@
           "__name__": "fusioninsight_host_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

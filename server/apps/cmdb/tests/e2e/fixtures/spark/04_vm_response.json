@@ -12,7 +12,7 @@
           "config_type": "production-contract",
           "host": "spark.example.invalid",
           "inst_name": "spark.example.invalid",
-          "instance_id": "cmdb-spark",
+          "instance_id": "cmdb_187515",
           "instance_type": "spark",
           "ip_addr": "192.0.2.74",
           "model_id": "spark",
@@ -22,7 +22,7 @@
           "__name__": "spark_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

@@ -11,13 +11,273 @@
           "collect_type": "discovery",
           "config_type": "production-contract",
           "endpoint": "https://ecs.cn-south-1.example.invalid",
-          "instance_id": "cmdb-hwcloud",
+          "instance_id": "cmdb_626047",
           "instance_type": "hwcloud",
           "model_id": "hwcloud",
           "__name__": "hwcloud_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "hwcloud_dcs",
+          "cache_mode": "ha",
+          "capacity_gb": "0",
+          "charge_type": "0",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "create_time": "2026-01-02T03:04:05Z",
+          "engine": "Redis",
+          "engine_version": "6.0",
+          "instance_id": "cmdb_626047",
+          "instance_type": "hwcloud",
+          "ip_addr": "192.0.2.40",
+          "model_id": "hwcloud_dcs",
+          "port": "6379",
+          "region": "cn-south-1",
+          "resource_id": "dcs-001",
+          "resource_name": "dcs-dcs-001",
+          "status": "RUNNING",
+          "subnet_id": "subnet-001",
+          "vpc_id": "vpc-001",
+          "__name__": "hwcloud_dcs_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "hwcloud_ecs",
+          "charge_type": "POSTPAID_BY_HOUR",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "create_time": "2026-01-02 11:04:05",
+          "instance_id": "cmdb_626047",
+          "instance_type": "hwcloud",
+          "ip_addr": "192.0.2.10",
+          "memory_mb": "4096",
+          "model_id": "hwcloud_ecs",
+          "os_name": "EulerOS",
+          "region": "cn-south-1",
+          "resource_id": "ecs-001",
+          "resource_name": "ecs-contract",
+          "status": "RUNNING",
+          "vcpus": "2",
+          "vpc": "vpc-001",
+          "zone": "cn-south-1a",
+          "__name__": "hwcloud_ecs_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bandwidth": "5",
+          "bk_obj_id": "hwcloud_eip",
+          "charge_type": "POSTPAID_BY_HOUR",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "create_time": "2026-01-02 03:04:05",
+          "instance_id": "cmdb_626047",
+          "instance_type": "hwcloud",
+          "ip_addr": "192.0.2.20",
+          "model_id": "hwcloud_eip",
+          "region": "cn-south-1",
+          "resource_id": "eip-001",
+          "resource_name": "eip-eip-001",
+          "status": "BIND",
+          "__name__": "hwcloud_eip_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "hwcloud_elb",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "create_time": "2026-01-02T03:04:05Z",
+          "instance_id": "cmdb_626047",
+          "instance_type": "hwcloud",
+          "ip_version": "IPV4",
+          "model_id": "hwcloud_elb",
+          "region": "cn-south-1",
+          "resource_id": "elb-001",
+          "resource_name": "elb-elb-001",
+          "status": "True",
+          "vpc": "vpc-001",
+          "__name__": "hwcloud_elb_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "hwcloud_evs",
+          "category": "CLOUD_SSD",
+          "charge_type": "POSTPAID_BY_HOUR",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "create_time": "2026-01-02 11:04:05",
+          "disk_size": "40",
+          "disk_type": "DATA_DISK",
+          "instance_id": "cmdb_626047",
+          "instance_type": "hwcloud",
+          "model_id": "hwcloud_evs",
+          "region": "cn-south-1",
+          "resource_id": "evs-001",
+          "resource_name": "evs-evs-001",
+          "status": "UNATTACHED",
+          "zone": "cn-south-1a",
+          "__name__": "hwcloud_evs_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "hwcloud_obs",
+          "bucket_type": "STANDARD",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb_626047",
+          "instance_type": "hwcloud",
+          "model_id": "hwcloud_obs",
+          "region": "cn-south-1",
+          "resource_id": "obs-contract",
+          "resource_name": "obs-contract",
+          "__name__": "hwcloud_obs_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "hwcloud_rds",
+          "charge_type": "postPaid",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "create_time": "2026-01-02T03:04:05Z",
+          "db_type": "Ha",
+          "engine": "MySQL",
+          "engine_version": "8.0",
+          "instance_id": "cmdb_626047",
+          "instance_type": "hwcloud",
+          "ip_addr": "192.0.2.30",
+          "memory_gb": "8",
+          "model_id": "hwcloud_rds",
+          "port": "3306",
+          "region": "cn-south-1",
+          "resource_id": "rds-001",
+          "resource_name": "rds-rds-001",
+          "status": "ACTIVE",
+          "subnet_id": "subnet-001",
+          "vcpus": "4",
+          "volume_size": "100",
+          "volume_type": "CLOUDSSD",
+          "vpc_id": "vpc-001",
+          "__name__": "hwcloud_rds_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "hwcloud_sg",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb_626047",
+          "instance_type": "hwcloud",
+          "is_default": "False",
+          "model_id": "hwcloud_sg",
+          "region": "cn-south-1",
+          "resource_id": "sg-001",
+          "resource_name": "sg-sg-001",
+          "vpc": "vpc-001",
+          "__name__": "hwcloud_sg_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "hwcloud_subnet",
+          "cidr": "192.0.2.0/28",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "gateway": "192.0.2.1",
+          "instance_id": "cmdb_626047",
+          "instance_type": "hwcloud",
+          "model_id": "hwcloud_subnet",
+          "region": "cn-south-1",
+          "resource_id": "subnet-001",
+          "resource_name": "subnet-contract",
+          "status": "AVAILABLE",
+          "vpc": "vpc-001",
+          "__name__": "hwcloud_subnet_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "hwcloud_vpc",
+          "cidr": "192.0.2.0/24",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb_626047",
+          "instance_type": "hwcloud",
+          "is_default": "False",
+          "model_id": "hwcloud_vpc",
+          "region": "cn-south-1",
+          "resource_id": "vpc-001",
+          "resource_name": "vpc-contract",
+          "status": "AVAILABLE",
+          "__name__": "hwcloud_vpc_info_gauge"
+        },
+        "value": [
+          1700000000.123,
           "1"
         ]
       }

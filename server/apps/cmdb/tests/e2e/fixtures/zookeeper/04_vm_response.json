@@ -14,9 +14,9 @@
           "data_dir": "/var/lib/zookeeper",
           "host": "zookeeper.example.invalid",
           "init_limit": "10",
-          "inst_name": "zookeeper.example.invalid-zk-2181",
+          "inst_name": "zookeeper-zk-2181.example.invalid",
           "install_path": "/usr/share",
-          "instance_id": "cmdb-zookeeper",
+          "instance_id": "cmdb_489471",
           "instance_type": "zookeeper",
           "ip_addr": "192.0.2.22",
           "java_path": "/usr/lib/jvm/java-11-openjdk-arm64/bin/java",
@@ -32,7 +32,7 @@
           "__name__": "zookeeper_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

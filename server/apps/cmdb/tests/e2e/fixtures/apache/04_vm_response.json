@@ -14,8 +14,8 @@
           "httpd_conf_path": "/etc/apache2/apache2.conf",
           "httpd_path": "/usr/sbin/apache2",
           "include": "mods-enabled/*.load,mods-enabled/*.conf,ports.conf,conf-enabled/*.conf,sites-enabled/*.conf",
-          "inst_name": "apache.example.invalid-apache-80",
-          "instance_id": "cmdb-apache",
+          "inst_name": "apache-apache-80.example.invalid",
+          "instance_id": "cmdb_152091",
           "instance_type": "apache",
           "ip_addr": "192.0.2.24",
           "model_id": "apache",
@@ -25,7 +25,7 @@
           "__name__": "apache_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

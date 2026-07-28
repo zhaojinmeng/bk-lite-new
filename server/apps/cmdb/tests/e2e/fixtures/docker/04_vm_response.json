@@ -16,7 +16,7 @@
           "host": "docker.example.invalid",
           "image": "alpine:3.18",
           "inst_name": "docker.example.invalid",
-          "instance_id": "cmdb-docker",
+          "instance_id": "cmdb_433404",
           "instance_type": "docker",
           "ip_addr": "192.0.2.50",
           "model_id": "docker",
@@ -24,7 +24,7 @@
           "__name__": "docker_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

@@ -11,9 +11,9 @@
           "collect_type": "discovery",
           "config_type": "production-contract",
           "host": "consul.example.invalid",
-          "inst_name": "consul.example.invalid-consul-8500",
+          "inst_name": "consul-consul-8500.example.invalid",
           "install_path": "/usr/bin",
-          "instance_id": "cmdb-consul",
+          "instance_id": "cmdb_522941",
           "instance_type": "consul",
           "ip_addr": "192.0.2.22",
           "model_id": "consul",
@@ -23,7 +23,7 @@
           "__name__": "consul_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

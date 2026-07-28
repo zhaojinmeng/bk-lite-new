@@ -17,7 +17,7 @@
           "data_path": "/data",
           "deploy_mode": "standalone",
           "host": "minio.example.invalid",
-          "instance_id": "cmdb-minio",
+          "instance_id": "cmdb_195291",
           "instance_type": "minio",
           "ip_addr": "192.0.2.22",
           "model_id": "minio",
@@ -27,7 +27,7 @@
           "__name__": "minio_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

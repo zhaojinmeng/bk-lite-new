@@ -14,7 +14,7 @@
           "config_type": "production-contract",
           "host": "rocketmq.example.invalid",
           "inst_name": "rocketmq.example.invalid",
-          "instance_id": "cmdb-rocketmq",
+          "instance_id": "cmdb_433546",
           "instance_type": "rocketmq",
           "ip_addr": "192.0.2.73",
           "model_id": "rocketmq",
@@ -23,7 +23,7 @@
           "__name__": "rocketmq_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

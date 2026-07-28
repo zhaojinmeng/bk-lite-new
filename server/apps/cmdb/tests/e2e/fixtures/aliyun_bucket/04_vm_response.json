@@ -14,7 +14,7 @@
           "creation_date": "2026-01-02 11:04:05",
           "cross_region_replication": "Disabled",
           "extranet_endpoint": "bucket-contract.oss-cn-hangzhou.aliyuncs.com",
-          "instance_id": "cmdb-aliyun_account",
+          "instance_id": "cmdb_124712",
           "instance_type": "aliyun_account",
           "intranet_endpoint": "bucket-contract.oss-cn-hangzhou-internal.aliyuncs.com",
           "location": "oss-cn-hangzhou",
@@ -25,7 +25,181 @@
           "__name__": "aliyun_bucket_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "aliyun_clb",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "create_time": "2026-01-02 11:04:00",
+          "instance_id": "cmdb_124712",
+          "instance_type": "aliyun_account",
+          "ip_addr": "192.0.2.10",
+          "model_id": "aliyun_clb",
+          "region": "cn-hangzhou",
+          "resource_id": "lb-001",
+          "resource_name": "clb-contract",
+          "status": "active",
+          "__name__": "aliyun_clb_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "aliyun_ecs",
+          "charge_type": "POSTPAID_BY_HOUR",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "create_time": "2026-01-01 08:00:00",
+          "instance_id": "cmdb_124712",
+          "instance_type": "aliyun_account",
+          "ip_addr": "192.0.2.9",
+          "memory": "4096",
+          "model_id": "aliyun_ecs",
+          "os_name": "Linux",
+          "public_ip": "192.0.2.9",
+          "region": "cn-hangzhou",
+          "resource_id": "i-001",
+          "resource_name": "ecs-contract",
+          "status": "RUNNING",
+          "vcpus": "2",
+          "vpc": "vpc-aliyun",
+          "zone": "cn-hangzhou-h",
+          "__name__": "aliyun_ecs_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "aliyun_kafka_inst",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "create_time": "1970-01-01 08:00:00",
+          "instance_id": "cmdb_124712",
+          "instance_type": "aliyun_account",
+          "model_id": "aliyun_kafka_inst",
+          "region": "cn-hangzhou",
+          "resource_id": "alikafka-001",
+          "resource_name": "kafka-contract",
+          "status": "5",
+          "storage_gb": "3600",
+          "__name__": "aliyun_kafka_inst_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "aliyun_mongodb",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "instance_id": "cmdb_124712",
+          "instance_type": "aliyun_account",
+          "model_id": "aliyun_mongodb",
+          "region": "cn-hangzhou",
+          "resource_id": "dds-001",
+          "resource_name": "mongodb-contract",
+          "status": "Running",
+          "type": "replicate",
+          "__name__": "aliyun_mongodb_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "aliyun_mysql",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "engine": "MySQL",
+          "instance_id": "cmdb_124712",
+          "instance_type": "aliyun_account",
+          "model_id": "aliyun_mysql",
+          "region": "cn-hangzhou",
+          "resource_id": "rm-001",
+          "resource_name": "mysql-contract",
+          "status": "Running",
+          "__name__": "aliyun_mysql_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "bk_obj_id": "aliyun_pgsql",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "engine": "PostgreSQL",
+          "instance_id": "cmdb_124712",
+          "instance_type": "aliyun_account",
+          "model_id": "aliyun_pgsql",
+          "region": "cn-hangzhou",
+          "resource_id": "pg-001",
+          "resource_name": "pgsql-contract",
+          "status": "Running",
+          "__name__": "aliyun_pgsql_info_gauge"
+        },
+        "value": [
+          1700000000.123,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "agent_id": "agent-contract",
+          "architecture_type": "cluster",
+          "bandwidth": "10",
+          "bk_obj_id": "aliyun_redis",
+          "capacity": "4096",
+          "charge_type": "PostPaid",
+          "collect_status": "success",
+          "collect_type": "discovery",
+          "config_type": "production-contract",
+          "connection_domain": "redis.example.invalid",
+          "engine_version": "6.0",
+          "instance_class": "redis.master.small.default",
+          "instance_id": "cmdb_124712",
+          "instance_type": "aliyun_account",
+          "model_id": "aliyun_redis",
+          "network_type": "VPC",
+          "package_type": "standard",
+          "port": "6379",
+          "qps": "1000",
+          "region": "cn-hangzhou",
+          "resource_id": "r-001",
+          "resource_name": "redis-contract",
+          "zone": "cn-hangzhou-h",
+          "__name__": "aliyun_redis_info_gauge"
+        },
+        "value": [
+          1700000000.123,
           "1"
         ]
       }

@@ -17,7 +17,7 @@
           "enable_binlog": "ON",
           "has_slaves": "False",
           "host": "mysql.example.invalid",
-          "instance_id": "cmdb-mysql",
+          "instance_id": "cmdb_610918",
           "instance_type": "mysql",
           "ip_addr": "127.0.0.1",
           "log_error": "stderr",
@@ -36,7 +36,7 @@
           "__name__": "mysql_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }

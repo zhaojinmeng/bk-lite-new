@@ -13,7 +13,7 @@
           "config_path": "/etc/nginx/nginx.conf",
           "config_type": "production-contract",
           "host": "nginx.example.invalid",
-          "instance_id": "cmdb-nginx",
+          "instance_id": "cmdb_450867",
           "instance_type": "nginx",
           "ip_addr": "192.0.2.22",
           "listen_port": "80",
@@ -24,7 +24,7 @@
           "__name__": "nginx_info_gauge"
         },
         "value": [
-          9999999999,
+          1700000000.123,
           "1"
         ]
       }
