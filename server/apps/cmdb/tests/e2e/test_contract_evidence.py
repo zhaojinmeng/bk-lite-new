@@ -329,6 +329,39 @@ def test_敏感信息门禁拒绝高风险键和值(complete_evidence, relative_
         evidence.assert_no_secrets()
 
 
+def test_敏感信息门禁允许重复服务前缀的明确合成资源名(complete_evidence):
+    expected_path = (
+        complete_evidence.root
+        / "fixtures"
+        / complete_evidence.case_id
+        / "05_expected_cmdb.json"
+    )
+    expected_path.write_text(
+        json.dumps({"inst_name": "dcs-dcs-001_dcs-001"}),
+        encoding="utf-8",
+    )
+
+    load_evidence(
+        complete_evidence.case_id, root=complete_evidence.root
+    ).assert_no_secrets()
+
+
+def test_敏感信息门禁允许凭据只从环境变量引用(complete_evidence):
+    line_protocol_path = (
+        complete_evidence.root
+        / "fixtures"
+        / complete_evidence.case_id
+        / "03_line_protocol.txt"
+    )
+    line_protocol_path.write_text(
+        'password=os.environ["DB_PASSWORD"]\n', encoding="utf-8"
+    )
+
+    load_evidence(
+        complete_evidence.case_id, root=complete_evidence.root
+    ).assert_no_secrets()
+
+
 def test_敏感键多种拼写在明确脱敏后允许通过(complete_evidence):
     source_path = complete_evidence.root / "fixtures" / complete_evidence.case_id / "01_source_raw.json"
     source_path.write_text(json.dumps({"API-KEY": "***", "Access_Token": "REDACTED"}), encoding="utf-8")
@@ -520,7 +553,7 @@ def test_生产缺口与非生产归档状态由结构化_audit_返回():
     audit = audit_manifest_evidence(manifest)
 
     assert {item.contract_id for item in audit.validation} == set(manifest.validation_contracts)
-    assert audit.incomplete_validation
+    assert audit.incomplete_validation == ()
     assert all(item.missing_files or item.validation_errors for item in audit.incomplete_validation)
     assert {item.contract_id for item in audit.non_production} == set(manifest.non_production_contracts)
     assert all(item.status == "archived" for item in audit.non_production)

@@ -535,7 +535,11 @@ def _scan_text(filename: str, content: str) -> Iterable[str]:
     for match in _PRIVATE_DOMAIN.finditer(content):
         yield f"{filename}:{match.group(0)}"
     for match in _ASSIGNMENT.finditer(content):
-        if _is_sensitive_key(match.group("key")) and not _is_redacted(match.group("value")):
+        if (
+            _is_sensitive_key(match.group("key"))
+            and not _is_redacted(match.group("value"))
+            and not _is_environment_reference(match.group("value"))
+        ):
             yield f"{filename}:{match.group(0)}"
     for match in _HOST_ASSIGNMENT.finditer(content):
         assignment = match.group(0)
@@ -554,6 +558,13 @@ def _is_redacted(value: Any) -> bool:
     return isinstance(value, str) and value.strip().lower() in _REDACTED_VALUES
 
 
+def _is_environment_reference(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    normalized = value.strip().lower().replace("\\", "")
+    return normalized.startswith(("os.environ[", "os.getenv("))
+
+
 def _normalize_key(key: str) -> str:
     return re.sub(r"[^a-z0-9]", "", key.lower())
 
@@ -570,6 +581,10 @@ def _is_unredacted_instance_name(value: Any) -> bool:
         return False
     lowered = value.strip().lower()
     if "contract" in lowered:
+        return False
+    if re.fullmatch(
+        r"([a-z][a-z0-9]*)-\1-[0-9]+_\1-[0-9]+", lowered
+    ):
         return False
     if re.search(r"(?:^|[^a-z0-9])(?:[a-z0-9-]+\.)*(?:example|invalid|test|localhost)(?:[^a-z0-9]|$)", lowered):
         return False
