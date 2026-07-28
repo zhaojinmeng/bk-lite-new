@@ -158,6 +158,91 @@ def test_nested_deadline_restores_outer_timer_without_extending_it() -> None:
     assert after < before - 0.02
 
 
+def test_deadline_without_outer_timer_raises_inner_timeout() -> None:
+    smoke.signal.setitimer(smoke.signal.ITIMER_REAL, 0)
+
+    with pytest.raises(smoke.SmokeTimeoutError, match="inner"):
+        smoke.CollectionChainSmokeRunner._call_with_deadline(
+            lambda: threading.Event().wait(1),
+            0.01,
+            "inner",
+        )
+
+
+def test_shorter_inner_deadline_restores_outer_handler_and_remaining_time() -> None:
+    class OuterDeadline(Exception):
+        pass
+
+    def outer_handler(_: int, __: object) -> None:
+        raise OuterDeadline
+
+    previous_handler = smoke.signal.getsignal(smoke.signal.SIGALRM)
+    smoke.signal.signal(smoke.signal.SIGALRM, outer_handler)
+    smoke.signal.setitimer(smoke.signal.ITIMER_REAL, 0.5)
+    try:
+        with pytest.raises(smoke.SmokeTimeoutError, match="inner"):
+            smoke.CollectionChainSmokeRunner._call_with_deadline(
+                lambda: threading.Event().wait(1),
+                0.01,
+                "inner",
+            )
+        remaining = smoke.signal.getitimer(smoke.signal.ITIMER_REAL)[0]
+        assert smoke.signal.getsignal(smoke.signal.SIGALRM) is outer_handler
+        assert 0 < remaining < 0.5
+    finally:
+        smoke.signal.setitimer(smoke.signal.ITIMER_REAL, 0)
+        smoke.signal.signal(smoke.signal.SIGALRM, previous_handler)
+
+
+def test_shorter_outer_deadline_keeps_outer_handler_and_exception() -> None:
+    class OuterDeadline(Exception):
+        pass
+
+    calls: list[str] = []
+
+    def outer_handler(_: int, __: object) -> None:
+        calls.append("outer")
+        raise OuterDeadline("outer")
+
+    previous_handler = smoke.signal.getsignal(smoke.signal.SIGALRM)
+    smoke.signal.signal(smoke.signal.SIGALRM, outer_handler)
+    smoke.signal.setitimer(smoke.signal.ITIMER_REAL, 0.01)
+    try:
+        with pytest.raises(OuterDeadline, match="outer"):
+            smoke.CollectionChainSmokeRunner._call_with_deadline(
+                lambda: threading.Event().wait(1),
+                0.5,
+                "inner",
+            )
+        assert calls == ["outer"]
+    finally:
+        smoke.signal.setitimer(smoke.signal.ITIMER_REAL, 0)
+        smoke.signal.signal(smoke.signal.SIGALRM, previous_handler)
+
+
+def test_normal_callback_only_consumes_elapsed_outer_budget() -> None:
+    def outer_handler(_: int, __: object) -> None:
+        raise AssertionError("outer deadline should not fire")
+
+    previous_handler = smoke.signal.getsignal(smoke.signal.SIGALRM)
+    smoke.signal.signal(smoke.signal.SIGALRM, outer_handler)
+    smoke.signal.setitimer(smoke.signal.ITIMER_REAL, 0.5)
+    before = smoke.signal.getitimer(smoke.signal.ITIMER_REAL)[0]
+    try:
+        result = smoke.CollectionChainSmokeRunner._call_with_deadline(
+            lambda: threading.Event().wait(0.02) or "done",
+            1,
+            "inner",
+        )
+        after = smoke.signal.getitimer(smoke.signal.ITIMER_REAL)[0]
+        assert result == "done"
+        assert after < before - 0.01
+        assert smoke.signal.getsignal(smoke.signal.SIGALRM) is outer_handler
+    finally:
+        smoke.signal.setitimer(smoke.signal.ITIMER_REAL, 0)
+        smoke.signal.signal(smoke.signal.SIGALRM, previous_handler)
+
+
 def test_bounded_command_output_limits_bytes_and_time() -> None:
     output = smoke.bounded_command_output(
         ["python", "-c", "import sys; sys.stdout.write('x' * 100000)"],

@@ -667,16 +667,17 @@ class CollectionChainSmokeRunner:
             raise SmokeConfigurationError("硬截止时间仅允许在主线程执行")
         previous_handler = signal.getsignal(signal.SIGALRM)
         previous_timer = signal.getitimer(signal.ITIMER_REAL)
+        if 0 < previous_timer[0] <= timeout:
+            # The outer deadline owns both the timer and its exception semantics.
+            # Leaving it untouched also lets the kernel deduct callback elapsed time.
+            return callback()
         started = time.monotonic()
 
         def raise_timeout(_: int, __: Any) -> None:
             raise _DeadlineExpired(message)
 
-        effective_timeout = (
-            min(timeout, previous_timer[0]) if previous_timer[0] > 0 else timeout
-        )
         signal.signal(signal.SIGALRM, raise_timeout)
-        signal.setitimer(signal.ITIMER_REAL, effective_timeout)
+        signal.setitimer(signal.ITIMER_REAL, timeout)
         try:
             try:
                 return callback()
