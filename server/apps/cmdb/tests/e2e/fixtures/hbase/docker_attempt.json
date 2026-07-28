@@ -36,9 +36,7 @@
       "ps",
       "-aq",
       "--filter",
-      "id=cmdb-task5-hbase",
-      "--filter",
-      "name=cmdb-task5-hbase"
+      "name=^/cmdb-task5-hbase$"
     ],
     "residual_count": 0
   }

@@ -38,16 +38,29 @@ def test_降级对象保留机器可审的真实Docker尝试(case_id):
     ).validate(attempt)
     assert attempt["case_id"] == case_id
     assert attempt["exit_code"] != 0
+    assert attempt["cleanup"]["exit_code"] == 0
     assert attempt["cleanup"]["residual_count"] == 0
     resource_identifier = attempt["resource_identifier"]
     assert any(
         resource_identifier in argument
         for argument in attempt["cleanup"]["command"]
     )
-    assert any(
-        resource_identifier in argument
-        for argument in attempt["cleanup"]["residual_query"]
-    )
+    if attempt["container_id"]:
+        assert attempt["cleanup"]["residual_query"] == [
+            "docker",
+            "ps",
+            "-aq",
+            "--filter",
+            f"id={attempt['container_id']}",
+        ]
+    else:
+        assert attempt["cleanup"]["residual_query"] == [
+            "docker",
+            "ps",
+            "-aq",
+            "--filter",
+            f"name=^/{resource_identifier}$",
+        ]
     started_at = datetime.fromisoformat(
         attempt["started_at"].replace("Z", "+00:00")
     )
@@ -95,6 +108,14 @@ def test_attempt_schema拒绝成功退出伪装成降级证据():
             "residual_count": 0,
         },
     }
+
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.Draft202012Validator(ATTEMPT_SCHEMA).validate(attempt)
+
+
+def test_attempt_schema拒绝cleanup失败冒充已清理():
+    attempt = _load_attempt("hbase")
+    attempt["cleanup"]["exit_code"] = 1
 
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.Draft202012Validator(ATTEMPT_SCHEMA).validate(attempt)

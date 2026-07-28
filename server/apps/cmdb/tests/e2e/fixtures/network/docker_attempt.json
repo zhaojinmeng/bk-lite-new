@@ -36,9 +36,7 @@
       "ps",
       "-aq",
       "--filter",
-      "id=cmdb-task5-network",
-      "--filter",
-      "name=cmdb-task5-network"
+      "name=^/cmdb-task5-network$"
     ],
     "residual_count": 0
   }

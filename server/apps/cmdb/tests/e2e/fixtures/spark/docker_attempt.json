@@ -36,9 +36,7 @@
       "ps",
       "-aq",
       "--filter",
-      "id=cmdb-task5-spark",
-      "--filter",
-      "name=cmdb-task5-spark"
+      "name=^/cmdb-task5-spark$"
     ],
     "residual_count": 0
   }

@@ -36,9 +36,7 @@
       "ps",
       "-aq",
       "--filter",
-      "id=cmdb-task5-mssql",
-      "--filter",
-      "name=cmdb-task5-mssql"
+      "name=^/cmdb-task5-mssql$"
     ],
     "residual_count": 0
   }

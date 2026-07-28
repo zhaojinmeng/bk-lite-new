@@ -39,9 +39,7 @@
       "ps",
       "-aq",
       "--filter",
-      "id=f00249a2e996",
-      "--filter",
-      "name=f00249a2e996"
+      "id=f00249a2e996"
     ],
     "residual_count": 0
   }

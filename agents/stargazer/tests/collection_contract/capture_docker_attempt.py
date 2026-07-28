@@ -19,6 +19,7 @@ EVIDENCE_ROOT = (
     REPOSITORY_ROOT / "server/apps/cmdb/tests/e2e/fixtures"
 )
 _CONTAINER_ID = re.compile(r"container_id\s*=\s*([0-9a-f]{12,64})")
+_DOCKER_RESOURCE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
 _SENSITIVE_ASSIGNMENT = re.compile(
     r"(?i)(password|secret|token|api[_-]?key)(\s*[:=]\s*)([^\s,;]+)"
 )
@@ -71,6 +72,63 @@ def _image_digest(image: str) -> str | None:
     return digest if result.returncode == 0 and digest else None
 
 
+def build_residual_query(
+    *, container_id: str | None, resource_identifier: str
+) -> list[str]:
+    if container_id:
+        resource_filter = f"id={container_id}"
+    else:
+        if not _DOCKER_RESOURCE_NAME.fullmatch(resource_identifier):
+            raise ValueError(
+                f"非法 Docker resource_identifier: {resource_identifier}"
+            )
+        resource_filter = f"name=^/{resource_identifier}$"
+    return [
+        "docker",
+        "ps",
+        "-aq",
+        "--filter",
+        resource_filter,
+    ]
+
+
+def cleanup_docker_resource(
+    *,
+    container_id: str | None,
+    resource_identifier: str,
+    cwd: Path,
+    runner=subprocess.run,
+) -> dict[str, object]:
+    cleanup_command = ["docker", "rm", "-f", resource_identifier]
+    cleanup = runner(
+        cleanup_command,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+    )
+    residual_query = build_residual_query(
+        container_id=container_id,
+        resource_identifier=resource_identifier,
+    )
+    residual = runner(
+        residual_query,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+    )
+    residual_ids = [
+        item for item in residual.stdout.splitlines() if item.strip()
+    ]
+    return {
+        "command": cleanup_command,
+        "exit_code": cleanup.returncode,
+        "stdout": _sanitize(cleanup.stdout),
+        "stderr": _sanitize(cleanup.stderr),
+        "residual_query": residual_query,
+        "residual_count": len(residual_ids),
+    }
+
+
 def capture(args: argparse.Namespace) -> Path:
     resource_identifier = f"cmdb-task5-{args.case_id}"
     started_at = _utc_now()
@@ -110,32 +168,11 @@ def capture(args: argparse.Namespace) -> Path:
     if container_id:
         resource_identifier = container_id
 
-    cleanup_command = ["docker", "rm", "-f", resource_identifier]
-    cleanup = subprocess.run(
-        cleanup_command,
+    cleanup = cleanup_docker_resource(
+        container_id=container_id,
+        resource_identifier=resource_identifier,
         cwd=REPOSITORY_ROOT,
-        capture_output=True,
-        text=True,
     )
-    residual_query = [
-        "docker",
-        "ps",
-        "-aq",
-        "--filter",
-        f"id={resource_identifier}",
-        "--filter",
-        f"name={resource_identifier}",
-    ]
-    residual = subprocess.run(
-        residual_query,
-        cwd=REPOSITORY_ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    residual_ids = [
-        item for item in residual.stdout.splitlines() if item.strip()
-    ]
     artifact = {
         "case_id": args.case_id,
         "kind": args.kind,
@@ -155,14 +192,7 @@ def capture(args: argparse.Namespace) -> Path:
         "outcome": "failed",
         "failure_stage": args.failure_stage,
         "sanitized": True,
-        "cleanup": {
-            "command": cleanup_command,
-            "exit_code": cleanup.returncode,
-            "stdout": _sanitize(cleanup.stdout),
-            "stderr": _sanitize(cleanup.stderr),
-            "residual_query": residual_query,
-            "residual_count": len(residual_ids),
-        },
+        "cleanup": cleanup,
     }
     destination = (
         EVIDENCE_ROOT / args.case_id / "docker_attempt.json"
@@ -171,6 +201,10 @@ def capture(args: argparse.Namespace) -> Path:
         json.dumps(artifact, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    if cleanup["exit_code"] != 0 or cleanup["residual_count"] != 0:
+        raise RuntimeError(
+            f"{args.case_id}: Docker 清理不完整: {cleanup}"
+        )
     print(destination)
     return destination
 

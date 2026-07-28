@@ -38,9 +38,7 @@
       "ps",
       "-aq",
       "--filter",
-      "id=cmdb-task5-oracle",
-      "--filter",
-      "name=cmdb-task5-oracle"
+      "name=^/cmdb-task5-oracle$"
     ],
     "residual_count": 0
   }
