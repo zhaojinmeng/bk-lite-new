@@ -3,9 +3,19 @@
   "source_contract_model_id": "ip",
   "write_mode": "ipam_service",
   "instance_count_min": 0,
-  "expected_vm_metric_subset": {
-    "ip": "127.0.0.1",
-    "collect_status": "success"
-  },
+  "expected_ipam_rows": [
+    {
+      "agent_id": "agent-contract",
+      "bk_obj_id": "ip",
+      "collect_status": "success",
+      "collect_type": "discovery",
+      "config_type": "production-contract",
+      "instance_id": "cmdb_258236",
+      "instance_type": "ip",
+      "ip": "127.0.0.1",
+      "model_id": "ip",
+      "__name__": "ip_info_gauge"
+    }
+  ],
   "review_basis": "独立审阅：IP 发现使用 IPAM 自定义回写服务，不进入通用图库实例列表"
 }

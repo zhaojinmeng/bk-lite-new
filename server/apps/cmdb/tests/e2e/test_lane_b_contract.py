@@ -25,6 +25,7 @@ from apps.cmdb.tests.e2e.lane_b_loader import (
 
 
 MODEL_CONFIG = Path(__file__).parents[2] / "support-files" / "model_config.xlsx"
+RUNTIME_INJECTED_REQUIRED_FIELDS = {"organization"}
 
 
 def _fake_task(entry, vm_response):
@@ -64,8 +65,6 @@ def _run_real_plugin(
     task_id = vm_instance_id.split("_", 1)[1] if "_" in vm_instance_id else "33011"
     monkeypatch.setattr(CollectBase, "get_collect_inst", lambda self: task)
     plugin_cls = get_collection_plugin(entry.task_type, entry.supported_model_id)
-    if entry.case_id == "network":
-        monkeypatch.setattr(plugin_cls, "get_oid_map", lambda self: {})
     if entry.case_id == "ip":
         monkeypatch.setattr(
             "apps.cmdb.services.ipam_discovery.apply_ip_discovery_vm_rows",
@@ -173,9 +172,45 @@ def _value_matches_model_type(value, attr_type):
         return isinstance(value, int) and not isinstance(value, bool)
     if attr_type == "float":
         return isinstance(value, (int, float)) and not isinstance(value, bool)
-    if attr_type in {"str", "time"}:
+    if attr_type in {"str", "time", "enum"}:
         return isinstance(value, str)
-    return True
+    if attr_type == "table":
+        if isinstance(value, list):
+            return all(isinstance(row, dict) for row in value)
+        if not isinstance(value, str):
+            return False
+        try:
+            return isinstance(json.loads(value), list)
+        except json.JSONDecodeError:
+            return False
+    if attr_type == "tag":
+        return isinstance(value, list) and all(
+            isinstance(item, str) for item in value
+        )
+    if attr_type in {"organization", "user"}:
+        return isinstance(value, list) and all(
+            isinstance(item, int) and not isinstance(item, bool)
+            for item in value
+        )
+    return False
+
+
+@pytest.mark.parametrize(
+    ("value", "attr_type", "matches"),
+    [
+        ([{"name": "disk-a"}], "table", True),
+        ('[{"name": "disk-a"}]', "table", True),
+        ("not-json", "table", False),
+        (["blue"], "tag", True),
+        ([1], "tag", False),
+        ([1, 2], "organization", True),
+        ([True], "organization", False),
+        ([1], "user", True),
+        ("anything", "unknown_type", False),
+    ],
+)
+def test_生产模型复杂字段类型必须fail_closed(value, attr_type, matches):
+    assert _value_matches_model_type(value, attr_type) is matches
 
 
 def test_生产模型反射允许artifact_tool导出的空短尾行():
@@ -318,6 +353,16 @@ def test_LaneB静态制品通过schema且模型身份一致(entry):
     assert vm_response["status"] == "success"
     assert vm_response["data"]["resultType"] == "vector"
     assert expected.get("source_contract_model_id", entry.emitted_model_id) == entry.emitted_model_id
+    generated_vm = build_vm_response_from_line_protocol(
+        (evidence.fixture_dir / "03_line_protocol.txt").read_text(
+            encoding="utf-8"
+        )
+    )
+    for generated_row in generated_vm["data"]["result"]:
+        assert generated_row in vm_response["data"]["result"], (
+            f"{entry.case_id}: 03 Line Protocol 的指标、值或时间"
+            "未原样传播到 04 VM 响应"
+        )
     if expected.get("write_mode", "graph_entity") != "ipam_service":
         assert expected["expected_instances"]
         assert all(row["inst_name"] for row in expected["expected_instances"])
@@ -333,7 +378,7 @@ def test_独立Golden关键字段符合生产模型反射与字段类型(entry):
         "05_expected_cmdb.json"
     )
     if expected.get("write_mode") == "ipam_service":
-        assert expected["expected_vm_metric_subset"]
+        assert expected["expected_ipam_rows"]
         return
 
     definitions = _production_model_field_definitions(expected["model_id"])
@@ -361,15 +406,21 @@ def test_独立Golden关键字段符合生产模型反射与字段类型(entry):
         field
         for field, definition in definitions.items()
         if definition.is_required
-    } - {"organization"}
+    }
     for row in rows:
         missing_required = required_fields - set(row)
-        assert not missing_required, (
+        unexpected_missing = (
+            missing_required - RUNTIME_INJECTED_REQUIRED_FIELDS
+        )
+        assert not unexpected_missing, (
             f"{entry.case_id}: Golden 缺生产模型必填字段 "
-            f"{sorted(missing_required)}"
+            f"{sorted(unexpected_missing)}；仅允许 Management 在图库写入阶段"
+            "注入 organization"
         )
         empty_required = {
-            field for field in required_fields if row[field] in (None, "")
+            field
+            for field in required_fields - missing_required
+            if row[field] in (None, "")
         }
         assert not empty_required, (
             f"{entry.case_id}: Golden 必填字段为空 {sorted(empty_required)}"
@@ -390,6 +441,7 @@ def test_独立Golden关键字段符合生产模型反射与字段类型(entry):
 @pytest.mark.parametrize(
     "entry", LANE_B_READY_ENTRIES, ids=lambda entry: entry.case_id
 )
+@pytest.mark.django_db
 def test_VM响应经过真实注册插件后匹配独立静态CMDB_Golden(entry, monkeypatch):
     evidence = load_lane_b_evidence(entry.case_id)
     vm_response = evidence.read_json("04_vm_response.json")
@@ -405,10 +457,7 @@ def test_VM响应经过真实注册插件后匹配独立静态CMDB_Golden(entry,
         assert plugin.raw_data == vm_response["data"]["result"]
         assert result == {"ip": []}
         assert applied_ip_rows["task"] is plugin.get_collect_inst()
-        assert any(
-            all(row.get(field) == value for field, value in expected["expected_vm_metric_subset"].items())
-            for row in applied_ip_rows["rows"]
-        )
+        assert applied_ip_rows["rows"] == expected["expected_ipam_rows"]
         return
 
     plugin, result, query = _run_real_plugin(entry, vm_response, monkeypatch)

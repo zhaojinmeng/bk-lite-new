@@ -147,12 +147,14 @@ def test_format_metrics_tuple_missing_field_defaults(runner):
     assert item["os_name"] == ""  # 非数值字段缺失默认空串
 
 
-def test_format_metrics_tuple_bad_value_caught(runner):
+def test_format_metrics_tuple_bad_value_caught(runner, caplog):
     # cpu_cores 为不可转换字符串 -> transform_int 抛 ValueError 被捕获，落 0
     index = {"index_key": "host_info_gauge", "host": "10.0.0.3", "cpu_cores": "abc"}
     runner.collection_metrics_dict["host_info_gauge"] = [index]
     runner.format_metrics()
     assert runner.result["host"][0]["cpu_core"] == 0
+    assert "field:cpu_core" in caplog.text
+    assert "value:'abc'" in caplog.text
 
 
 def test_format_metrics_skips_unmapped_model(runner):

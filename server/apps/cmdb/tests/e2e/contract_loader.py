@@ -87,7 +87,21 @@ _SCHEMA_TARGETS = (
     ("04_vm_response.json", "vm.schema.json"),
     ("05_expected_cmdb.json", "cmdb.schema.json"),
 )
-_ASSIGNMENT = re.compile(r"(?<![A-Za-z0-9_-])['\"]?(?P<key>[A-Za-z][A-Za-z0-9_-]*)['\"]?\s*[:=]\s*['\"]?(?P<value>[^\s,'\"}]+)", re.I,)
+_ASSIGNMENT = re.compile(
+    r"""(?ix)
+    (?<![A-Za-z0-9_-])
+    ['"]?(?P<key>[A-Za-z][A-Za-z0-9_-]*)['"]?\s*[:=]\s*
+    (?P<value>
+        (?:
+            os\.environ\[\s*['"][A-Za-z_][A-Za-z0-9_]*['"]\s*\]
+            |
+            os\.getenv\(\s*['"][A-Za-z_][A-Za-z0-9_]*['"]\s*\)
+        )[^\s,}]*
+        |
+        [^\s,}]+
+    )
+    """,
+)
 _BEARER = re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{6,}", re.I)
 _PRIVATE_DOMAIN = re.compile(r"\b(?:[a-z0-9-]+\.)+(?:internal|local|corp|lan)\b", re.I)
 _HOST_ASSIGNMENT = re.compile(r"\b(?:host|hostname|host_name|ip_addr|ip_address|inst_name|node_name|machine_name)\s*=\s*['\"]?([^,\s}'\"]+)", re.I)
@@ -112,6 +126,16 @@ _SENSITIVE_KEY_NAMES = {
 }
 _SENSITIVE_KEY_SUFFIXES = ("password", "passwd", "pwd", "secret", "token", "apikey", "passphrase")
 _REDACTED_VALUES = {"***", "redacted", "<redacted>", "[redacted]", "not_applicable"}
+_ENVIRONMENT_REFERENCE = re.compile(
+    r"""(?x)
+    (?:
+        os\.environ\[\s*(['"])[A-Za-z_][A-Za-z0-9_]*\1\s*\]
+        |
+        os\.getenv\(\s*(['"])[A-Za-z_][A-Za-z0-9_]*\2\s*\)
+    )
+    \Z
+    """
+)
 
 
 class EvidenceValidationError(ValueError):
@@ -555,14 +579,16 @@ def _scan_text(filename: str, content: str) -> Iterable[str]:
 
 
 def _is_redacted(value: Any) -> bool:
-    return isinstance(value, str) and value.strip().lower() in _REDACTED_VALUES
+    return (
+        isinstance(value, str)
+        and value.strip().strip("'\"").lower() in _REDACTED_VALUES
+    )
 
 
 def _is_environment_reference(value: Any) -> bool:
     if not isinstance(value, str):
         return False
-    normalized = value.strip().lower().replace("\\", "")
-    return normalized.startswith(("os.environ[", "os.getenv("))
+    return _ENVIRONMENT_REFERENCE.fullmatch(value.strip()) is not None
 
 
 def _normalize_key(key: str) -> str:

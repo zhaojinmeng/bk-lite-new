@@ -328,7 +328,17 @@ class HostCollectMetrics(CollectBase):
                                 logger.error(f"数据处理转换失败 field:{field}, error:{e}")
                         else:
                             data[field] = index_data.get(key_or_func, "")
-                    except (KeyError, ValueError, TypeError):
+                    except (KeyError, ValueError, TypeError) as error:
+                        logger.error(
+                            "数据处理转换失败 field:%s, value:%r, error:%s",
+                            field,
+                            index_data.get(
+                                key_or_func[1]
+                                if isinstance(key_or_func, tuple)
+                                else field
+                            ),
+                            error,
+                        )
                         if field in ["cpu_core", "memory", "disk"]:
                             data[field] = 0
                 if data:

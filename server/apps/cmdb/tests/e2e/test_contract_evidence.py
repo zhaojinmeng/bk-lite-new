@@ -362,6 +362,32 @@ def test_敏感信息门禁允许凭据只从环境变量引用(complete_evidenc
     ).assert_no_secrets()
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        "os.getenv(DB_PASSWORD)clear-secret",
+        'os.getenv("DB_PASSWORD")+"clear-secret"',
+        'os.environ["DB_PASSWORD"]clear-secret',
+        'os.environ[DB_PASSWORD]',
+    ],
+)
+def test_敏感信息门禁拒绝畸形或拼接的环境变量表达式(
+    complete_evidence, value
+):
+    path = (
+        complete_evidence.root
+        / "fixtures"
+        / complete_evidence.case_id
+        / "02_prometheus.txt"
+    )
+    path.write_text(f"password={value}\n", encoding="utf-8")
+
+    with pytest.raises(EvidenceValidationError, match="敏感信息"):
+        load_evidence(
+            complete_evidence.case_id, root=complete_evidence.root
+        ).assert_no_secrets()
+
+
 def test_敏感键多种拼写在明确脱敏后允许通过(complete_evidence):
     source_path = complete_evidence.root / "fixtures" / complete_evidence.case_id / "01_source_raw.json"
     source_path.write_text(json.dumps({"API-KEY": "***", "Access_Token": "REDACTED"}), encoding="utf-8")
