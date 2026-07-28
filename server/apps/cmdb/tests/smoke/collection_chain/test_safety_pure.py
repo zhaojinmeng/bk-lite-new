@@ -97,7 +97,9 @@ def test_runner_times_out_and_still_cleans_up(tmp_path: Path) -> None:
     runner = CollectionChainSmokeRunner(
         settings,
         execute=execute,
-        monotonic=iter(chain([0.0, 2.0, 3.0, 4.0], repeat(100.0))).__next__,
+        monotonic=iter(
+            chain([0.0, 2.0, 3.0, 4.0, 5.0, 6.0], repeat(100.0))
+        ).__next__,
         wait=lambda _: None,
     )
 

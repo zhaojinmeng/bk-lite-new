@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import subprocess
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -81,6 +83,79 @@ def test_settings_expose_all_resource_deadlines_and_log_bound(tmp_path: Path) ->
     assert settings.command_timeout == 5
     assert settings.log_timeout == 6
     assert settings.log_max_bytes == 4096
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("CMDB_SMOKE_STARTUP_TIMEOUT", "inf"),
+        ("CMDB_SMOKE_WORKLOAD_TIMEOUT", "nan"),
+        ("CMDB_SMOKE_CANARY_TIMEOUT", "121"),
+        ("CMDB_SMOKE_CLEANUP_TIMEOUT", "121"),
+        ("CMDB_SMOKE_COMMAND_TIMEOUT", "61"),
+        ("CMDB_SMOKE_LOG_TIMEOUT", "31"),
+        ("CMDB_SMOKE_POLL_INTERVAL", "6"),
+        ("CMDB_SMOKE_LOG_MAX_BYTES", "10485761"),
+        ("CMDB_SMOKE_LEDGER_MAX_RESOURCES", "10001"),
+    ],
+)
+def test_settings_reject_non_finite_or_over_limit_resource_values(
+    tmp_path: Path,
+    name: str,
+    value: str,
+) -> None:
+    with pytest.raises(smoke.SmokeConfigurationError, match="上限|有限"):
+        smoke.SmokeSettings.from_env(
+            enabled_env(**{name: value}),
+            artifact_root=tmp_path,
+        )
+
+
+def test_ledger_has_a_hard_resource_count_limit() -> None:
+    ledger = smoke.OwnershipLedger("cmdb-a1b2c3d4", max_resources=2)
+    ledger.record("graph_entity", "node-1")
+    ledger.record("graph_entity", "node-2")
+
+    with pytest.raises(smoke.SmokeConfigurationError, match="资源数量"):
+        ledger.record("graph_entity", "node-3")
+
+
+def test_settings_reject_non_posix_or_non_main_thread(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(smoke.os, "name", "nt")
+    with pytest.raises(smoke.SmokeConfigurationError, match="POSIX"):
+        smoke.SmokeSettings.from_env(enabled_env(), artifact_root=tmp_path)
+    monkeypatch.setattr(smoke.os, "name", "posix")
+
+    errors: list[BaseException] = []
+
+    def construct() -> None:
+        try:
+            smoke.SmokeSettings.from_env(enabled_env(), artifact_root=tmp_path)
+        except BaseException as exc:
+            errors.append(exc)
+
+    thread = threading.Thread(target=construct)
+    thread.start()
+    thread.join(timeout=1)
+
+    assert isinstance(errors[0], smoke.SmokeConfigurationError)
+    assert "主线程" in str(errors[0])
+
+
+def test_nested_deadline_restores_outer_timer_without_extending_it() -> None:
+    smoke.signal.setitimer(smoke.signal.ITIMER_REAL, 1)
+    before = smoke.signal.getitimer(smoke.signal.ITIMER_REAL)[0]
+    try:
+        smoke.CollectionChainSmokeRunner._call_with_deadline(
+            lambda: threading.Event().wait(0.03),
+            0.5,
+            "inner",
+        )
+        after = smoke.signal.getitimer(smoke.signal.ITIMER_REAL)[0]
+    finally:
+        smoke.signal.setitimer(smoke.signal.ITIMER_REAL, 0)
+
+    assert after < before - 0.02
 
 
 def test_bounded_command_output_limits_bytes_and_time() -> None:
@@ -184,6 +259,67 @@ def test_remover_timeout_is_reported_and_compose_is_still_removed(tmp_path: Path
     assert docker.down_calls == 1
 
 
+def test_cleanup_uses_one_budget_and_retries_down_with_remaining_timeout(
+    tmp_path: Path,
+) -> None:
+    docker = HealthyDocker(fail_down_times=1)
+    settings = smoke.SmokeSettings.from_env(
+        enabled_env(
+            CMDB_SMOKE_CLEANUP_TIMEOUT="0.2",
+            CMDB_SMOKE_COMMAND_TIMEOUT="0.1",
+        ),
+        artifact_root=tmp_path,
+    )
+    runner = smoke.CollectionChainSmokeRunner(
+        settings,
+        execute=docker,
+        log_capture=lambda *_: "",
+        canary_probe=lambda _: True,
+        wait=lambda _: None,
+    )
+
+    runner.run(lambda _: None)
+
+    assert docker.down_calls == 2
+    cleanup_timeouts = [
+        timeout
+        for command, timeout in docker.command_timeouts
+        if "down" in command or command[-4:] == ["ps", "-a", "--format", "json"]
+    ]
+    assert cleanup_timeouts
+    assert all(0 < timeout <= settings.command_timeout for timeout in cleanup_timeouts)
+
+
+def test_many_removers_cannot_multiply_global_cleanup_budget(tmp_path: Path) -> None:
+    docker = HealthyDocker()
+    settings = smoke.SmokeSettings.from_env(
+        enabled_env(
+            CMDB_SMOKE_CLEANUP_TIMEOUT="0.03",
+            CMDB_SMOKE_COMMAND_TIMEOUT="0.02",
+        ),
+        artifact_root=tmp_path,
+    )
+    runner = smoke.CollectionChainSmokeRunner(
+        settings,
+        execute=docker,
+        log_capture=lambda *_: "",
+        canary_probe=lambda _: True,
+        resource_remover=lambda *_: threading.Event().wait(1),
+        wait=lambda _: None,
+    )
+
+    def workload(context: smoke.SmokeContext) -> None:
+        for index in range(5):
+            context.ledger.record("graph_entity", f"node-{index}")
+
+    started = time.monotonic()
+    with pytest.raises(smoke.SmokeCleanupError):
+        runner.run(workload)
+    elapsed = time.monotonic() - started
+
+    assert elapsed < 0.15
+
+
 def test_existing_artifact_directory_is_rejected_before_docker(tmp_path: Path) -> None:
     docker = HealthyDocker()
     (tmp_path / "cmdb-a1b2c3d4").mkdir()
@@ -265,23 +401,27 @@ class HealthyDocker:
         *,
         fail_up: bool = False,
         fail_down: bool = False,
+        fail_down_times: int = 0,
         leave_container: bool = False,
         network_error: str = "not found",
     ) -> None:
         self.fail_up = fail_up
         self.fail_down = fail_down
+        self.fail_down_times = fail_down_times
         self.leave_container = leave_container
         self.network_error = network_error
         self.commands: list[list[str]] = []
         self.down_calls = 0
         self.network_inspections: list[str] = []
+        self.command_timeouts: list[tuple[list[str], float]] = []
 
     def __call__(
         self,
         command: list[str],
-        **_: object,
+        **options: object,
     ) -> subprocess.CompletedProcess[str]:
         self.commands.append(command)
+        self.command_timeouts.append((command, float(options.get("timeout", 0))))
         if command[:3] == ["docker", "network", "inspect"]:
             self.network_inspections.append(command[-1])
             return subprocess.CompletedProcess(command, 1, "", self.network_error)
@@ -289,6 +429,8 @@ class HealthyDocker:
             raise subprocess.CalledProcessError(1, command, stderr="up failed")
         if "down" in command:
             self.down_calls += 1
+            if self.down_calls <= self.fail_down_times:
+                return subprocess.CompletedProcess(command, 1, "", "transient down failure")
             return subprocess.CompletedProcess(
                 command,
                 1 if self.fail_down else 0,

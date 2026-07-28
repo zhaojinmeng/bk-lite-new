@@ -70,10 +70,18 @@ project 执行 `down --remove-orphans`。Compose 使用 tmpfs，不创建持久 
 - `CMDB_SMOKE_COMMAND_TIMEOUT`
 - `CMDB_SMOKE_LOG_TIMEOUT`
 - `CMDB_SMOKE_LOG_MAX_BYTES`
+- `CMDB_SMOKE_LEDGER_MAX_RESOURCES`
+
+这些变量只能收紧或在硬上限内调整：启动 300s、workload 600s、canary/cleanup
+各 120s、单命令 60s、日志 30s、轮询间隔 5s、日志 10 MiB、ledger 10000
+条。`NaN`、`Inf` 和超上限值会在 Docker 启动前拒绝。
 
 清理完成后会继续有界确认当前 project 的容器列表为空，且精确名称
 `${COMPOSE_PROJECT_NAME}_default` 的网络不存在。若业务与清理同时失败，运行器用
 `ExceptionGroup` 同时保留两类异常，不能以清理异常覆盖业务根因。
+
+VictoriaMetrics 使用 `-influxSkipSingleField`，因此 canary 的单字段 `value`
+保持原 measurement 名；查询不会错误寻找自动追加的 `_value` 后缀。
 
 ## Task 9 接入点
 

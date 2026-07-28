@@ -16,7 +16,10 @@ services:
 
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.115.0
-    command: ["-storageDataPath=/storage", "-retentionPeriod=1d"]
+    command:
+      - "-storageDataPath=/storage"
+      - "-retentionPeriod=1d"
+      - "-influxSkipSingleField"
     ports:
       - "127.0.0.1::8428"
     tmpfs:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import selectors
@@ -116,6 +117,7 @@ class SmokeSettings:
     command_timeout: float = 30.0
     log_timeout: float = 10.0
     log_max_bytes: int = 1_048_576
+    ledger_max_resources: int = 1_000
 
     @classmethod
     def from_env(
@@ -129,6 +131,7 @@ class SmokeSettings:
             raise SmokeConfigurationError(
                 "真实采集 smoke 仅在显式设置 CMDB_COLLECTION_SMOKE=1 后运行"
             )
+        cls._validate_runtime_support()
 
         run_id = values.get("CMDB_SMOKE_RUN_ID") or f"cmdb-{uuid.uuid4().hex[:12]}"
         project = values.get("COMPOSE_PROJECT_NAME") or f"cmdb-collection-{run_id[5:]}"
@@ -155,37 +158,50 @@ class SmokeSettings:
             compose_project=project,
             compose_file=compose_file,
             artifact_dir=(root / run_id).resolve(),
-            startup_timeout=cls._positive_float(
+            startup_timeout=cls._bounded_float(
                 values.get("CMDB_SMOKE_STARTUP_TIMEOUT", "90"),
                 "CMDB_SMOKE_STARTUP_TIMEOUT",
+                maximum=300,
             ),
-            poll_interval=cls._positive_float(
+            poll_interval=cls._bounded_float(
                 values.get("CMDB_SMOKE_POLL_INTERVAL", "0.5"),
                 "CMDB_SMOKE_POLL_INTERVAL",
+                maximum=5,
             ),
-            workload_timeout=cls._positive_float(
+            workload_timeout=cls._bounded_float(
                 values.get("CMDB_SMOKE_WORKLOAD_TIMEOUT", "120"),
                 "CMDB_SMOKE_WORKLOAD_TIMEOUT",
+                maximum=600,
             ),
-            canary_timeout=cls._positive_float(
+            canary_timeout=cls._bounded_float(
                 values.get("CMDB_SMOKE_CANARY_TIMEOUT", "30"),
                 "CMDB_SMOKE_CANARY_TIMEOUT",
+                maximum=120,
             ),
-            cleanup_timeout=cls._positive_float(
+            cleanup_timeout=cls._bounded_float(
                 values.get("CMDB_SMOKE_CLEANUP_TIMEOUT", "30"),
                 "CMDB_SMOKE_CLEANUP_TIMEOUT",
+                maximum=120,
             ),
-            command_timeout=cls._positive_float(
+            command_timeout=cls._bounded_float(
                 values.get("CMDB_SMOKE_COMMAND_TIMEOUT", "30"),
                 "CMDB_SMOKE_COMMAND_TIMEOUT",
+                maximum=60,
             ),
-            log_timeout=cls._positive_float(
+            log_timeout=cls._bounded_float(
                 values.get("CMDB_SMOKE_LOG_TIMEOUT", "10"),
                 "CMDB_SMOKE_LOG_TIMEOUT",
+                maximum=30,
             ),
-            log_max_bytes=cls._positive_int(
+            log_max_bytes=cls._bounded_int(
                 values.get("CMDB_SMOKE_LOG_MAX_BYTES", "1048576"),
                 "CMDB_SMOKE_LOG_MAX_BYTES",
+                maximum=10_485_760,
+            ),
+            ledger_max_resources=cls._bounded_int(
+                values.get("CMDB_SMOKE_LEDGER_MAX_RESOURCES", "1000"),
+                "CMDB_SMOKE_LEDGER_MAX_RESOURCES",
+                maximum=10_000,
             ),
         )
 
@@ -200,29 +216,45 @@ class SmokeSettings:
             raise SmokeConfigurationError(f"{name} 只允许本机回环或 Compose 内部地址")
 
     @staticmethod
-    def _positive_float(value: str, name: str) -> float:
+    def _bounded_float(value: str, name: str, *, maximum: float) -> float:
         try:
             result = float(value)
         except ValueError as exc:
             raise SmokeConfigurationError(f"{name} 必须是正数") from exc
+        if not math.isfinite(result):
+            raise SmokeConfigurationError(f"{name} 必须是有限数")
         if result <= 0:
             raise SmokeConfigurationError(f"{name} 必须是正数")
+        if result > maximum:
+            raise SmokeConfigurationError(f"{name} 超过安全上限 {maximum:g}")
         return result
 
     @staticmethod
-    def _positive_int(value: str, name: str) -> int:
+    def _bounded_int(value: str, name: str, *, maximum: int) -> int:
         try:
             result = int(value)
         except ValueError as exc:
             raise SmokeConfigurationError(f"{name} 必须是正整数") from exc
         if result <= 0:
             raise SmokeConfigurationError(f"{name} 必须是正整数")
+        if result > maximum:
+            raise SmokeConfigurationError(f"{name} 超过安全上限 {maximum}")
         return result
+
+    @staticmethod
+    def _validate_runtime_support() -> None:
+        if os.name != "posix" or not all(
+            hasattr(signal, name) for name in ("SIGALRM", "ITIMER_REAL", "setitimer")
+        ):
+            raise SmokeConfigurationError("smoke 硬截止时间要求 POSIX SIGALRM")
+        if threading.current_thread() is not threading.main_thread():
+            raise SmokeConfigurationError("smoke 必须在主线程构造和执行")
 
 
 @dataclass
 class OwnershipLedger:
     run_id: str
+    max_resources: int = 1_000
     _resources: list[tuple[str, str, str]] = field(default_factory=list)
     skipped: list[tuple[str, str]] = field(default_factory=list)
     cleanup_errors: list[str] = field(default_factory=list)
@@ -230,6 +262,10 @@ class OwnershipLedger:
     def record(self, kind: str, identifier: str, *, owner_run_id: str | None = None) -> None:
         if not kind or not identifier:
             raise ValueError("资源类型和标识不能为空")
+        if len(self._resources) >= self.max_resources:
+            raise SmokeConfigurationError(
+                f"ownership ledger 资源数量超过上限 {self.max_resources}"
+            )
         self._resources.append((kind, identifier, owner_run_id or self.run_id))
 
     def cleanup(self, remover: Callable[[str, str], None]) -> None:
@@ -241,6 +277,8 @@ class OwnershipLedger:
                 remover(kind, identifier)
             except Exception as exc:
                 self.cleanup_errors.append(f"{kind}:{identifier}: {exc}")
+                if isinstance(exc, SmokeTimeoutError):
+                    break
 
 
 @dataclass(frozen=True)
@@ -282,7 +320,10 @@ class CollectionChainSmokeRunner:
         self._resource_remover = resource_remover or self._missing_resource_remover
         self._log_capture = log_capture
         self._canary_probe = canary_probe or self._probe_pipeline_once
-        self.ledger = OwnershipLedger(settings.run_id)
+        self.ledger = OwnershipLedger(
+            settings.run_id,
+            max_resources=settings.ledger_max_resources,
+        )
 
     def run(self, workload: Callable[[SmokeContext], Any]) -> Any:
         try:
@@ -314,34 +355,7 @@ class CollectionChainSmokeRunner:
         except Exception as exc:
             cleanup_errors.append(f"保存 Compose 日志失败: {exc}")
 
-        self.ledger.cleanup(
-            lambda kind, identifier: self._call_with_deadline(
-                lambda: self._resource_remover(kind, identifier),
-                self.settings.cleanup_timeout,
-                f"清理 {kind}:{identifier} 超时",
-            )
-        )
-        cleanup_errors.extend(self.ledger.cleanup_errors)
-        try:
-            down_result = self._compose(
-                "down",
-                "--remove-orphans",
-                "--timeout",
-                str(self.settings.shutdown_timeout),
-                check=False,
-            )
-            if down_result.returncode:
-                cleanup_errors.append(
-                    f"Compose 清理失败({down_result.returncode}): "
-                    f"{down_result.stderr or down_result.stdout}"
-                )
-        except Exception as exc:
-            cleanup_errors.append(f"执行 Compose 清理失败: {exc}")
-
-        try:
-            self._wait_until_project_removed()
-        except Exception as exc:
-            cleanup_errors.append(f"确认 Compose 残留失败: {exc}")
+        cleanup_errors.extend(self._cleanup_with_global_budget())
 
         if cleanup_errors:
             (self.settings.artifact_dir / "cleanup-errors.log").write_text(
@@ -420,22 +434,8 @@ class CollectionChainSmokeRunner:
             timeout=self.settings.command_timeout,
         ) as connection:
             connection.settimeout(self.settings.command_timeout)
-            info = connection.makefile("rb").readline()
-            if not info.startswith(b"INFO "):
-                return False
             subject = f"metrics.{context.settings.run_id}".encode()
-            connection.sendall(
-                b'CONNECT {"verbose":false,"pedantic":false}\r\n'
-                + b"PUB "
-                + subject
-                + b" "
-                + str(len(line)).encode()
-                + b"\r\n"
-                + line
-                + b"\r\nPING\r\n"
-            )
-            if b"PONG" not in connection.recv(64):
-                return False
+            publish_nats_canary(connection, subject=subject, payload=line)
 
         query = quote(f'{metric}{{run_id="{context.settings.run_id}"}}')
         with urlopen(
@@ -513,6 +513,7 @@ class CollectionChainSmokeRunner:
         self,
         *arguments: str,
         check: bool,
+        timeout: float | None = None,
     ) -> subprocess.CompletedProcess[str]:
         command = self._compose_command(*arguments)
         return self._execute(
@@ -520,7 +521,7 @@ class CollectionChainSmokeRunner:
             check=check,
             capture_output=True,
             text=True,
-            timeout=self.settings.command_timeout,
+            timeout=timeout or self.settings.command_timeout,
         )
 
     def _compose_command(self, *arguments: str) -> list[str]:
@@ -534,28 +535,108 @@ class CollectionChainSmokeRunner:
             *arguments,
         ]
 
-    def _wait_until_project_removed(self) -> None:
+    def _cleanup_with_global_budget(self) -> list[str]:
         deadline = self._monotonic() + self.settings.cleanup_timeout
-        network_name = f"{self.settings.compose_project}_default"
-        while self._monotonic() < deadline:
-            containers = self._compose("ps", "-a", "--format", "json", check=False)
-            network = self._execute(
-                ["docker", "network", "inspect", network_name],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=self.settings.command_timeout,
+        self.ledger.cleanup(
+            lambda kind, identifier: self._call_with_deadline(
+                lambda: self._resource_remover(kind, identifier),
+                min(
+                    self.settings.command_timeout,
+                    max(self._remaining(deadline) / 2, 0.001),
+                ),
+                f"清理 {kind}:{identifier} 超时",
             )
-            if (
+        )
+        errors = list(self.ledger.cleanup_errors)
+        network_name = f"{self.settings.compose_project}_default"
+        last_diagnostic = ""
+        while True:
+            try:
+                remaining = self._remaining(deadline)
+            except SmokeTimeoutError:
+                errors.append(
+                    "全局清理预算耗尽，当前 project 仍有残留"
+                    + (f": {last_diagnostic}" if last_diagnostic else "")
+                )
+                return errors
+
+            command_timeout = min(self.settings.command_timeout, remaining)
+            try:
+                down = self._compose(
+                    "down",
+                    "--remove-orphans",
+                    "--timeout",
+                    str(self.settings.shutdown_timeout),
+                    check=False,
+                    timeout=command_timeout,
+                )
+                remaining = self._remaining(deadline)
+                containers = self._compose(
+                    "ps",
+                    "-a",
+                    "--format",
+                    "json",
+                    check=False,
+                    timeout=min(self.settings.command_timeout, remaining),
+                )
+                remaining = self._remaining(deadline)
+                network = self._execute(
+                    ["docker", "network", "inspect", network_name],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=min(self.settings.command_timeout, remaining),
+                )
+            except Exception as exc:
+                last_diagnostic = str(exc)
+                if not self._wait_within_cleanup_budget(
+                    deadline,
+                    errors,
+                    last_diagnostic,
+                ):
+                    return errors
+                continue
+
+            removed = (
                 containers.returncode == 0
                 and not self._has_compose_records(containers.stdout)
                 and self._network_is_absent(network)
+            )
+            if down.returncode == 0 and removed:
+                return errors
+            last_diagnostic = (
+                f"down={down.returncode}, containers={containers.stdout!r}, "
+                f"network={network.stderr or network.stdout!r}"
+            )
+            if not self._wait_within_cleanup_budget(
+                deadline,
+                errors,
+                last_diagnostic,
             ):
-                return
-            self._wait(self.settings.poll_interval)
-        raise SmokeTimeoutError(
-            f"当前 project 仍有容器或网络残留: {self.settings.compose_project}"
-        )
+                return errors
+
+    def _remaining(self, deadline: float) -> float:
+        remaining = deadline - self._monotonic()
+        if remaining <= 0:
+            raise SmokeTimeoutError("全局清理预算耗尽")
+        return remaining
+
+    def _wait_within_cleanup_budget(
+        self,
+        deadline: float,
+        errors: list[str],
+        diagnostic: str,
+    ) -> bool:
+        try:
+            remaining = self._remaining(deadline)
+        except SmokeTimeoutError:
+            errors.append(
+                "全局清理预算耗尽，当前 project 仍有残留"
+                + (f": {diagnostic}" if diagnostic else "")
+            )
+            return False
+        self._wait(min(self.settings.poll_interval, remaining))
+        return True
 
     @staticmethod
     def _has_compose_records(output: str) -> bool:
@@ -586,17 +667,68 @@ class CollectionChainSmokeRunner:
             raise SmokeConfigurationError("硬截止时间仅允许在主线程执行")
         previous_handler = signal.getsignal(signal.SIGALRM)
         previous_timer = signal.getitimer(signal.ITIMER_REAL)
+        started = time.monotonic()
 
         def raise_timeout(_: int, __: Any) -> None:
             raise _DeadlineExpired(message)
 
+        effective_timeout = (
+            min(timeout, previous_timer[0]) if previous_timer[0] > 0 else timeout
+        )
         signal.signal(signal.SIGALRM, raise_timeout)
-        signal.setitimer(signal.ITIMER_REAL, timeout)
+        signal.setitimer(signal.ITIMER_REAL, effective_timeout)
         try:
             try:
                 return callback()
             except _DeadlineExpired as exc:
                 raise SmokeTimeoutError(message) from exc
         finally:
-            signal.setitimer(signal.ITIMER_REAL, *previous_timer)
+            elapsed = time.monotonic() - started
             signal.signal(signal.SIGALRM, previous_handler)
+            restored_delay = (
+                max(previous_timer[0] - elapsed, 0.000001)
+                if previous_timer[0] > 0
+                else 0
+            )
+            signal.setitimer(
+                signal.ITIMER_REAL,
+                restored_delay,
+                previous_timer[1],
+            )
+
+
+def publish_nats_canary(
+    connection: Any,
+    *,
+    subject: bytes,
+    payload: bytes,
+) -> None:
+    _read_nats_frame(connection, expected_prefix=b"INFO ")
+    connection.sendall(
+        b'CONNECT {"verbose":false,"pedantic":false}\r\n'
+        + b"PUB "
+        + subject
+        + b" "
+        + str(len(payload)).encode()
+        + b"\r\n"
+        + payload
+        + b"\r\nPING\r\n"
+    )
+    _read_nats_frame(connection, expected_prefix=b"PONG")
+
+
+def _read_nats_frame(connection: Any, *, expected_prefix: bytes) -> None:
+    buffer = bytearray()
+    while len(buffer) <= 65_536:
+        chunk = connection.recv(4096)
+        if not chunk:
+            raise ConnectionError("NATS 在目标帧返回前关闭连接")
+        buffer.extend(chunk)
+        while b"\r\n" in buffer:
+            frame, _, remaining = buffer.partition(b"\r\n")
+            buffer = bytearray(remaining)
+            if frame.startswith(expected_prefix):
+                return
+            if frame == b"PING":
+                connection.sendall(b"PONG\r\n")
+    raise ConnectionError("NATS 握手响应超过 64 KiB 上限")
