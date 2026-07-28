@@ -1,4 +1,5 @@
 import json
+import hashlib
 import sys
 from copy import deepcopy
 from contextvars import ContextVar
@@ -26,6 +27,13 @@ if str(STARGAZER_ROOT) not in sys.path:
     sys.path.insert(0, str(STARGAZER_ROOT))
 
 FIXED_TIMESTAMP_MS = 1_700_000_000_123
+
+
+def contract_task_id(task_type: str, supported_model_id: str) -> int:
+    """为离线合同生成稳定且接近生产形态的数字任务 ID。"""
+    identity = f"{task_type}:{supported_model_id}"
+    digest = hashlib.sha256(identity.encode("utf-8")).digest()
+    return 100_000 + int.from_bytes(digest[:4], "big") % 800_000
 
 
 @dataclass
@@ -80,13 +88,14 @@ class ProductionAdapterBinding:
 
     @property
     def publish_params(self) -> dict[str, Any]:
+        task_id = contract_task_id(self.task_type, self.supported_model_id)
         return {
             "monitor_type": self.supported_model_id,
             "plugin_name": f"{self.adapter_dir}_info",
             "model_id": self.supported_model_id,
             "tags": {
                 "agent_id": "agent-contract",
-                "instance_id": f"cmdb-{self.supported_model_id}",
+                "instance_id": f"cmdb_{task_id}",
                 "instance_type": self.supported_model_id,
                 "collect_type": "discovery",
                 "config_type": "production-contract",
@@ -267,6 +276,19 @@ def validation_contracts() -> set[tuple[str, str, str]]:
         (entry["task_type"], entry["supported_model_id"], entry["emitted_model_id"],)
         for entry in manifest["validation_contracts"]
     }
+
+
+def contract_instance_id_for_case(case_id: str) -> str:
+    manifest = json.loads(CONTRACT_MANIFEST_PATH.read_text(encoding="utf-8"))
+    matches = [
+        entry
+        for entry in manifest["validation_contracts"]
+        if entry["case_id"] == case_id
+    ]
+    assert len(matches) == 1, f"{case_id}: validation contract 必须唯一"
+    entry = matches[0]
+    task_id = contract_task_id(entry["task_type"], entry["supported_model_id"])
+    return f"cmdb_{task_id}"
 
 
 def covered_lane_a_contracts() -> set[tuple[str, str, str]]:

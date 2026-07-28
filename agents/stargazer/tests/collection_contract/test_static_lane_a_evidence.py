@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import pytest
 import semantics
-from conftest import FIXED_TIMESTAMP_MS, REPOSITORY_ROOT
+from conftest import FIXED_TIMESTAMP_MS, REPOSITORY_ROOT, contract_instance_id_for_case
 from plugins import base_utils
 from plugins.base_utils import convert_to_prometheus_format
 from service.collection_service import CollectionService
@@ -142,7 +142,7 @@ def test_可审计非云来源经过生产转换匹配逐case静态Golden(case_i
             "model_id": case_id,
             "tags": {
                 "agent_id": "agent-contract",
-                "instance_id": f"cmdb-{case_id}",
+                "instance_id": contract_instance_id_for_case(case_id),
                 "instance_type": case_id,
                 "collect_type": "discovery",
                 "config_type": "production-contract",
@@ -191,7 +191,7 @@ def test_阿里云逐emitted_case只比较自身模型并匹配静态Golden(case
             "model_id": "aliyun_account",
             "tags": {
                 "agent_id": "agent-contract",
-                "instance_id": "cmdb-aliyun_account",
+                "instance_id": contract_instance_id_for_case(case_id),
                 "instance_type": "aliyun_account",
                 "collect_type": "discovery",
                 "config_type": "production-contract",
@@ -239,7 +239,7 @@ def test_mysql真实来源经过生产转换匹配静态LaneA_Golden(monkeypatch
         "model_id": "mysql",
         "tags": {
             "agent_id": "agent-contract",
-            "instance_id": "cmdb-mysql",
+            "instance_id": contract_instance_id_for_case("mysql"),
             "instance_type": "mysql",
             "collect_type": "discovery",
             "config_type": "production-contract",
@@ -302,7 +302,7 @@ def test_Elasticsearch旧捕获显式归一为es并匹配静态LaneA_Golden(monk
             "model_id": "es",
             "tags": {
                 "agent_id": "agent-contract",
-                "instance_id": "cmdb-es",
+                "instance_id": contract_instance_id_for_case("es"),
                 "instance_type": "es",
                 "collect_type": "discovery",
                 "config_type": "production-contract",
@@ -317,14 +317,8 @@ def test_Elasticsearch旧捕获显式归一为es并匹配静态LaneA_Golden(monk
     ) == semantics.parse_line_protocol(expected_line_protocol)
 
 
-@pytest.mark.parametrize(
-    ("case_id", "instance_id"),
-    (
-        ("postgresql", "cmdb-postgresql"),
-        ("protocol_postgresql", "cmdb-protocol-postgresql"),
-    ),
-)
-def test_PostgreSQL共享真实父来源但逐三元组匹配独立静态Golden(case_id, instance_id, monkeypatch):
+@pytest.mark.parametrize("case_id", ("postgresql", "protocol_postgresql"))
+def test_PostgreSQL共享真实父来源但逐三元组匹配独立静态Golden(case_id, monkeypatch):
     evidence = EVIDENCE_ROOT / case_id
     source = json.loads((evidence / "01_source_raw.json").read_text(encoding="utf-8"))
     monkeypatch.setattr(base_utils.time, "time", lambda: 1_700_000_000.123)
@@ -349,7 +343,7 @@ def test_PostgreSQL共享真实父来源但逐三元组匹配独立静态Golden(
             "model_id": "postgresql",
             "tags": {
                 "agent_id": "agent-contract",
-                "instance_id": instance_id,
+                    "instance_id": contract_instance_id_for_case(case_id),
                 "instance_type": "postgresql",
                 "collect_type": "discovery",
                 "config_type": "production-contract",
@@ -394,7 +388,7 @@ def test_腾讯云逐emitted_case只比较自身模型并匹配静态Golden(case
             "model_id": "qcloud",
             "tags": {
                 "agent_id": "agent-contract",
-                "instance_id": "cmdb-qcloud",
+                "instance_id": contract_instance_id_for_case(case_id),
                 "instance_type": "qcloud",
                 "collect_type": "discovery",
                 "config_type": "production-contract",
@@ -445,7 +439,7 @@ def test_华为云逐emitted_case只比较自身模型并匹配静态Golden(case
             "model_id": "hwcloud",
             "tags": {
                 "agent_id": "agent-contract",
-                "instance_id": "cmdb-hwcloud",
+                "instance_id": contract_instance_id_for_case(case_id),
                 "instance_type": "hwcloud",
                 "collect_type": "discovery",
                 "config_type": "production-contract",

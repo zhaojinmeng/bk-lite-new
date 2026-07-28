@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 import semantics
-from conftest import REPOSITORY_ROOT
+from conftest import REPOSITORY_ROOT, contract_instance_id_for_case
 from plugins import base_utils, script_executor
 from plugins.base_utils import convert_to_prometheus_format
 from service.collection_service import CollectionService
@@ -440,7 +440,7 @@ def test_特殊环境边界Mock逐case运行生产转换并精确匹配静态Gol
             "model_id": model_id,
             "tags": {
                 "agent_id": "agent-contract",
-                "instance_id": f"cmdb-{model_id}",
+                    "instance_id": contract_instance_id_for_case(case_id),
                 "instance_type": model_id,
                 "collect_type": "discovery",
                 "config_type": "production-contract",

@@ -2,7 +2,7 @@ import json
 from copy import deepcopy
 
 import semantics
-from conftest import REPOSITORY_ROOT
+from conftest import REPOSITORY_ROOT, contract_instance_id_for_case
 from plugins import base_utils
 from plugins.base_utils import convert_to_prometheus_format
 from service.collection_service import CollectionService
@@ -55,7 +55,7 @@ def test_IP真实Docker_TCP探活来源匹配静态LaneA_Golden(monkeypatch):
             "model_id": "ip",
             "tags": {
                 "agent_id": "agent-contract",
-                "instance_id": "cmdb-ip",
+                "instance_id": contract_instance_id_for_case("ip"),
                 "instance_type": "ip",
                 "collect_type": "discovery",
                 "config_type": "production-contract",

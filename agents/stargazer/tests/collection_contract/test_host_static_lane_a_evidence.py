@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import pytest
 import semantics
-from conftest import REPOSITORY_ROOT
+from conftest import REPOSITORY_ROOT, contract_instance_id_for_case
 from plugins import base_utils
 from plugins.base_utils import convert_to_prometheus_format
 from service.collection_service import CollectionService
@@ -55,7 +55,7 @@ def test_Host父采集真实容器来源逐模型匹配静态LaneA_Golden(
             "model_id": "host",
             "tags": {
                 "agent_id": "agent-contract",
-                "instance_id": "cmdb-host",
+                "instance_id": contract_instance_id_for_case("host"),
                 "instance_type": "host",
                 "collect_type": "discovery",
                 "config_type": "production-contract",

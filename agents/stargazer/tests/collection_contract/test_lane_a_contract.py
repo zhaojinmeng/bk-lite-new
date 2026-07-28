@@ -18,6 +18,55 @@ def test_binding清单覆盖全部可测试生产三元组():
     )
 
 
+def test_生产binding任务身份唯一且使用cmdb数字下划线格式():
+    identities = [
+        binding.publish_params["tags"]["instance_id"]
+        for binding in conftest.PRODUCTION_ADAPTER_BINDINGS
+    ]
+    assert len(identities) == len(set(identities))
+    assert all(identity.startswith("cmdb_") for identity in identities)
+    assert all(identity.removeprefix("cmdb_").isdigit() for identity in identities)
+    assert all("-" not in identity for identity in identities)
+
+
+def _assert_line_protocol_identity(line_protocol, expected_identity):
+    records = semantics.parse_line_protocol(line_protocol)
+    identities = {
+        dict(record.tags).get("instance_id")
+        for record in records.elements()
+    }
+    assert identities == {expected_identity}
+
+
+def test_冻结03逐三元组绑定生产task_identity且拒绝连字符漂移():
+    manifest = conftest.json.loads(
+        conftest.CONTRACT_MANIFEST_PATH.read_text(encoding="utf-8")
+    )
+    evidence_root = (
+        conftest.REPOSITORY_ROOT
+        / "server"
+        / "apps"
+        / "cmdb"
+        / "tests"
+        / "e2e"
+        / "fixtures"
+    )
+    for entry in manifest["validation_contracts"]:
+        expected_identity = conftest.contract_instance_id_for_case(
+            entry["case_id"]
+        )
+        line_protocol = (
+            evidence_root / entry["case_id"] / "03_line_protocol.txt"
+        ).read_text(encoding="utf-8")
+        _assert_line_protocol_identity(line_protocol, expected_identity)
+
+    with pytest.raises(AssertionError):
+        _assert_line_protocol_identity(
+            "sample,instance_id=cmdb-invalid gauge=1i 1700000000123000000",
+            "cmdb_123456",
+        )
+
+
 def test_每个生产binding贯通标准化formatter与publish链路(production_adapter_binding, monkeypatch):
     binding = production_adapter_binding
     monkeypatch.setattr(base_utils.time, "time", lambda: 1_700_000_000.123)
