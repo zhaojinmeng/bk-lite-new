@@ -43,6 +43,12 @@ class HwCloudCollectMetrics(CollectBase):
     def set_account_inst_name(self, data, *args, **kwargs):
         return self.inst_name
 
+    @staticmethod
+    def to_bool(value):
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() in {"true", "1", "yes"}
+
     def set_asso_instances(self, data, *args, **kwargs):
         model_id = kwargs["model_id"]
         return [

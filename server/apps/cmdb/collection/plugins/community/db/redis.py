@@ -13,7 +13,6 @@ class RedisCollectionPlugin(BaseDBCollectionPlugin):
         "max_conn": "max_conn",
         "max_mem": "max_mem",
         "database_role": "database_role",
-        "topo_mode": "topo_mode",
         "cluster_uuid": "cluster_uuid",
         "slaves": "slaves",
         "master": "master",

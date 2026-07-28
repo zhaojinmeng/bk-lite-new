@@ -77,7 +77,7 @@ class HwCloudCollectionPlugin(AutoRegisterCollectionPluginMixin, HwCloudCollectM
             "resource_id": "resource_id",
             "status": "status",
             "cidr": "cidr",
-            "is_default": "is_default",
+            "is_default": (HwCloudCollectMetrics.to_bool, "is_default"),
             "region": "region",
         },
         "hwcloud_subnet": {
@@ -108,7 +108,7 @@ class HwCloudCollectionPlugin(AutoRegisterCollectionPluginMixin, HwCloudCollectM
             "assos": HwCloudCollectMetrics.set_asso_instances,
             "resource_name": "resource_name",
             "resource_id": "resource_id",
-            "is_default": "is_default",
+            "is_default": (HwCloudCollectMetrics.to_bool, "is_default"),
             "region": "region",
         },
         "hwcloud_elb": {
