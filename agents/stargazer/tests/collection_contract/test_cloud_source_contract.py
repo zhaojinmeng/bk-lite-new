@@ -877,7 +877,7 @@ def _aliyun_instance(instance_id):
         "PublicIpAddress": {"IpAddress": []},
         "NetworkInterfaces": {"NetworkInterface": []},
         "VpcAttributes": {
-            "PrivateIpAddress": {"IpAddress": ["10.0.0.9"]},
+            "PrivateIpAddress": {"IpAddress": ["192.0.2.9"]},
             "VpcId": "vpc-aliyun",
             "VSwitchId": "vsw-aliyun",
         },

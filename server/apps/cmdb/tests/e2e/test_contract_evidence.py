@@ -382,6 +382,23 @@ def test_敏感信息门禁仍拒绝真实私网host地址(complete_evidence):
         ).assert_no_secrets()
 
 
+def test_敏感信息门禁仍拒绝真实私网ip_addr字段(complete_evidence):
+    source_path = (
+        complete_evidence.root
+        / "fixtures"
+        / complete_evidence.case_id
+        / "01_source_raw.json"
+    )
+    source_path.write_text(
+        json.dumps({"ip_addr": "172.17.0.4"}), encoding="utf-8"
+    )
+
+    with pytest.raises(EvidenceValidationError, match="172.17.0.4"):
+        load_evidence(
+            complete_evidence.case_id, root=complete_evidence.root
+        ).assert_no_secrets()
+
+
 def test_敏感信息门禁扫描provenance引用的原始source_fixture(complete_evidence):
     source_fixture = complete_evidence.root / "source_capture.json"
     source_fixture.write_text(

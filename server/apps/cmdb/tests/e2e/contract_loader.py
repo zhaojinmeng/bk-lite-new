@@ -90,8 +90,16 @@ _SCHEMA_TARGETS = (
 _ASSIGNMENT = re.compile(r"(?<![A-Za-z0-9_-])['\"]?(?P<key>[A-Za-z][A-Za-z0-9_-]*)['\"]?\s*[:=]\s*['\"]?(?P<value>[^\s,'\"}]+)", re.I,)
 _BEARER = re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{6,}", re.I)
 _PRIVATE_DOMAIN = re.compile(r"\b(?:[a-z0-9-]+\.)+(?:internal|local|corp|lan)\b", re.I)
-_HOST_ASSIGNMENT = re.compile(r"\b(?:host|hostname|host_name|inst_name|node_name|machine_name)\s*=\s*['\"]?([^,\s}'\"]+)", re.I)
-_HOST_KEYS = {"host", "hostname", "instname", "nodename", "machinename"}
+_HOST_ASSIGNMENT = re.compile(r"\b(?:host|hostname|host_name|ip_addr|ip_address|inst_name|node_name|machine_name)\s*=\s*['\"]?([^,\s}'\"]+)", re.I)
+_HOST_KEYS = {
+    "host",
+    "hostname",
+    "ipaddr",
+    "ipaddress",
+    "instname",
+    "nodename",
+    "machinename",
+}
 _SENSITIVE_KEY_MARKERS = ("secret", "token", "password", "apikey")
 _REDACTED_VALUES = {"***", "redacted", "<redacted>", "[redacted]", "not_applicable"}
 
@@ -499,6 +507,8 @@ def _is_sensitive_key(key: str) -> bool:
 
 def _is_unredacted_hostname(value: Any) -> bool:
     if not isinstance(value, str) or not value.strip() or _is_redacted(value):
+        return False
+    if any(character.isspace() for character in value):
         return False
     lowered = value.lower()
     try:

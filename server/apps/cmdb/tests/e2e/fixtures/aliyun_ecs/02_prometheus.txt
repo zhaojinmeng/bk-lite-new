@@ -1,3 +1,3 @@
 # HELP aliyun_ecs_info Auto-generated help for aliyun_ecs_info
 # TYPE aliyun_ecs_info gauge
-aliyun_ecs_info{bk_obj_id="aliyun_ecs",charge_type="POSTPAID_BY_HOUR",collect_status="success",create_time="2026-01-01 08:00:00",expired_time="",instance_type="ecs.g7.large",ip_addr="10.0.0.9",memory="4096",model_id="aliyun_ecs",os_name="Linux",public_ip="10.0.0.9",region="cn-hangzhou",resource_id="i-001",resource_name="ecs-contract",status="RUNNING",vcpus="2",vpc="vpc-aliyun",zone="cn-hangzhou-h"} 1 1700000000123
+aliyun_ecs_info{bk_obj_id="aliyun_ecs",charge_type="POSTPAID_BY_HOUR",collect_status="success",create_time="2026-01-01 08:00:00",expired_time="",instance_type="ecs.g7.large",ip_addr="192.0.2.9",memory="4096",model_id="aliyun_ecs",os_name="Linux",public_ip="192.0.2.9",region="cn-hangzhou",resource_id="i-001",resource_name="ecs-contract",status="RUNNING",vcpus="2",vpc="vpc-aliyun",zone="cn-hangzhou-h"} 1 1700000000123

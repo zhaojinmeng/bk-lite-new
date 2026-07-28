@@ -4,7 +4,7 @@
     "es": [
       {
         "inst_name": "es.example.invalid",
-        "ip_addr": "172.17.0.4",
+        "ip_addr": "192.0.2.41",
         "obj_id": "elasticsearch",
         "port": "9200",
         "version": "8.19.18",

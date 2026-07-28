@@ -5,8 +5,8 @@
       {
         "resource_name": "ecs-contract",
         "resource_id": "i-001",
-        "ip_addr": "10.0.0.9",
-        "public_ip": "10.0.0.9",
+        "ip_addr": "192.0.2.9",
+        "public_ip": "192.0.2.9",
         "region": "cn-hangzhou",
         "zone": "cn-hangzhou-h",
         "vpc": "vpc-aliyun",
