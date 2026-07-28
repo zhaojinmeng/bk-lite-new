@@ -338,6 +338,35 @@ def test_敏感键多种拼写在明确脱敏后允许通过(complete_evidence):
     load_evidence(complete_evidence.case_id, root=complete_evidence.root).assert_no_secrets()
 
 
+def test_非凭据业务字段名不会因包含敏感词片段而误报(complete_evidence):
+    source_path = complete_evidence.root / "fixtures" / complete_evidence.case_id / "01_source_raw.json"
+    source_path.write_text(
+        json.dumps(
+            {
+                "token_count": 3,
+                "password_policy": "strict",
+                "secretary": "example.invalid",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    load_evidence(
+        complete_evidence.case_id, root=complete_evidence.root
+    ).assert_no_secrets()
+
+
+@pytest.mark.parametrize("key", ("db_password", "access_token", "client_secret"))
+def test_敏感键后缀仍然fail_closed(complete_evidence, key):
+    source_path = complete_evidence.root / "fixtures" / complete_evidence.case_id / "01_source_raw.json"
+    source_path.write_text(json.dumps({key: "clear-value"}), encoding="utf-8")
+
+    with pytest.raises(EvidenceValidationError, match=key):
+        load_evidence(
+            complete_evidence.case_id, root=complete_evidence.root
+        ).assert_no_secrets()
+
+
 def test_敏感信息门禁允许RFC5737文档地址作为host标签(complete_evidence):
     prometheus_path = (
         complete_evidence.root

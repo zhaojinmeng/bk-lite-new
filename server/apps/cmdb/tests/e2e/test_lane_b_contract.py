@@ -10,11 +10,12 @@ from apps.cmdb.collection.collect_plugin.base import CollectBase
 from apps.cmdb.collection.plugins import get_collection_plugin
 from apps.cmdb.tests.e2e.contract_loader import audit_lane_a_evidence
 from apps.cmdb.tests.e2e.lane_b_loader import (
+    LaneBValidationError,
     lane_b_entries,
     lane_b_incomplete,
     load_lane_b_evidence,
+    parse_model_field_rows,
 )
-from apps.cmdb.tests.e2e.utils.model_reflection import get_model_field_def
 
 
 MODEL_CONFIG = Path(__file__).parents[2] / "support-files" / "model_config.xlsx"
@@ -88,22 +89,11 @@ def _production_model_fields(model_id):
     workbook = openpyxl.load_workbook(MODEL_CONFIG, read_only=True, data_only=True)
     try:
         sheet_name = f"attr-{model_id}"
-        if sheet_name not in workbook.sheetnames:
-            assert model_id == "consul", f"{model_id}: 生产模型表与动态模型契约均缺失"
-            return {
-                name: field.field_type
-                for name, field in get_model_field_def(model_id).items()
-            }
-        rows = workbook[sheet_name].iter_rows(values_only=True)
-        next(rows)
-        headers = list(next(rows))
-        attr_id_index = headers.index("attr_id")
-        attr_type_index = headers.index("attr_type")
-        return {
-            str(row[attr_id_index]): str(row[attr_type_index])
-            for row in rows
-            if row[attr_id_index] not in (None, "")
-        }
+        assert sheet_name in workbook.sheetnames, f"{model_id}: 生产模型表缺少 {sheet_name}"
+        return parse_model_field_rows(
+            workbook[sheet_name].iter_rows(values_only=True),
+            model_id=model_id,
+        )
     finally:
         workbook.close()
 
@@ -118,6 +108,29 @@ def _value_matches_model_type(value, attr_type):
     if attr_type in {"str", "time"}:
         return isinstance(value, str)
     return True
+
+
+def test_生产模型反射允许artifact_tool导出的空短尾行():
+    rows = (
+        ("模型字段",),
+        ("attr_id", "attr_type"),
+        ("inst_name", "str"),
+        (),
+        (None,),
+    )
+    assert parse_model_field_rows(rows, model_id="sample") == {
+        "inst_name": "str"
+    }
+
+
+def test_生产模型反射拒绝非空短行而不静默吞格式错误():
+    rows = (
+        ("模型字段",),
+        ("attr_id", "unused", "attr_type"),
+        ("inst_name",),
+    )
+    with pytest.raises(LaneBValidationError, match="列数不足"):
+        parse_model_field_rows(rows, model_id="sample")
 
 
 LANE_B_READY_ENTRIES = tuple(

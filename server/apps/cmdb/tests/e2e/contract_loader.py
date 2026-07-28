@@ -96,11 +96,21 @@ _HOST_KEYS = {
     "hostname",
     "ipaddr",
     "ipaddress",
-    "instname",
     "nodename",
     "machinename",
 }
-_SENSITIVE_KEY_MARKERS = ("secret", "token", "password", "apikey")
+_INSTANCE_NAME_KEYS = {"instname"}
+_SENSITIVE_KEY_NAMES = {
+    "apikey",
+    "accesstoken",
+    "authtoken",
+    "bearertoken",
+    "clientsecret",
+    "secretkey",
+    "privatekey",
+    "privatekeypassphrase",
+}
+_SENSITIVE_KEY_SUFFIXES = ("password", "passwd", "pwd", "secret", "token", "apikey", "passphrase")
 _REDACTED_VALUES = {"***", "redacted", "<redacted>", "[redacted]", "not_applicable"}
 
 
@@ -507,7 +517,10 @@ def _scan_json(filename: str, value: Any, path: tuple[str, ...] = ()) -> list[st
             child_path = (*path, str(key))
             if _is_sensitive_key(str(key)) and not _is_redacted(child):
                 findings.append(f"{filename}:{'.'.join(child_path)}")
-            if _normalize_key(str(key)) in _HOST_KEYS and _is_unredacted_hostname(child):
+            normalized_key = _normalize_key(str(key))
+            if normalized_key in _HOST_KEYS and _is_unredacted_hostname(child):
+                findings.append(f"{filename}:{'.'.join(child_path)}={child}")
+            if normalized_key in _INSTANCE_NAME_KEYS and _is_unredacted_instance_name(child):
                 findings.append(f"{filename}:{'.'.join(child_path)}={child}")
             findings.extend(_scan_json(filename, child, child_path))
     elif isinstance(value, list):
@@ -525,8 +538,16 @@ def _scan_text(filename: str, content: str) -> Iterable[str]:
         if _is_sensitive_key(match.group("key")) and not _is_redacted(match.group("value")):
             yield f"{filename}:{match.group(0)}"
     for match in _HOST_ASSIGNMENT.finditer(content):
-        if _is_unredacted_hostname(match.group(1)):
-            yield f"{filename}:{match.group(0)}"
+        assignment = match.group(0)
+        key = assignment.split("=", 1)[0].strip()
+        value = match.group(1)
+        predicate = (
+            _is_unredacted_instance_name
+            if _normalize_key(key) in _INSTANCE_NAME_KEYS
+            else _is_unredacted_hostname
+        )
+        if predicate(value):
+            yield f"{filename}:{assignment}"
 
 
 def _is_redacted(value: Any) -> bool:
@@ -539,7 +560,23 @@ def _normalize_key(key: str) -> str:
 
 def _is_sensitive_key(key: str) -> bool:
     normalized = _normalize_key(key)
-    return any(marker in normalized for marker in _SENSITIVE_KEY_MARKERS)
+    return normalized in _SENSITIVE_KEY_NAMES or normalized.endswith(
+        _SENSITIVE_KEY_SUFFIXES
+    )
+
+
+def _is_unredacted_instance_name(value: Any) -> bool:
+    if not isinstance(value, str) or not value.strip() or _is_redacted(value):
+        return False
+    lowered = value.strip().lower()
+    if "contract" in lowered:
+        return False
+    if re.search(r"(?:^|[^a-z0-9])(?:[a-z0-9-]+\.)*(?:example|invalid|test|localhost)(?:[^a-z0-9]|$)", lowered):
+        return False
+    address_match = re.search(r"(?<![0-9])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![0-9])", lowered)
+    if address_match and not _is_unredacted_hostname(address_match.group(0)):
+        return False
+    return _is_unredacted_hostname(lowered)
 
 
 def _is_unredacted_hostname(value: Any) -> bool:
