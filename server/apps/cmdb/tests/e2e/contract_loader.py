@@ -444,7 +444,7 @@ def _validate_source_revision(case_id: str, provenance: dict[str, Any]) -> None:
 
 def _validate_scenario_support(case_id: str, provenance: dict[str, Any]) -> None:
     scenarios = provenance.get("scenario_contract")
-    if scenarios is None:
+    if "scenario_support" not in provenance:
         return
     if (
         not isinstance(scenarios, list)
