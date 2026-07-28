@@ -1,0 +1,45 @@
+{
+  "case_id": "spark",
+  "kind": "image_pull",
+  "started_at": "2026-07-28T03:49:42.852325Z",
+  "finished_at": "2026-07-28T03:49:52.219846Z",
+  "command": [
+    "docker",
+    "pull",
+    "bitnami/spark:3.5.1"
+  ],
+  "working_directory": ".",
+  "docker_context": "desktop-linux",
+  "image": "bitnami/spark:3.5.1",
+  "platform": "linux/arm64",
+  "image_digest": null,
+  "resource_identifier": "cmdb-task5-spark",
+  "container_id": null,
+  "stdout": "",
+  "stderr": "Error response from daemon: Get \"https://registry-1.docker.io/v2/\": EOF\n",
+  "exit_code": 1,
+  "outcome": "failed",
+  "failure_stage": "image_pull",
+  "sanitized": true,
+  "cleanup": {
+    "command": [
+      "docker",
+      "rm",
+      "-f",
+      "cmdb-task5-spark"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "Error response from daemon: No such container: cmdb-task5-spark\n",
+    "residual_query": [
+      "docker",
+      "ps",
+      "-aq",
+      "--filter",
+      "id=cmdb-task5-spark",
+      "--filter",
+      "name=cmdb-task5-spark"
+    ],
+    "residual_count": 0
+  }
+}

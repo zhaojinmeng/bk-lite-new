@@ -1,0 +1,45 @@
+{
+  "case_id": "network",
+  "kind": "network_boundary",
+  "started_at": "2026-07-28T03:49:16.546838Z",
+  "finished_at": "2026-07-28T03:49:17.995427Z",
+  "command": [
+    ".venv/bin/python",
+    "-c",
+    "import json,sys; from plugins.inputs.network.snmp_facts import SnmpFacts; result=SnmpFacts({\"host\":\"127.0.0.1\",\"version\":\"v2c\",\"community\":\"public\",\"timeout\":1,\"retries\":0,\"snmp_port\":1161}).list_all_resources(); print(json.dumps(result,ensure_ascii=False)); sys.exit(0 if result.get(\"success\") else 1)"
+  ],
+  "working_directory": "agents/stargazer",
+  "docker_context": "desktop-linux",
+  "image": "polinux/snmpd:latest",
+  "platform": "linux/arm64",
+  "image_digest": null,
+  "resource_identifier": "cmdb-task5-network",
+  "container_id": null,
+  "stdout": "{\"result\": {\"cmdb_collect_error\": \"Error during SNMP system information collection: SNMP getCmd failed: No SNMP response received before timeout\"}, \"success\": false}\n",
+  "stderr": "snmp_facts collect error! Traceback (most recent call last):\n  File \"<HOME>/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests/agents/stargazer/plugins/inputs/network/snmp_facts.py\", line 189, in collect\n    raise RuntimeError(f\"SNMP getCmd failed: {errorIndication}\")\nRuntimeError: SNMP getCmd failed: No SNMP response received before timeout\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"<HOME>/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests/agents/stargazer/plugins/inputs/network/snmp_facts.py\", line 274, in list_all_resources\n    snmp_data = self.collect()\n                ^^^^^^^^^^^^^^\n  File \"<HOME>/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests/agents/stargazer/plugins/inputs/network/snmp_facts.py\", line 214, in collect\n    raise RuntimeError(\nRuntimeError: Error during SNMP system information collection: SNMP getCmd failed: No SNMP response received before timeout\n\n",
+  "exit_code": 1,
+  "outcome": "failed",
+  "failure_stage": "network_protocol",
+  "sanitized": true,
+  "cleanup": {
+    "command": [
+      "docker",
+      "rm",
+      "-f",
+      "cmdb-task5-network"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "Error response from daemon: No such container: cmdb-task5-network\n",
+    "residual_query": [
+      "docker",
+      "ps",
+      "-aq",
+      "--filter",
+      "id=cmdb-task5-network",
+      "--filter",
+      "name=cmdb-task5-network"
+    ],
+    "residual_count": 0
+  }
+}

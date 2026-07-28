@@ -1,0 +1,47 @@
+{
+  "case_id": "oracle",
+  "kind": "image_pull",
+  "started_at": "2026-07-28T03:45:04.399834Z",
+  "finished_at": "2026-07-28T03:45:34.525489Z",
+  "command": [
+    "docker",
+    "pull",
+    "--platform",
+    "linux/arm64",
+    "gvenzl/oracle-free:23-slim-faststart"
+  ],
+  "working_directory": ".",
+  "docker_context": "desktop-linux",
+  "image": "gvenzl/oracle-free:23-slim-faststart",
+  "platform": "linux/arm64",
+  "image_digest": null,
+  "resource_identifier": "cmdb-task5-oracle",
+  "container_id": null,
+  "stdout": "23-slim-faststart: Pulling from gvenzl/oracle-free\nca7c653f0492: Pulling fs layer\n5ee694666e5d: Pulling fs layer\nf49c1c5f53a9: Pulling fs layer\na56d0f60191b: Pulling fs layer\nd461012290f4: Pulling fs layer\n501f209bbe8f: Pulling fs layer\n56f34356a166: Pulling fs layer\n00daf086c177: Pulling fs layer\n70cb6b7ea322: Pulling fs layer\na56d0f60191b: Waiting\nd461012290f4: Waiting\n501f209bbe8f: Waiting\n56f34356a166: Waiting\n00daf086c177: Waiting\n70cb6b7ea322: Waiting\n",
+  "stderr": "\ncommand timed out after 30s",
+  "exit_code": 124,
+  "outcome": "failed",
+  "failure_stage": "image_pull",
+  "sanitized": true,
+  "cleanup": {
+    "command": [
+      "docker",
+      "rm",
+      "-f",
+      "cmdb-task5-oracle"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "Error response from daemon: No such container: cmdb-task5-oracle\n",
+    "residual_query": [
+      "docker",
+      "ps",
+      "-aq",
+      "--filter",
+      "id=cmdb-task5-oracle",
+      "--filter",
+      "name=cmdb-task5-oracle"
+    ],
+    "residual_count": 0
+  }
+}

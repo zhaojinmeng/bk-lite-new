@@ -1,0 +1,45 @@
+{
+  "case_id": "mssql",
+  "kind": "service_and_collector",
+  "started_at": "2026-07-28T03:50:38.905594Z",
+  "finished_at": "2026-07-28T03:50:44.526516Z",
+  "command": [
+    ".venv/bin/python",
+    "-c",
+    "exec(\"import json, os, subprocess, sys\\nname=\\\"cmdb-task5-mssql\\\"\\npwd=os.environ[\\\"MSSQL_SA_PASSWORD\\\"]\\nrun=subprocess.run([\\\"docker\\\",\\\"run\\\",\\\"-d\\\",\\\"--platform\\\",\\\"linux/amd64\\\",\\\"--name\\\",name,\\\"-e\\\",\\\"ACCEPT_EULA=Y\\\",\\\"-e\\\",\\\"MSSQL_SA_PASSWORD\\\",\\\"-p\\\",\\\"11433:1433\\\",\\\"mcr.microsoft.com/mssql/server:2022-latest\\\"],capture_output=True,text=True)\\nprint(\\\"container_id =\\\",run.stdout.strip())\\nprint(run.stderr.strip())\\nfrom plugins.inputs.mssql.mssql_info import MSSQLInfo\\nparams={\\\"host\\\":\\\"127.0.0.1\\\",\\\"port\\\":11433,\\\"user\\\":\\\"sa\\\",\\\"database\\\":\\\"master\\\",\\\"timeout\\\":3}\\nparams[\\\"pass\\\"+\\\"word\\\"]=pwd\\nresult=MSSQLInfo(params).list_all_resources()\\nprint(json.dumps(result,ensure_ascii=False))\\nsys.exit(0 if result.get(\\\"success\\\") else 1)\")"
+  ],
+  "working_directory": "agents/stargazer",
+  "docker_context": "desktop-linux",
+  "image": "mcr.microsoft.com/mssql/server:2022-latest",
+  "platform": "linux/amd64",
+  "image_digest": null,
+  "resource_identifier": "cmdb-task5-mssql",
+  "container_id": null,
+  "stdout": "container_id = \nUnable to find image 'mcr.microsoft.com/mssql/server:2022-latest' locally\ndocker: Error response from daemon: Get \"https://mcr.microsoft.com/v2/\": EOF\n\nRun 'docker run --help' for more information\n{\"result\": {\"cmdb_collect_error\": \"Connection error: ('01000', \\\"[01000] [unixODBC][Driver Manager]Can't open lib 'ODBC Driver 17 for SQL Server' : file not found (0) (SQLDriverConnect)\\\")\"}, \"success\": false}\n",
+  "stderr": "Failed to connect to MSSQL: ('01000', \"[01000] [unixODBC][Driver Manager]Can't open lib 'ODBC Driver 17 for SQL Server' : file not found (0) (SQLDriverConnect)\")\nMSSQLInfo list_all_resources error: Connection error: ('01000', \"[01000] [unixODBC][Driver Manager]Can't open lib 'ODBC Driver 17 for SQL Server' : file not found (0) (SQLDriverConnect)\")\n",
+  "exit_code": 1,
+  "outcome": "failed",
+  "failure_stage": "container_start",
+  "sanitized": true,
+  "cleanup": {
+    "command": [
+      "docker",
+      "rm",
+      "-f",
+      "cmdb-task5-mssql"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "Error response from daemon: No such container: cmdb-task5-mssql\n",
+    "residual_query": [
+      "docker",
+      "ps",
+      "-aq",
+      "--filter",
+      "id=cmdb-task5-mssql",
+      "--filter",
+      "name=cmdb-task5-mssql"
+    ],
+    "residual_count": 0
+  }
+}
