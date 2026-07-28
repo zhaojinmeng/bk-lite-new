@@ -1,12 +1,35 @@
 {
   "model_id": "aliyun_mongodb",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "mongodb-contract(dds-001)",
-    "resource_name": "mongodb-contract",
-    "resource_id": "dds-001",
-    "type": "replicate",
-    "status": "Running"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "mongodb-contract(dds-001)",
+      "resource_name": "mongodb-contract",
+      "resource_id": "dds-001",
+      "region": "cn-hangzhou",
+      "zone": "",
+      "zone_slave": "",
+      "engine": "",
+      "version": "",
+      "type": "replicate",
+      "status": "Running",
+      "class": "",
+      "storage_type": "",
+      "lock_mode": "",
+      "charge_type": "",
+      "assos": [
+        {
+          "model_id": "aliyun_account",
+          "inst_name": "aliyun_account-contract",
+          "asst_id": "belong",
+          "model_asst_id": "aliyun_mongodb_belong_aliyun_account"
+        }
+      ]
+    }
+  ],
+  "optional_absent_fields": [
+    "expire_time",
+    "storage_gb"
+  ]
 }

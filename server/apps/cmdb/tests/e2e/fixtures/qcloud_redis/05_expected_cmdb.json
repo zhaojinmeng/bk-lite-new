@@ -1,19 +1,40 @@
 {
   "model_id": "qcloud_redis",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "redis-prod-01_crs-abc123def456",
-    "resource_name": "redis-prod-01",
-    "resource_id": "crs-abc123def456",
-    "ip_addr": "10.0.3.30",
-    "vpc": "vpc-abc123",
-    "region": "ap-shanghai",
-    "port": "6379",
-    "status": "RUNNING",
-    "engine": "Redis",
-    "version": "7.2.4",
-    "type": "cluster"
-  },
   "review_basis": "迁移仓库既有人工 expected，未读取生产 mapping",
-  "migration_source": "04_expected_cmdb_result.json"
+  "migration_source": "04_expected_cmdb_result.json",
+  "expected_instances": [
+    {
+      "inst_name": "redis-contract_crs-001",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_redis_belong_qcloud"
+        }
+      ],
+      "resource_name": "redis-contract",
+      "resource_id": "crs-001",
+      "ip_addr": "",
+      "vpc": "",
+      "region": "ap-shanghai",
+      "zone": "",
+      "port": "6379",
+      "wan_address": "",
+      "status": "未知",
+      "sub_status": "未知",
+      "engine": "",
+      "version": "",
+      "type": "",
+      "memory_mb": "1024",
+      "shard_size": "",
+      "shard_num": "",
+      "replicas_num": "",
+      "client_limit": "",
+      "net_limit": "",
+      "charge_type": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

@@ -1,18 +1,30 @@
 {
   "model_id": "qcloud_mysql",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "qmysql-prod-01_qmysql-abc123def456",
-    "resource_name": "qmysql-prod-01",
-    "resource_id": "qmysql-abc123def456",
-    "ip_addr": "10.0.4.40",
-    "region": "ap-shanghai",
-    "zone": "ap-shanghai-2",
-    "status": "RUNNING",
-    "volume": 100,
-    "memory_mb": 2048,
-    "charge_type": "POSTPAID"
-  },
   "review_basis": "迁移仓库既有人工 expected，未读取生产 mapping",
-  "migration_source": "04_expected_cmdb_result.json"
+  "migration_source": "04_expected_cmdb_result.json",
+  "expected_instances": [
+    {
+      "inst_name": "mysql-contract_cdb-001",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_mysql_belong_qcloud"
+        }
+      ],
+      "resource_name": "mysql-contract",
+      "resource_id": "cdb-001",
+      "ip_addr": "",
+      "region": "ap-shanghai",
+      "zone": "",
+      "status": "运行中",
+      "memory_mb": 4096,
+      "charge_type": "未知"
+    }
+  ],
+  "optional_absent_fields": [
+    "volume"
+  ]
 }

@@ -1,12 +1,21 @@
 {
   "model_id": "minio",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.22-minio-9000",
-    "ip_addr": "192.0.2.22",
-    "port": "9000",
-    "version": "RELEASE.2025-09-07T16-13-09Z",
-    "console_port": "9001"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.22-minio-9000",
+      "ip_addr": "192.0.2.22",
+      "port": "9000",
+      "version": "RELEASE.2025-09-07T16-13-09Z",
+      "bin_path": "minio",
+      "data_path": "/data",
+      "conf_path": "/etc/default/minio",
+      "console_port": "9001",
+      "deploy_mode": "standalone",
+      "region": "",
+      "start_args": "/run/rosetta/rosetta /usr/local/bin/minio minio server /data --address :9000 --console-address :9001"
+    }
+  ],
+  "optional_absent_fields": []
 }

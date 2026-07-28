@@ -1,12 +1,27 @@
 {
   "model_id": "hwcloud_eip",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "eip-eip-001_eip-001",
-    "resource_name": "eip-eip-001",
-    "resource_id": "eip-001",
-    "bandwidth": 5,
-    "status": "BIND"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "eip-eip-001_eip-001",
+      "assos": [
+        {
+          "model_id": "hwcloud",
+          "inst_name": "hwcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "hwcloud_eip_belong_hwcloud"
+        }
+      ],
+      "resource_name": "eip-eip-001",
+      "resource_id": "eip-001",
+      "ip_addr": "192.0.2.20",
+      "status": "BIND",
+      "bandwidth": 5,
+      "charge_type": "POSTPAID_BY_HOUR",
+      "region": "cn-south-1",
+      "create_time": "2026-01-02 03:04:05"
+    }
+  ],
+  "optional_absent_fields": []
 }

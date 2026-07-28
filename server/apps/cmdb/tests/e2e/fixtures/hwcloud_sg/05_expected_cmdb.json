@@ -1,12 +1,23 @@
 {
   "model_id": "hwcloud_sg",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "sg-sg-001_sg-001",
-    "resource_name": "sg-sg-001",
-    "resource_id": "sg-001",
-    "is_default": false,
-    "region": "cn-south-1"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "sg-sg-001_sg-001",
+      "assos": [
+        {
+          "model_id": "hwcloud",
+          "inst_name": "hwcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "hwcloud_sg_belong_hwcloud"
+        }
+      ],
+      "resource_name": "sg-sg-001",
+      "resource_id": "sg-001",
+      "is_default": false,
+      "region": "cn-south-1"
+    }
+  ],
+  "optional_absent_fields": []
 }

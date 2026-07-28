@@ -1,12 +1,23 @@
 {
   "model_id": "es",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "172.17.0.4-es-9200",
-    "ip_addr": "172.17.0.4",
-    "port": "9200",
-    "version": "8.19.18",
-    "cluster_name": "elasticsearch"
-  },
-  "review_basis": "独立审阅真实 ES 原始样本、命名规则与字段映射合同；未读取运行时输出"
+  "review_basis": "独立审阅真实 ES 原始样本、命名规则与字段映射合同；未读取运行时输出",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.41-es-9200",
+      "ip_addr": "192.0.2.41",
+      "port": "9200",
+      "version": "8.19.18",
+      "log_path": "",
+      "data_path": "",
+      "is_master": "",
+      "node_name": "",
+      "cluster_name": "elasticsearch",
+      "java_version": "",
+      "java_path": "",
+      "conf_path": "",
+      "install_path": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

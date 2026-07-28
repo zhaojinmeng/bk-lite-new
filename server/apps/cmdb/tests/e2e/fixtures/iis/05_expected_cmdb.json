@@ -1,10 +1,24 @@
 {
   "model_id": "iis",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.81",
-    "ip_addr": "192.0.2.81",
-    "phys_path": "C:inetpubwwwroot"
-  },
-  "review_basis": "独立审阅 IIS 模型字段：host 回退为实例/IP，physical_path 清洗对齐到 phys_path"
+  "review_basis": "独立审阅 IIS 模型字段：host 回退为实例/IP，physical_path 清洗对齐到 phys_path",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.81",
+      "ip_addr": "192.0.2.81",
+      "port": "",
+      "version": "",
+      "webapp": "",
+      "virdir": "",
+      "configfile": "",
+      "apppool": "",
+      "website": "",
+      "apppool_count": "",
+      "webapp_count": "",
+      "phys_path": "C:inetpubwwwroot",
+      "server_name": "",
+      "max_concur_connect": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

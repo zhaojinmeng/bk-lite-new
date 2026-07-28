@@ -1,12 +1,20 @@
 {
   "model_id": "nginx",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.22-nginx-80",
-    "ip_addr": "192.0.2.22",
-    "port": "80",
-    "version": "1.18.0",
-    "conf_path": "/etc/nginx/nginx.conf"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "ip_addr": "192.0.2.22",
+      "port": "80",
+      "bin_path": "/usr/sbin/nginx",
+      "version": "1.18.0",
+      "log_path": "/var/log/nginx/error.log",
+      "conf_path": "/etc/nginx/nginx.conf",
+      "server_name": "",
+      "include": "",
+      "ssl_version": "",
+      "inst_name": "192.0.2.22-nginx-80"
+    }
+  ],
+  "optional_absent_fields": []
 }

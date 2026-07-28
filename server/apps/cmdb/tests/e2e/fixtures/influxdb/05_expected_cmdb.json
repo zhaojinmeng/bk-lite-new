@@ -1,11 +1,22 @@
 {
   "model_id": "influxdb",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "127.0.0.1-influxdb-18086",
-    "ip_addr": "127.0.0.1",
-    "port": "18086",
-    "https_enabled": "false"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "127.0.0.1-influxdb-18086",
+      "ip_addr": "127.0.0.1",
+      "port": "18086",
+      "version": "",
+      "data_dir": "",
+      "wal_dir": "",
+      "meta_dir": "",
+      "engine": "",
+      "http_bind_address": "",
+      "auth_enabled": "",
+      "https_enabled": "false",
+      "max_concurrent_queries": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

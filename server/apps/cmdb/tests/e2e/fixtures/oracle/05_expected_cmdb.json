@@ -1,15 +1,20 @@
 {
   "model_id": "oracle",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.77-oracle-1521",
-    "ip_addr": "192.0.2.77",
-    "port": "1521",
-    "version": "Oracle Database 19c Enterprise Edition",
-    "database_role": "PRIMARY",
-    "db_name": "ORCL",
-    "sid": "ORCL1",
-    "service_name": "orclpdb"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "version": "Oracle Database 19c Enterprise Edition",
+      "max_mem": "1024",
+      "max_conn": "100",
+      "db_name": "ORCL",
+      "database_role": "PRIMARY",
+      "sid": "ORCL1",
+      "ip_addr": "192.0.2.77",
+      "port": "1521",
+      "service_name": "orclpdb",
+      "inst_name": "192.0.2.77-oracle-1521"
+    }
+  ],
+  "optional_absent_fields": []
 }

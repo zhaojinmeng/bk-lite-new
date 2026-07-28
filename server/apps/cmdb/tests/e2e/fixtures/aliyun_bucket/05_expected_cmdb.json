@@ -1,12 +1,28 @@
 {
   "model_id": "aliyun_bucket",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "bucket-contract(bucket-contract)",
-    "resource_name": "bucket-contract",
-    "resource_id": "bucket-contract",
-    "location": "oss-cn-hangzhou",
-    "storage_class": "Standard"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "bucket-contract(bucket-contract)",
+      "resource_name": "bucket-contract",
+      "resource_id": "bucket-contract",
+      "location": "oss-cn-hangzhou",
+      "extranet_endpoint": "bucket-contract.oss-cn-hangzhou.aliyuncs.com",
+      "intranet_endpoint": "bucket-contract.oss-cn-hangzhou-internal.aliyuncs.com",
+      "storage_class": "Standard",
+      "cross_region_replication": "Disabled",
+      "block_public_access": "True",
+      "creation_date": "2026-01-02T11:04:05+00:00",
+      "assos": [
+        {
+          "model_id": "aliyun_account",
+          "inst_name": "aliyun_account-contract",
+          "asst_id": "belong",
+          "model_asst_id": "aliyun_bucket_belong_aliyun_account"
+        }
+      ]
+    }
+  ],
+  "optional_absent_fields": []
 }

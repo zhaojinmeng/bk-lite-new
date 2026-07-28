@@ -1,12 +1,23 @@
 {
   "model_id": "haproxy",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.23-haproxy-80&8404",
-    "ip_addr": "192.0.2.23",
-    "port": "80&8404",
-    "version": "2.4.30",
-    "defaults_mode": "http"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.23-haproxy-80&8404",
+      "ip_addr": "192.0.2.23",
+      "port": "80&8404",
+      "version": "2.4.30",
+      "install_path": "haproxy",
+      "conf_file": "/etc/haproxy/haproxy.cfg",
+      "defaults_maxconn": "",
+      "defaults_mode": "http",
+      "defaults_retries": "",
+      "global_group_name": "",
+      "global_maxconn": "",
+      "global_pidfile": "",
+      "global_user_name": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

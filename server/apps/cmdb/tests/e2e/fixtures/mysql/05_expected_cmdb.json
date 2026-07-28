@@ -1,12 +1,26 @@
 {
   "model_id": "mysql",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "127.0.0.1-mysql-13306",
-    "ip_addr": "127.0.0.1",
-    "port": "13306",
-    "version": "8.0.46",
-    "max_conn": "151"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "ip_addr": "127.0.0.1",
+      "port": "13306",
+      "version": "8.0.46",
+      "enable_binlog": "ON",
+      "sync_binlog": "1",
+      "max_conn": "151",
+      "max_mem": "67108864",
+      "basedir": "/usr/",
+      "datadir": "/var/lib/mysql/",
+      "socket": "/var/run/mysqld/mysqld.sock",
+      "bind_address": "*",
+      "slow_query_log": "OFF",
+      "slow_query_log_file": "/var/lib/mysql/contract-mysql-slow.log",
+      "log_error": "stderr",
+      "wait_timeout": "28800",
+      "inst_name": "127.0.0.1-mysql-13306"
+    }
+  ],
+  "optional_absent_fields": []
 }

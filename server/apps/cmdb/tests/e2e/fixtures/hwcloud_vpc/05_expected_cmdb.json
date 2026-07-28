@@ -1,15 +1,26 @@
 {
   "model_id": "hwcloud_vpc",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "vpc-prod-01_vpc-bp1yyyyyy",
-    "resource_name": "vpc-prod-01",
-    "resource_id": "vpc-bp1yyyyyy",
-    "region": "cn-north-4",
-    "status": "ACTIVE",
-    "cidr": "192.168.0.0/16",
-    "is_default": false
-  },
   "review_basis": "迁移仓库既有人工 expected，未读取生产 mapping",
-  "migration_source": "04_expected_cmdb_result.json"
+  "migration_source": "04_expected_cmdb_result.json",
+  "expected_instances": [
+    {
+      "inst_name": "vpc-contract_vpc-001",
+      "assos": [
+        {
+          "model_id": "hwcloud",
+          "inst_name": "hwcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "hwcloud_vpc_belong_hwcloud"
+        }
+      ],
+      "resource_name": "vpc-contract",
+      "resource_id": "vpc-001",
+      "status": "AVAILABLE",
+      "cidr": "192.0.2.0/24",
+      "is_default": false,
+      "region": "cn-south-1"
+    }
+  ],
+  "optional_absent_fields": []
 }

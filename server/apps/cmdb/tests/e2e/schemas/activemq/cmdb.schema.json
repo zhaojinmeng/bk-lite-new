@@ -1,89 +1,83 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "required": [
     "model_id",
     "instance_count_min",
     "review_basis",
-    "expected_instance_subset"
+    "expected_instances",
+    "optional_absent_fields"
   ],
   "additionalProperties": false,
   "properties": {
     "model_id": {
       "const": "activemq"
     },
-    "source_contract_model_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "write_mode": {
-      "enum": [
-        "graph_entity",
-        "embedded_host_field",
-        "dynamic_model_entity",
-        "model_alias_entity",
-        "ipam_service"
-      ]
-    },
     "instance_count_min": {
-      "type": "integer",
-      "minimum": 1
-    },
-    "expected_instance_subset": {
-      "type": "object",
-      "required": [
-        "inst_name"
-      ],
-      "minProperties": 2,
-      "additionalProperties": {
-        "type": [
-          "string",
-          "number",
-          "integer",
-          "boolean",
-          "null",
-          "array",
-          "object"
-        ]
-      }
-    },
-    "expected_process_subset": {
-      "type": "object",
-      "minProperties": 2,
-      "additionalProperties": {
-        "type": [
-          "string",
-          "number",
-          "integer",
-          "boolean",
-          "null",
-          "array",
-          "object"
-        ]
-      }
-    },
-    "expected_vm_metric_subset": {
-      "type": "object",
-      "minProperties": 2,
-      "additionalProperties": {
-        "type": [
-          "string",
-          "number",
-          "integer",
-          "boolean",
-          "null",
-          "array",
-          "object"
-        ]
-      }
+      "type": "integer"
     },
     "review_basis": {
-      "type": "string",
-      "minLength": 12
+      "type": "string"
     },
-    "migration_source": {
-      "type": "string",
-      "minLength": 1
+    "expected_instances": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "prefixItems": [
+        {
+          "type": "object",
+          "required": [
+            "inst_name",
+            "ip_addr",
+            "port",
+            "version",
+            "install_path",
+            "conf_path",
+            "java_path",
+            "java_version",
+            "xms",
+            "xmx"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "inst_name": {
+              "type": "string"
+            },
+            "ip_addr": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "install_path": {
+              "type": "string"
+            },
+            "conf_path": {
+              "type": "string"
+            },
+            "java_path": {
+              "type": "string"
+            },
+            "java_version": {
+              "type": "string"
+            },
+            "xms": {
+              "type": "string"
+            },
+            "xmx": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "items": false
+    },
+    "optional_absent_fields": {
+      "type": "array",
+      "maxItems": 0
     }
-  }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

@@ -1,12 +1,30 @@
 {
   "model_id": "aliyun_clb",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "clb-contract(lb-001)",
-    "resource_name": "clb-contract",
-    "resource_id": "lb-001",
-    "region": "cn-hangzhou",
-    "status": "active"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "clb-contract(lb-001)",
+      "resource_name": "clb-contract",
+      "resource_id": "lb-001",
+      "region": "cn-hangzhou",
+      "zone": "",
+      "zone_slave": "",
+      "vpc": "",
+      "ip_addr": "192.0.2.10",
+      "status": "active",
+      "class": "",
+      "charge_type": "",
+      "create_time": "2026-01-02T11:04:00+00:00",
+      "assos": [
+        {
+          "model_id": "aliyun_account",
+          "inst_name": "aliyun_account-contract",
+          "asst_id": "belong",
+          "model_asst_id": "aliyun_clb_belong_aliyun_account"
+        }
+      ]
+    }
+  ],
+  "optional_absent_fields": []
 }

@@ -1,12 +1,48 @@
 {
   "model_id": "etcd",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.22-etcd-2379",
-    "ip_addr": "192.0.2.22",
-    "port": "2379",
-    "version": "3.3.25",
-    "peer_port": "2380"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.22-etcd-2379",
+      "ip_addr": "192.0.2.22",
+      "port": "2379",
+      "version": "3.3.25",
+      "data_dir": "/var/lib/etcd",
+      "conf_file_path": "",
+      "peer_port": "2380",
+      "install_path": "/usr/bin"
+    },
+    {
+      "inst_name": "192.0.2.22-etcd-2379",
+      "ip_addr": "192.0.2.22",
+      "port": "2379",
+      "version": "",
+      "data_dir": "default.etcd",
+      "conf_file_path": "",
+      "peer_port": "2380",
+      "install_path": "/usr/bin"
+    },
+    {
+      "inst_name": "192.0.2.22-etcd-2379",
+      "ip_addr": "192.0.2.22",
+      "port": "2379",
+      "version": "",
+      "data_dir": "default.etcd",
+      "conf_file_path": "",
+      "peer_port": "2380",
+      "install_path": ""
+    },
+    {
+      "inst_name": "192.0.2.22-etcd-2379",
+      "ip_addr": "192.0.2.22",
+      "port": "2379",
+      "version": "",
+      "data_dir": "default.etcd",
+      "conf_file_path": "",
+      "peer_port": "2380",
+      "install_path": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

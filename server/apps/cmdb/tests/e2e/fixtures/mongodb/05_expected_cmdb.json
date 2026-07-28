@@ -1,12 +1,22 @@
 {
   "model_id": "mongodb",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.23-mongodb-27017",
-    "ip_addr": "192.0.2.23",
-    "port": "27017",
-    "version": "7.0.37",
-    "db_path": "/var/lib/mongodb"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.23-mongodb-27017",
+      "ip_addr": "192.0.2.23",
+      "port": "27017",
+      "version": "7.0.37",
+      "mongo_path": "",
+      "bin_path": "/usr/bin",
+      "config": "/etc/mongod.conf",
+      "fork": "",
+      "system_log": "/var/log/mongodb/mongod.log",
+      "db_path": "/var/lib/mongodb",
+      "max_incoming_conn": "default:819",
+      "database_role": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

@@ -1,12 +1,24 @@
 {
   "model_id": "qcloud_domain",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "example.invalid_domain-001",
-    "resource_name": "example.invalid",
-    "resource_id": "domain-001",
-    "status": "正常",
-    "expired_time": "2027-01-01"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "example.invalid_domain-001",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_domain_belong_qcloud"
+        }
+      ],
+      "resource_name": "example.invalid",
+      "resource_id": "domain-001",
+      "tld": "com",
+      "status": "正常",
+      "expired_time": "2027-01-01"
+    }
+  ],
+  "optional_absent_fields": []
 }

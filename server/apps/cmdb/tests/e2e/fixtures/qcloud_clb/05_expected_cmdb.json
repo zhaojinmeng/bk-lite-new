@@ -1,18 +1,35 @@
 {
   "model_id": "qcloud_clb",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "clb-prod-01_clb-abc123def456",
-    "resource_name": "clb-prod-01",
-    "resource_id": "clb-abc123def456",
-    "region": "ap-shanghai",
-    "status": "RUNNING",
-    "domain": "clb-prod-01.example.com",
-    "ip_addr": "10.0.1.10",
-    "type": "OPEN",
-    "isp": "BGP",
-    "charge_type": "POSTPAID_BY_HOUR"
-  },
   "review_basis": "迁移仓库既有人工 expected，未读取生产 mapping",
-  "migration_source": "04_expected_cmdb_result.json"
+  "migration_source": "04_expected_cmdb_result.json",
+  "expected_instances": [
+    {
+      "inst_name": "clb-contract_lb-001",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_clb_belong_qcloud"
+        }
+      ],
+      "resource_name": "clb-contract",
+      "resource_id": "lb-001",
+      "tag": "",
+      "project_id": "",
+      "security_group_id": "",
+      "vpc": "",
+      "region": "ap-shanghai",
+      "master_zone": "",
+      "backup_zone": "",
+      "status": "正常运行",
+      "domain": "",
+      "ip_addr": "203.0.113.10",
+      "type": "未知",
+      "isp": "未知",
+      "charge_type": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

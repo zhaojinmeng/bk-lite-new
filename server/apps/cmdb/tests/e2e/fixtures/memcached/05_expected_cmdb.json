@@ -1,12 +1,38 @@
 {
   "model_id": "memcached",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.22-memcached-11211",
-    "ip_addr": "192.0.2.22",
-    "port": "11211",
-    "cachesize": "64",
-    "user_name": "memcache"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.22-memcached-11211",
+      "ip_addr": "192.0.2.22",
+      "port": "11211",
+      "version": "",
+      "install_path": ".",
+      "maxconn": "",
+      "cachesize": "64",
+      "user_name": "memcache"
+    },
+    {
+      "inst_name": "192.0.2.22",
+      "ip_addr": "192.0.2.22",
+      "port": "",
+      "version": "",
+      "install_path": "/usr/bin",
+      "maxconn": "",
+      "cachesize": "",
+      "user_name": "root"
+    },
+    {
+      "inst_name": "192.0.2.22",
+      "ip_addr": "192.0.2.22",
+      "port": "",
+      "version": "",
+      "install_path": ".",
+      "maxconn": "",
+      "cachesize": "",
+      "user_name": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

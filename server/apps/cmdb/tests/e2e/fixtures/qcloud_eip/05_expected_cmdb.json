@@ -1,12 +1,30 @@
 {
   "model_id": "qcloud_eip",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "eip-contract_eip-001",
-    "resource_name": "eip-contract",
-    "resource_id": "eip-001",
-    "ip_addr": "203.0.113.11",
-    "status": "已绑定"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "eip-contract_eip-001",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_eip_belong_qcloud"
+        }
+      ],
+      "resource_name": "eip-contract",
+      "resource_id": "eip-001",
+      "tag": "",
+      "region": "ap-shanghai",
+      "status": "已绑定",
+      "type": "未知",
+      "ip_addr": "203.0.113.11",
+      "instance_type": "qcloud",
+      "instance_id": "cmdb_681532",
+      "isp": "未知",
+      "charge_type": "未知"
+    }
+  ],
+  "optional_absent_fields": []
 }

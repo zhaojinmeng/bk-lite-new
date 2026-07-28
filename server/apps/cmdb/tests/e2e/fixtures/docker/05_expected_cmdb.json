@@ -1,13 +1,21 @@
 {
   "model_id": "docker",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "docker.example.invalid",
-    "container_id": "1f5b1b6af7aa",
-    "ip_addr": "192.0.2.50",
-    "image": "alpine:3.18",
-    "command": "sleep 300",
-    "mounts": "[]"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "docker.example.invalid",
+      "ip_addr": "192.0.2.50",
+      "port": "",
+      "container_id": "1f5b1b6af7aa",
+      "status": "",
+      "command": "sleep 300",
+      "created": "2026-07-27T06:37:04.674723001Z",
+      "image": "alpine:3.18",
+      "networks": "",
+      "ports": "",
+      "mounts": "[]"
+    }
+  ],
+  "optional_absent_fields": []
 }

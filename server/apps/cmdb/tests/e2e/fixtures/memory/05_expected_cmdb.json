@@ -1,11 +1,25 @@
 {
   "model_id": "memory",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "DIMM-A1-192.0.2.80",
-    "self_device": "192.0.2.80",
-    "mem_locator": "DIMM-A1",
-    "mem_size": 16
-  },
-  "review_basis": "独立审阅内存插槽复合身份与容量单位整数转换"
+  "review_basis": "独立审阅内存插槽复合身份与容量单位整数转换",
+  "expected_instances": [
+    {
+      "inst_name": "DIMM-A1-192.0.2.80",
+      "self_device": "192.0.2.80",
+      "mem_locator": "DIMM-A1",
+      "mem_part_number": "",
+      "mem_type": "",
+      "mem_size": 16,
+      "mem_sn": "",
+      "assos": [
+        {
+          "model_id": "physcial_server",
+          "inst_name": "192.0.2.80",
+          "asst_id": "contains",
+          "model_asst_id": "physcial_server_contains_memory"
+        }
+      ]
+    }
+  ],
+  "optional_absent_fields": []
 }

@@ -3,16 +3,25 @@
   "source_contract_model_id": "host_proc_usage",
   "write_mode": "embedded_host_field",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.60[contract-cloud]",
-    "ip_addr": "192.0.2.60"
-  },
-  "expected_process_subset": {
-    "pid": "1",
-    "name": "sleep",
-    "arg": "sleep 300",
-    "exe": "/usr/bin/sleep",
-    "cwd": "/"
-  },
-  "review_basis": "独立审阅：host_proc_usage 不创建独立图库模型，进程字段应嵌入 host.proc JSON"
+  "review_basis": "独立审阅：host_proc_usage 不创建独立图库模型，进程字段应嵌入 host.proc JSON",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.60[contract-cloud]",
+      "ip_addr": "192.0.2.60",
+      "cloud": "contract-cloud",
+      "hostname": "host.example.invalid",
+      "os_type": "1",
+      "os_name": "Ubuntu",
+      "os_version": "22.04",
+      "os_bit": "64-bit",
+      "cpu_model": "unknown",
+      "cpu_core": 8,
+      "memory": 7,
+      "disk": 58,
+      "cpu_arch": "arm64",
+      "inner_mac": "unknown",
+      "proc": "[{\"pid\": \"1\", \"name\": \"sleep\", \"arg\": \"sleep 300\", \"exe\": \"/usr/bin/sleep\", \"cwd\": \"/\", \"ports\": \"\"}, {\"pid\": \"7\", \"name\": \"bash\", \"arg\": \"bash\", \"exe\": \"/usr/bin/bash\", \"cwd\": \"/\", \"ports\": \"\"}, {\"pid\": \"53\", \"name\": \"bash\", \"arg\": \"bash\", \"exe\": \"/usr/bin/bash\", \"cwd\": \"/\", \"ports\": \"\"}, {\"pid\": \"64\", \"name\": \"ps\", \"arg\": \"ps -e -o pid= -o comm= -o args=\", \"exe\": \"\", \"cwd\": \"\", \"ports\": \"\"}]"
+    }
+  ],
+  "optional_absent_fields": []
 }

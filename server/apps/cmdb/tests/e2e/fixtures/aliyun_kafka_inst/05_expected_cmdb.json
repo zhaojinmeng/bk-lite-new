@@ -1,12 +1,35 @@
 {
   "model_id": "aliyun_kafka_inst",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "kafka-contract(alikafka-001)",
-    "resource_name": "kafka-contract",
-    "resource_id": "alikafka-001",
-    "storage_gb": 3600,
-    "status": "5"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "kafka-contract(alikafka-001)",
+      "resource_name": "kafka-contract",
+      "resource_id": "alikafka-001",
+      "region": "cn-hangzhou",
+      "zone": "",
+      "vpc": "",
+      "status": "5",
+      "class": "",
+      "storage_gb": 3600,
+      "storage_type": "",
+      "charge_type": "",
+      "create_time": "1970-01-01T08:00:00+00:00",
+      "assos": [
+        {
+          "model_id": "aliyun_account",
+          "inst_name": "aliyun_account-contract",
+          "asst_id": "belong",
+          "model_asst_id": "aliyun_kafka_inst_belong_aliyun_account"
+        }
+      ]
+    }
+  ],
+  "optional_absent_fields": [
+    "io_max_read",
+    "io_max_write",
+    "msg_retain",
+    "topoc_num"
+  ]
 }

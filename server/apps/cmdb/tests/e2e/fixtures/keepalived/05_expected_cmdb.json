@@ -3,13 +3,19 @@
   "source_contract_model_id": "keepalived",
   "write_mode": "model_alias_entity",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.71-keepalive-51",
-    "ip_addr": "192.0.2.71",
-    "version": "2.2.7",
-    "priority": "100",
-    "state": "MASTER",
-    "virtual_router_id": "51"
-  },
-  "review_basis": "独立审阅：Stargazer 指标使用历史名 keepalived，CMDB 模型规范名为 keepalive"
+  "review_basis": "独立审阅：Stargazer 指标使用历史名 keepalived，CMDB 模型规范名为 keepalive",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.71-keepalive-51",
+      "ip_addr": "192.0.2.71",
+      "version": "2.2.7",
+      "priority": "100",
+      "state": "MASTER",
+      "virtual_router_id": "51",
+      "user_name": "",
+      "install_path": "",
+      "config_file": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

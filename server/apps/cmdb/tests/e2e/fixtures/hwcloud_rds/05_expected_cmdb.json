@@ -1,12 +1,35 @@
 {
   "model_id": "hwcloud_rds",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "rds-rds-001_rds-001",
-    "resource_name": "rds-rds-001",
-    "resource_id": "rds-001",
-    "port": 3306,
-    "volume_size": 100
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "rds-rds-001_rds-001",
+      "assos": [
+        {
+          "model_id": "hwcloud",
+          "inst_name": "hwcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "hwcloud_rds_belong_hwcloud"
+        }
+      ],
+      "resource_name": "rds-rds-001",
+      "resource_id": "rds-001",
+      "ip_addr": "192.0.2.30",
+      "public_ip": "",
+      "status": "ACTIVE",
+      "db_type": "Ha",
+      "engine": "MySQL",
+      "engine_version": "8.0",
+      "volume_type": "CLOUDSSD",
+      "volume_size": 100,
+      "vcpus": 4,
+      "memory_gb": 8,
+      "port": 3306,
+      "region": "cn-south-1",
+      "charge_type": "postPaid",
+      "create_time": "2026-01-02T03:04:05Z"
+    }
+  ],
+  "optional_absent_fields": []
 }

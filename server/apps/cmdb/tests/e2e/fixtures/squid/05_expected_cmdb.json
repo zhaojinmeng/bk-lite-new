@@ -1,12 +1,20 @@
 {
   "model_id": "squid",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.23-squid-instead.",
-    "ip_addr": "192.0.2.23",
-    "port": "instead.",
-    "config_file_path": "/etc/squid/squid.conf",
-    "cache_dir": "lines"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.23-squid-instead.",
+      "ip_addr": "192.0.2.23",
+      "port": "instead.",
+      "version": "",
+      "install_path": ".",
+      "config_file_path": "/etc/squid/squid.conf",
+      "cache_dir": "lines",
+      "access_log": "directives",
+      "error_log": "/var/log/squid/cache.log",
+      "visible_hostname": "is"
+    }
+  ],
+  "optional_absent_fields": []
 }

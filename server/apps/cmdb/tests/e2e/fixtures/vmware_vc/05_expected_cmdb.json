@@ -1,9 +1,13 @@
 {
   "model_id": "vmware_vc",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "vcenter.example.invalid",
-    "vc_version": "8.0"
-  },
-  "review_basis": "独立审阅vCenter任务身份与版本字段"
+  "review_basis": "独立审阅vCenter任务身份与版本字段",
+  "expected_instances": [
+    {
+      "vc_version": "8.0",
+      "inst_name": "vcenter.example.invalid",
+      "ip_addr": "192.0.2.10"
+    }
+  ],
+  "optional_absent_fields": []
 }

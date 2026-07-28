@@ -1,10 +1,20 @@
 {
   "model_id": "physcial_server",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "SN-CONTRACT-001",
-    "serial_number": "SN-CONTRACT-001",
-    "brand": "ContractVendor"
-  },
-  "review_basis": "独立审阅IPMI路径序列号优先身份与厂商品牌字段"
+  "review_basis": "独立审阅IPMI路径序列号优先身份与厂商品牌字段",
+  "expected_instances": [
+    {
+      "serial_number": "SN-CONTRACT-001",
+      "brand": "ContractVendor",
+      "inst_name": "SN-CONTRACT-001"
+    }
+  ],
+  "optional_absent_fields": [
+    "asset_code",
+    "board_model",
+    "board_serial",
+    "board_vendor",
+    "ip_addr",
+    "model"
+  ]
 }

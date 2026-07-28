@@ -1,12 +1,24 @@
 {
   "model_id": "zookeeper",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.22-zookeeper-2181",
-    "ip_addr": "192.0.2.22",
-    "port": "2181",
-    "version": "3.4.13",
-    "tick_time": "2000"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.22-zookeeper-2181",
+      "ip_addr": "192.0.2.22",
+      "port": "2181",
+      "version": "3.4.13",
+      "install_path": "/usr/share",
+      "log_path": "/var/log/zookeeper",
+      "conf_path": "/etc/zookeeper/conf/zoo.cfg",
+      "java_path": "/usr/lib/jvm/java-11-openjdk-arm64/bin/java",
+      "java_version": "11.0.31",
+      "data_dir": "/var/lib/zookeeper",
+      "tick_time": "2000",
+      "init_limit": "10",
+      "sync_limit": "5",
+      "server": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

@@ -1,12 +1,21 @@
 {
   "model_id": "hbase",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.70-hbase-16000",
-    "ip_addr": "192.0.2.70",
-    "port": "16000",
-    "version": "2.5.8",
-    "cluster_distributed": "false"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.70-hbase-16000",
+      "ip_addr": "192.0.2.70",
+      "port": "16000",
+      "version": "2.5.8",
+      "install_path": "",
+      "log_path": "",
+      "config_file": "",
+      "tmp_dir": "",
+      "cluster_distributed": "false",
+      "java_path": "",
+      "java_version": ""
+    }
+  ],
+  "optional_absent_fields": []
 }

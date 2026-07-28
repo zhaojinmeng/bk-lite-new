@@ -1,12 +1,23 @@
 {
   "model_id": "qcloud_bucket",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "cos-prod-01_cos-prod-01-1300000000",
-    "resource_name": "cos-prod-01",
-    "resource_id": "cos-prod-01-1300000000",
-    "region": "ap-shanghai"
-  },
   "review_basis": "迁移仓库既有人工 expected，未读取生产 mapping",
-  "migration_source": "04_expected_cmdb_result.json"
+  "migration_source": "04_expected_cmdb_result.json",
+  "expected_instances": [
+    {
+      "inst_name": "bucket-contract_bucket-contract",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_bucket_belong_qcloud"
+        }
+      ],
+      "resource_name": "bucket-contract",
+      "resource_id": "bucket-contract",
+      "region": "ap-shanghai"
+    }
+  ],
+  "optional_absent_fields": []
 }

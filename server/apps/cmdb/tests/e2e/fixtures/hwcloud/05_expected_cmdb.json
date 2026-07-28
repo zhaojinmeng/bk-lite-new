@@ -1,9 +1,12 @@
 {
   "model_id": "hwcloud",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "hwcloud-contract",
-    "endpoint": "https://ecs.cn-south-1.example.invalid"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "hwcloud-contract",
+      "endpoint": "https://ecs.cn-south-1.example.invalid"
+    }
+  ],
+  "optional_absent_fields": []
 }

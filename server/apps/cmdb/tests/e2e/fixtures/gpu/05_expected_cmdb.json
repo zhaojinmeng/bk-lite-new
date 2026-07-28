@@ -1,10 +1,23 @@
 {
   "model_id": "gpu",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "GPU-0-192.0.2.80",
-    "self_device": "192.0.2.80",
-    "gpu_name": "GPU-0"
-  },
-  "review_basis": "独立审阅GPU组件名称与所属物理设备复合身份"
+  "review_basis": "独立审阅GPU组件名称与所属物理设备复合身份",
+  "expected_instances": [
+    {
+      "inst_name": "GPU-0-192.0.2.80",
+      "self_device": "192.0.2.80",
+      "gpu_name": "GPU-0",
+      "gpu_type": "",
+      "gpu_desc": "",
+      "assos": [
+        {
+          "model_id": "physcial_server",
+          "inst_name": "192.0.2.80",
+          "asst_id": "contains",
+          "model_asst_id": "physcial_server_contains_gpu"
+        }
+      ]
+    }
+  ],
+  "optional_absent_fields": []
 }

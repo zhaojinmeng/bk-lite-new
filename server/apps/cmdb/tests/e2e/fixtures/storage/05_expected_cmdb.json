@@ -1,13 +1,24 @@
 {
   "model_id": "storage",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "storage-contract",
-    "device_sn": "device-contract",
-    "brand": "huawei",
-    "total_capacity": 2,
-    "available_capacity": 1,
-    "running_status": "running"
-  },
-  "review_basis": "独立审阅OceanStor设备身份、容量整数转换与状态码27"
+  "review_basis": "独立审阅OceanStor设备身份、容量整数转换与状态码27",
+  "expected_instances": [
+    {
+      "inst_name": "storage-contract",
+      "device_sn": "device-contract",
+      "model": "",
+      "brand": "huawei",
+      "storage_type": "SAN",
+      "firmware_version": "",
+      "sys_desc": "Huawei OceanStor",
+      "total_capacity": 2,
+      "used_capacity": 1,
+      "available_capacity": 1,
+      "pool_count": 1,
+      "disk_count": 1,
+      "volume_count": 1,
+      "running_status": "running"
+    }
+  ],
+  "optional_absent_fields": []
 }

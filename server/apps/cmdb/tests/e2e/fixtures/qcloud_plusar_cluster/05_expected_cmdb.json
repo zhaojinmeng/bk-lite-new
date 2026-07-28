@@ -1,12 +1,35 @@
 {
   "model_id": "qcloud_plusar_cluster",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "pulsar-contract_pulsar-001",
-    "resource_name": "pulsar-contract",
-    "resource_id": "pulsar-001",
-    "max_topic_num": "1000",
-    "status": "正常"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "pulsar-contract_pulsar-001",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_plusar_cluster_belong_qcloud"
+        }
+      ],
+      "resource_name": "pulsar-contract",
+      "resource_id": "pulsar-001",
+      "tag": "",
+      "project_id": "",
+      "region": "ap-shanghai",
+      "status": "正常",
+      "version": "",
+      "vpc_endpoint": "",
+      "public_endpoint": "",
+      "max_namespace_num": "",
+      "max_topic_num": "1000",
+      "max_qps": "",
+      "max_retention_s": "",
+      "max_storage_mb": "",
+      "max_delay_s": "",
+      "charge_type": "未知"
+    }
+  ],
+  "optional_absent_fields": []
 }

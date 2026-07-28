@@ -1,19 +1,41 @@
 {
   "model_id": "qcloud_mongodb",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "mongodb-prod-01_cmgo-abc123def456",
-    "resource_name": "mongodb-prod-01",
-    "resource_id": "cmgo-abc123def456",
-    "ip_addr": "10.0.5.50",
-    "vpc": "vpc-abc123",
-    "region": "ap-shanghai",
-    "port": "27017",
-    "status": "RUNNING",
-    "cluster_type": "REPLSET",
-    "version": "5.0.20",
-    "charge_type": "PREPAID"
-  },
   "review_basis": "迁移仓库既有人工 expected，未读取生产 mapping",
-  "migration_source": "04_expected_cmdb_result.json"
+  "migration_source": "04_expected_cmdb_result.json",
+  "expected_instances": [
+    {
+      "inst_name": "mongo-contract_cmgo-001",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_mongodb_belong_qcloud"
+        }
+      ],
+      "resource_name": "mongo-contract",
+      "resource_id": "cmgo-001",
+      "ip_addr": "",
+      "tag": "",
+      "project_id": "",
+      "vpc": "",
+      "region": "ap-shanghai",
+      "zone": "",
+      "port": "27017",
+      "status": "未知",
+      "cluster_type": "未知",
+      "machine_type": "",
+      "version": "",
+      "cpu": "",
+      "memory_mb": "4096",
+      "volume_mb": "",
+      "secondary_num": "",
+      "mongos_cpu": "",
+      "mongos_memory_mb": "",
+      "mongos_node_num": "",
+      "charge_type": "未知"
+    }
+  ],
+  "optional_absent_fields": []
 }

@@ -1,12 +1,36 @@
 {
   "model_id": "qcloud_pgsql",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "pgsql-contract_postgres-001",
-    "resource_name": "pgsql-contract",
-    "resource_id": "postgres-001",
-    "cpu": "2",
-    "memory_mb": "4096"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "pgsql-contract_postgres-001",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_pgsql_belong_qcloud"
+        }
+      ],
+      "resource_name": "pgsql-contract",
+      "resource_id": "postgres-001",
+      "tag": "",
+      "project_id": "",
+      "vpc": "",
+      "region": "ap-shanghai",
+      "zone": "",
+      "status": "未知",
+      "chartset": "",
+      "engine": "",
+      "mode": "",
+      "version": "",
+      "kernel_version": "",
+      "cpu": "2",
+      "memory_mb": "4096",
+      "volume_mb": "20480",
+      "charge_type": "未知"
+    }
+  ],
+  "optional_absent_fields": []
 }

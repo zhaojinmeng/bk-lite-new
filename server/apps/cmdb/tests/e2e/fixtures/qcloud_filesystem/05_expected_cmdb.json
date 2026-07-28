@@ -1,12 +1,30 @@
 {
   "model_id": "qcloud_filesystem",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "cfs-contract_cfs-001",
-    "resource_name": "cfs-contract",
-    "resource_id": "cfs-001",
-    "size_gib": 100,
-    "protocol": "NFS"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "cfs-contract_cfs-001",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_filesystem_belong_qcloud"
+        }
+      ],
+      "resource_name": "cfs-contract",
+      "resource_id": "cfs-001",
+      "tag": "",
+      "region": "ap-shanghai",
+      "zone": "",
+      "status": "未知",
+      "protocol": "NFS",
+      "type": "未知",
+      "size_gib": 100
+    }
+  ],
+  "optional_absent_fields": [
+    "net_limit"
+  ]
 }

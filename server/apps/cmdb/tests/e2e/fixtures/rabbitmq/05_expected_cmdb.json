@@ -1,12 +1,20 @@
 {
   "model_id": "rabbitmq",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.22-rabbitmq-5672",
-    "ip_addr": "192.0.2.22",
-    "port": "5672",
-    "version": "3.9.27",
-    "erlang_version": "24"
-  },
-  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping"
+  "review_basis": "独立审阅当前冻结真实样本、命名规则与关键清洗字段；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.22-rabbitmq-5672",
+      "ip_addr": "192.0.2.22",
+      "port": "5672",
+      "allport": "25672(clustering),5672(amqp)",
+      "node_name": "rabbit@node.example.invalid",
+      "log_path": "/var/log/rabbitmq/rabbit@node.example.invalid.log,/var/log/rabbitmq/rabbit@node.example.invalid_upgrade.log,stdout>",
+      "conf_path": "",
+      "version": "3.9.27",
+      "enabled_plugin_file": "/etc/rabbitmq/enabled_plugins",
+      "erlang_version": "24"
+    }
+  ],
+  "optional_absent_fields": []
 }

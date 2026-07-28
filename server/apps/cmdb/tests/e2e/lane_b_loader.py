@@ -300,6 +300,46 @@ def build_case_vm_schema(
     }
 
 
+def _json_shape_schema(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return {
+            "type": "object",
+            "required": list(value),
+            "additionalProperties": False,
+            "properties": {
+                key: _json_shape_schema(item) for key, item in value.items()
+            },
+        }
+    if isinstance(value, list):
+        if not value:
+            return {"type": "array", "maxItems": 0}
+        return {
+            "type": "array",
+            "minItems": len(value),
+            "maxItems": len(value),
+            "prefixItems": [_json_shape_schema(item) for item in value],
+            "items": False,
+        }
+    if isinstance(value, bool):
+        return {"type": "boolean"}
+    if isinstance(value, int):
+        return {"type": "integer"}
+    if isinstance(value, float):
+        return {"type": "number"}
+    if value is None:
+        return {"type": "null"}
+    return {"type": "string"}
+
+
+def build_case_cmdb_schema(expected: dict[str, Any]) -> dict[str, Any]:
+    schema = _json_shape_schema(expected)
+    schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+    schema["properties"]["model_id"] = {"const": expected["model_id"]}
+    if "expected_instances" in expected:
+        schema["properties"]["expected_instances"]["minItems"] = 1
+    return schema
+
+
 @dataclass(frozen=True)
 class LaneBEvidence:
     case_id: str
@@ -346,22 +386,31 @@ class LaneBEvidence:
         ).assert_no_secrets()
 
 
-def parse_model_field_rows(
+@dataclass(frozen=True)
+class ModelFieldDefinition:
+    attr_type: str
+    is_required: bool
+    enum_values: tuple[Any, ...] = ()
+
+
+def parse_model_field_definitions(
     rows: Any, *, model_id: str
-) -> dict[str, str]:
+) -> dict[str, ModelFieldDefinition]:
     row_iter = iter(rows)
     try:
         next(row_iter)
         headers = tuple(next(row_iter))
-        attr_id_index = headers.index("attr_id")
-        attr_type_index = headers.index("attr_type")
+        indexes = {
+            name: headers.index(name)
+            for name in ("attr_id", "attr_type", "is_required", "option")
+        }
     except (StopIteration, ValueError) as error:
         raise LaneBValidationError(
-            f"{model_id}: 生产模型 attr sheet 缺少两行表头或 attr_id/attr_type"
+            f"{model_id}: 生产模型 attr sheet 缺少两行表头或字段定义列"
         ) from error
 
-    required_index = max(attr_id_index, attr_type_index)
-    fields: dict[str, str] = {}
+    required_index = max(indexes.values())
+    fields: dict[str, ModelFieldDefinition] = {}
     for row_number, row in enumerate(row_iter, start=3):
         row = tuple(row)
         if not any(cell not in (None, "") for cell in row):
@@ -370,18 +419,48 @@ def parse_model_field_rows(
             raise LaneBValidationError(
                 f"{model_id}: 生产模型 attr sheet 第 {row_number} 行非空但列数不足"
             )
-        attr_id = row[attr_id_index]
-        attr_type = row[attr_type_index]
-        if attr_id in (None, ""):
+        attr_id = row[indexes["attr_id"]]
+        attr_type = row[indexes["attr_type"]]
+        if attr_id in (None, "") or attr_type in (None, ""):
             raise LaneBValidationError(
-                f"{model_id}: 生产模型 attr sheet 第 {row_number} 行缺少 attr_id"
+                f"{model_id}: 生产模型 attr sheet 第 {row_number} 行缺少 attr_id/attr_type"
             )
-        if attr_type in (None, ""):
-            raise LaneBValidationError(
-                f"{model_id}: 生产模型 attr sheet 第 {row_number} 行缺少 attr_type"
-            )
-        fields[str(attr_id)] = str(attr_type)
+        enum_values: tuple[Any, ...] = ()
+        option = row[indexes["option"]]
+        if attr_type == "enum" and option not in (None, ""):
+            try:
+                choices = json.loads(str(option))
+                if isinstance(choices, list):
+                    enum_values = tuple(choice["id"] for choice in choices)
+                elif (
+                    isinstance(choices, dict)
+                    and choices.get("enum_rule_type") == "public_library"
+                    and choices.get("public_library_id")
+                ):
+                    enum_values = ()
+                else:
+                    raise TypeError("未知 enum option 形态")
+            except (json.JSONDecodeError, KeyError, TypeError) as error:
+                raise LaneBValidationError(
+                    f"{model_id}: 生产模型字段 {attr_id} enum option 非法"
+                ) from error
+        fields[str(attr_id)] = ModelFieldDefinition(
+            attr_type=str(attr_type),
+            is_required=row[indexes["is_required"]] is True,
+            enum_values=enum_values,
+        )
     return fields
+
+
+def parse_model_field_rows(
+    rows: Any, *, model_id: str
+) -> dict[str, str]:
+    return {
+        field: definition.attr_type
+        for field, definition in parse_model_field_definitions(
+            rows, model_id=model_id
+        ).items()
+    }
 
 
 def load_lane_b_evidence(

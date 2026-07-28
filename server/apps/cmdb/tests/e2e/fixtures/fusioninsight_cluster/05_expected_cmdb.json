@@ -1,10 +1,21 @@
 {
   "model_id": "fusioninsight_cluster",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "cluster-contract_1",
-    "resource_name": "cluster-contract",
-    "resource_id": "1"
-  },
-  "review_basis": "独立审阅私有API Mock资源身份与集群命名规则"
+  "review_basis": "独立审阅私有API Mock资源身份与集群命名规则",
+  "expected_instances": [
+    {
+      "inst_name": "cluster-contract_1",
+      "assos": [
+        {
+          "model_id": "fusioninsight",
+          "inst_name": "fusioninsight-contract",
+          "asst_id": "belong",
+          "model_asst_id": "fusioninsight_cluster_belong_fusioninsight"
+        }
+      ],
+      "resource_name": "cluster-contract",
+      "resource_id": "1"
+    }
+  ],
+  "optional_absent_fields": []
 }

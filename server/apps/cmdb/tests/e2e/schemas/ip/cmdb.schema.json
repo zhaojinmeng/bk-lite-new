@@ -1,13 +1,12 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "required": [
     "model_id",
-    "instance_count_min",
-    "review_basis",
     "source_contract_model_id",
     "write_mode",
-    "expected_vm_metric_subset"
+    "instance_count_min",
+    "expected_vm_metric_subset",
+    "review_basis"
   ],
   "additionalProperties": false,
   "properties": {
@@ -15,77 +14,33 @@
       "const": "ip"
     },
     "source_contract_model_id": {
-      "type": "string",
-      "minLength": 1
+      "type": "string"
     },
     "write_mode": {
-      "enum": [
-        "graph_entity",
-        "embedded_host_field",
-        "dynamic_model_entity",
-        "model_alias_entity",
-        "ipam_service"
-      ]
+      "type": "string"
     },
     "instance_count_min": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "expected_instance_subset": {
-      "type": "object",
-      "required": [
-        "inst_name"
-      ],
-      "minProperties": 2,
-      "additionalProperties": {
-        "type": [
-          "string",
-          "number",
-          "integer",
-          "boolean",
-          "null",
-          "array",
-          "object"
-        ]
-      }
-    },
-    "expected_process_subset": {
-      "type": "object",
-      "minProperties": 2,
-      "additionalProperties": {
-        "type": [
-          "string",
-          "number",
-          "integer",
-          "boolean",
-          "null",
-          "array",
-          "object"
-        ]
-      }
+      "type": "integer"
     },
     "expected_vm_metric_subset": {
       "type": "object",
-      "minProperties": 2,
-      "additionalProperties": {
-        "type": [
-          "string",
-          "number",
-          "integer",
-          "boolean",
-          "null",
-          "array",
-          "object"
-        ]
+      "required": [
+        "ip",
+        "collect_status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ip": {
+          "type": "string"
+        },
+        "collect_status": {
+          "type": "string"
+        }
       }
     },
     "review_basis": {
-      "type": "string",
-      "minLength": 12
-    },
-    "migration_source": {
-      "type": "string",
-      "minLength": 1
+      "type": "string"
     }
-  }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

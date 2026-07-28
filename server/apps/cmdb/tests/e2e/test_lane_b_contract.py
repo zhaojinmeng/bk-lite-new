@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -12,11 +13,13 @@ from apps.cmdb.collection.plugins import get_collection_plugin
 from apps.cmdb.tests.e2e.contract_loader import audit_lane_a_evidence
 from apps.cmdb.tests.e2e.lane_b_loader import (
     LaneBValidationError,
+    build_case_cmdb_schema,
     build_case_vm_schema,
     build_vm_response_from_line_protocol,
     lane_b_entries,
     lane_b_incomplete,
     load_lane_b_evidence,
+    parse_model_field_definitions,
     parse_model_field_rows,
 )
 
@@ -47,7 +50,14 @@ def _fake_task(entry, vm_response):
     )
 
 
-def _run_real_plugin(entry, vm_response, monkeypatch, applied_ip_rows=None):
+def _run_real_plugin(
+    entry,
+    vm_response,
+    monkeypatch,
+    applied_ip_rows=None,
+    *,
+    clock_offset_seconds=3600,
+):
     task = _fake_task(entry, vm_response)
     first_metric = vm_response["data"]["result"][0]["metric"]
     vm_instance_id = str(first_metric.get("instance_id", ""))
@@ -77,6 +87,21 @@ def _run_real_plugin(entry, vm_response, monkeypatch, applied_ip_rows=None):
         inst_id=task.instances[0]["_id"],
         task_id=task_id,
     )
+    evidence_timestamp = max(
+        row["value"][0] for row in vm_response["data"]["result"]
+    )
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls.fromtimestamp(
+                evidence_timestamp + clock_offset_seconds, tz=tz
+            )
+
+    # 只冻结墙上时钟；所有插件仍执行生产 timestamp_gt_one_day_ago。
+    monkeypatch.setattr(
+        "apps.cmdb.collection.collect_util.datetime", FrozenDateTime
+    )
     with mock.patch(
         "apps.cmdb.collection.query_vm.Collection.query", return_value=vm_response
     ) as query:
@@ -88,12 +113,52 @@ def _output_model_id(entry, expected):
     return expected.get("model_id", entry.emitted_model_id)
 
 
+def _target_mapping_fields(plugin, model_id):
+    if model_id != "interface" and hasattr(plugin, "device_map"):
+        mapping = plugin.device_map
+        assert isinstance(mapping, dict)
+        return set(mapping)
+    mapping = getattr(plugin, "model_field_mapping", {})
+    if isinstance(mapping, dict) and model_id in mapping:
+        mapping = mapping[model_id]
+    if not isinstance(mapping, dict):
+        mapping = getattr(plugin, "field_mapping", {})
+    assert isinstance(mapping, dict), f"{model_id}: 无法反射生产 mapping"
+    return set(mapping)
+
+
+def _assert_query_identity(plugin, query, vm_response):
+    query.assert_called_once_with(plugin.prom_sql())
+    selectors = plugin.prom_sql().split(" or ")
+    assert selectors == [
+        f"{metric}{{instance_id='{plugin._instance_id}'}}"
+        for metric in plugin._metrics
+    ]
+    assert {
+        row["metric"]["instance_id"]
+        for row in vm_response["data"]["result"]
+    } == {plugin._instance_id}
+
+
 def _production_model_fields(model_id):
     workbook = openpyxl.load_workbook(MODEL_CONFIG, read_only=True, data_only=True)
     try:
         sheet_name = f"attr-{model_id}"
         assert sheet_name in workbook.sheetnames, f"{model_id}: 生产模型表缺少 {sheet_name}"
         return parse_model_field_rows(
+            workbook[sheet_name].iter_rows(values_only=True),
+            model_id=model_id,
+        )
+    finally:
+        workbook.close()
+
+
+def _production_model_field_definitions(model_id):
+    workbook = openpyxl.load_workbook(MODEL_CONFIG, read_only=True, data_only=True)
+    try:
+        sheet_name = f"attr-{model_id}"
+        assert sheet_name in workbook.sheetnames, f"{model_id}: 生产模型表缺少 {sheet_name}"
+        return parse_model_field_definitions(
             workbook[sheet_name].iter_rows(values_only=True),
             model_id=model_id,
         )
@@ -116,8 +181,8 @@ def _value_matches_model_type(value, attr_type):
 def test_生产模型反射允许artifact_tool导出的空短尾行():
     rows = (
         ("模型字段",),
-        ("attr_id", "attr_type"),
-        ("inst_name", "str"),
+        ("attr_id", "attr_type", "is_required", "option"),
+        ("inst_name", "str", True, None),
         (),
         (None,),
     )
@@ -129,7 +194,7 @@ def test_生产模型反射允许artifact_tool导出的空短尾行():
 def test_生产模型反射拒绝非空短行而不静默吞格式错误():
     rows = (
         ("模型字段",),
-        ("attr_id", "unused", "attr_type"),
+        ("attr_id", "unused", "attr_type", "is_required", "option"),
         ("inst_name",),
     )
     with pytest.raises(LaneBValidationError, match="列数不足"):
@@ -182,6 +247,49 @@ def test_LineProtocol到VM拒绝非纳秒时间与身份漂移():
         )
 
 
+def test_CMDB专属schema拒绝缺字段_错误重命名和类型漂移():
+    expected = {
+        "model_id": "sample",
+        "instance_count_min": 1,
+        "expected_instances": [
+            {"inst_name": "sample-contract", "enabled": False, "capacity": 0}
+        ],
+        "optional_absent_fields": [],
+        "review_basis": "独立静态审阅",
+    }
+    schema = build_case_cmdb_schema(expected)
+    validate(expected, schema)
+
+    for drifted in (
+        {
+            **expected,
+            "expected_instances": [{"enabled": False, "capacity": 0}],
+        },
+        {
+            **expected,
+            "expected_instances": [
+                {
+                    "instance_name": "sample-contract",
+                    "enabled": False,
+                    "capacity": 0,
+                }
+            ],
+        },
+        {
+            **expected,
+            "expected_instances": [
+                {
+                    "inst_name": "sample-contract",
+                    "enabled": "false",
+                    "capacity": 0,
+                }
+            ],
+        },
+    ):
+        with pytest.raises(ValidationError):
+            validate(drifted, schema)
+
+
 LANE_B_READY_ENTRIES = tuple(
     entry
     for entry in lane_b_entries()
@@ -211,7 +319,10 @@ def test_LaneB静态制品通过schema且模型身份一致(entry):
     assert vm_response["data"]["resultType"] == "vector"
     assert expected.get("source_contract_model_id", entry.emitted_model_id) == entry.emitted_model_id
     if expected.get("write_mode", "graph_entity") != "ipam_service":
-        assert expected["expected_instance_subset"]["inst_name"]
+        assert expected["expected_instances"]
+        assert all(row["inst_name"] for row in expected["expected_instances"])
+        assert "expected_instance_subset" not in expected
+        assert isinstance(expected["optional_absent_fields"], list)
 
 
 @pytest.mark.parametrize(
@@ -225,16 +336,55 @@ def test_独立Golden关键字段符合生产模型反射与字段类型(entry):
         assert expected["expected_vm_metric_subset"]
         return
 
-    fields = _production_model_fields(expected["model_id"])
-    subset = expected["expected_instance_subset"]
-    unknown = set(subset) - set(fields)
+    definitions = _production_model_field_definitions(expected["model_id"])
+    fields = {
+        field: definition.attr_type
+        for field, definition in definitions.items()
+    }
+    rows = expected["expected_instances"]
+    unknown = {
+        field
+        for row in rows
+        for field in row
+        if field != "assos" and field not in fields
+    }
     assert not unknown, f"{entry.case_id}: Golden 含生产模型未定义字段 {sorted(unknown)}"
     mismatches = {
         field: {"model_type": fields[field], "value": value}
-        for field, value in subset.items()
-        if not _value_matches_model_type(value, fields[field])
+        for row in rows
+        for field, value in row.items()
+        if field != "assos"
+        and not _value_matches_model_type(value, fields[field])
     }
     assert not mismatches, f"{entry.case_id}: Golden 字段类型与生产模型不一致 {mismatches}"
+    required_fields = {
+        field
+        for field, definition in definitions.items()
+        if definition.is_required
+    } - {"organization"}
+    for row in rows:
+        missing_required = required_fields - set(row)
+        assert not missing_required, (
+            f"{entry.case_id}: Golden 缺生产模型必填字段 "
+            f"{sorted(missing_required)}"
+        )
+        empty_required = {
+            field for field in required_fields if row[field] in (None, "")
+        }
+        assert not empty_required, (
+            f"{entry.case_id}: Golden 必填字段为空 {sorted(empty_required)}"
+        )
+        invalid_enums = {
+            field: row[field]
+            for field, definition in definitions.items()
+            if definition.enum_values
+            and field in row
+            and row[field] not in ("", None)
+            and row[field] not in definition.enum_values
+        }
+        assert not invalid_enums, (
+            f"{entry.case_id}: Golden enum 不在生产选项 {invalid_enums}"
+        )
 
 
 @pytest.mark.parametrize(
@@ -251,7 +401,7 @@ def test_VM响应经过真实注册插件后匹配独立静态CMDB_Golden(entry,
         plugin, result, query = _run_real_plugin(
             entry, vm_response, monkeypatch, applied_ip_rows=applied_ip_rows
         )
-        assert query.call_count == 1
+        _assert_query_identity(plugin, query, vm_response)
         assert plugin.raw_data == vm_response["data"]["result"]
         assert result == {"ip": []}
         assert applied_ip_rows["task"] is plugin.get_collect_inst()
@@ -262,22 +412,53 @@ def test_VM响应经过真实注册插件后匹配独立静态CMDB_Golden(entry,
         return
 
     plugin, result, query = _run_real_plugin(entry, vm_response, monkeypatch)
-    rows = result[_output_model_id(entry, expected)]
+    output_model_id = _output_model_id(entry, expected)
+    rows = result[output_model_id]
 
-    assert query.call_count == 1
+    _assert_query_identity(plugin, query, vm_response)
     assert plugin.raw_data == vm_response["data"]["result"]
-    assert len(rows) >= expected["instance_count_min"]
-    assert any(
-        all(row.get(field) == value for field, value in expected["expected_instance_subset"].items())
-        for row in rows
-    ), {"expected": expected["expected_instance_subset"], "actual": rows}
-    if expected_mode == "embedded_host_field":
-        process_subset = expected["expected_process_subset"]
-        assert any(
-            all(process.get(field) == value for field, value in process_subset.items())
-            for row in rows
-            for process in json.loads(row["proc"])
+    assert len(rows) >= expected["instance_count_min"], result
+    assert rows == expected["expected_instances"]
+    actual_fields = set().union(*(row.keys() for row in rows))
+    assert expected["optional_absent_fields"] == sorted(
+        _target_mapping_fields(plugin, output_model_id) - actual_fields
+    )
+    target_vm_response = build_vm_response_from_line_protocol(
+        (evidence.fixture_dir / "03_line_protocol.txt").read_text(
+            encoding="utf-8"
         )
+    )
+    target_metrics = [
+        row["metric"] for row in target_vm_response["data"]["result"]
+    ]
+    unexpectedly_dropped = {
+        field
+        for field in expected["optional_absent_fields"]
+        if any(metric.get(field) not in (None, "") for metric in target_metrics)
+    }
+    assert not unexpectedly_dropped, (
+        f"{entry.case_id}: VM 已携带但清洗丢失 mapped 字段 "
+        f"{sorted(unexpectedly_dropped)}"
+    )
+
+
+def test_真实插件仍会过滤超过一天的VM数据(monkeypatch):
+    entry = next(
+        item for item in lane_b_entries() if item.case_id == "aliyun_bucket"
+    )
+    vm_response = load_lane_b_evidence(entry.case_id).read_json(
+        "04_vm_response.json"
+    )
+
+    plugin, result, query = _run_real_plugin(
+        entry,
+        vm_response,
+        monkeypatch,
+        clock_offset_seconds=2 * 24 * 60 * 60,
+    )
+
+    _assert_query_identity(plugin, query, vm_response)
+    assert result["aliyun_bucket"] == []
 
 
 def test_expected必须是静态字面量且不得携带运行时生成声明():
@@ -287,6 +468,9 @@ def test_expected必须是静态字面量且不得携带运行时生成声明():
         )
         assert "generated_at" not in expected
         assert "generated_from_mapping" not in expected
+        if expected.get("write_mode") != "ipam_service":
+            assert "expected_instances" in expected
+            assert "expected_instance_subset" not in expected
 
 
 def test_VM_Golden锁定成功状态_向量形态_标签_值与新鲜时间戳():

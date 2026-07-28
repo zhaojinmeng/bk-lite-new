@@ -1,12 +1,31 @@
 {
   "model_id": "hwcloud_dcs",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "dcs-dcs-001_dcs-001",
-    "resource_name": "dcs-dcs-001",
-    "resource_id": "dcs-001",
-    "port": 6379,
-    "capacity_gb": 0
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "dcs-dcs-001_dcs-001",
+      "assos": [
+        {
+          "model_id": "hwcloud",
+          "inst_name": "hwcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "hwcloud_dcs_belong_hwcloud"
+        }
+      ],
+      "resource_name": "dcs-dcs-001",
+      "resource_id": "dcs-001",
+      "ip_addr": "192.0.2.40",
+      "port": 6379,
+      "status": "RUNNING",
+      "engine": "Redis",
+      "engine_version": "6.0",
+      "capacity_gb": 0,
+      "cache_mode": "ha",
+      "charge_type": "0",
+      "region": "cn-south-1",
+      "create_time": "2026-01-02T03:04:05Z"
+    }
+  ],
+  "optional_absent_fields": []
 }

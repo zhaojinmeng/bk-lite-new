@@ -1,15 +1,25 @@
 {
   "model_id": "host",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "192.0.2.60[contract-cloud]",
-    "ip_addr": "192.0.2.60",
-    "hostname": "host.example.invalid",
-    "os_type": "1",
-    "cpu_core": 8,
-    "memory": 7,
-    "disk": 58,
-    "cpu_arch": "arm64"
-  },
-  "review_basis": "独立审阅Host IP/云区域命名、枚举与浮点到整数转换"
+  "review_basis": "独立审阅Host IP/云区域命名、枚举与浮点到整数转换",
+  "expected_instances": [
+    {
+      "inst_name": "192.0.2.60[contract-cloud]",
+      "ip_addr": "192.0.2.60",
+      "cloud": "contract-cloud",
+      "hostname": "host.example.invalid",
+      "os_type": "1",
+      "os_name": "Ubuntu",
+      "os_version": "22.04",
+      "os_bit": "64-bit",
+      "cpu_model": "unknown",
+      "cpu_core": 8,
+      "memory": 7,
+      "disk": 58,
+      "cpu_arch": "arm64",
+      "inner_mac": "unknown",
+      "proc": "[{\"pid\": \"1\", \"name\": \"sleep\", \"arg\": \"sleep 300\", \"exe\": \"/usr/bin/sleep\", \"cwd\": \"/\", \"ports\": \"\"}, {\"pid\": \"7\", \"name\": \"bash\", \"arg\": \"bash\", \"exe\": \"/usr/bin/bash\", \"cwd\": \"/\", \"ports\": \"\"}, {\"pid\": \"53\", \"name\": \"bash\", \"arg\": \"bash\", \"exe\": \"/usr/bin/bash\", \"cwd\": \"/\", \"ports\": \"\"}, {\"pid\": \"64\", \"name\": \"ps\", \"arg\": \"ps -e -o pid= -o comm= -o args=\", \"exe\": \"\", \"cwd\": \"\", \"ports\": \"\"}]"
+    }
+  ],
+  "optional_absent_fields": []
 }

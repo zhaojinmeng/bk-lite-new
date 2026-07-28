@@ -1,12 +1,27 @@
 {
   "model_id": "hwcloud_elb",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "elb-elb-001_elb-001",
-    "resource_name": "elb-elb-001",
-    "resource_id": "elb-001",
-    "status": "True",
-    "ip_version": "IPV4"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "elb-elb-001_elb-001",
+      "assos": [
+        {
+          "model_id": "hwcloud",
+          "inst_name": "hwcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "hwcloud_elb_belong_hwcloud"
+        }
+      ],
+      "resource_name": "elb-elb-001",
+      "resource_id": "elb-001",
+      "status": "True",
+      "ip_version": "IPV4",
+      "ipv6_addr": "",
+      "charge_type": "",
+      "region": "cn-south-1",
+      "create_time": "2026-01-02T03:04:05Z"
+    }
+  ],
+  "optional_absent_fields": []
 }

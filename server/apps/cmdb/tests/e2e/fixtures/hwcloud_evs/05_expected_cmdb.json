@@ -1,12 +1,29 @@
 {
   "model_id": "hwcloud_evs",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "evs-evs-001_evs-001",
-    "resource_name": "evs-evs-001",
-    "resource_id": "evs-001",
-    "disk_size": 40,
-    "status": "UNATTACHED"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "evs-evs-001_evs-001",
+      "assos": [
+        {
+          "model_id": "hwcloud",
+          "inst_name": "hwcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "hwcloud_evs_belong_hwcloud"
+        }
+      ],
+      "resource_name": "evs-evs-001",
+      "resource_id": "evs-001",
+      "disk_size": 40,
+      "disk_type": "DATA_DISK",
+      "category": "CLOUD_SSD",
+      "status": "UNATTACHED",
+      "charge_type": "POSTPAID_BY_HOUR",
+      "zone": "cn-south-1a",
+      "region": "cn-south-1",
+      "create_time": "2026-01-02 11:04:05"
+    }
+  ],
+  "optional_absent_fields": []
 }

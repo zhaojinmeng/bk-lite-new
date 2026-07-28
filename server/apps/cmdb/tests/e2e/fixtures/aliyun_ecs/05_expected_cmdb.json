@@ -1,13 +1,35 @@
 {
   "model_id": "aliyun_ecs",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "web-prod-01(i-bp1abcdef1234567)",
-    "resource_name": "web-prod-01",
-    "resource_id": "i-bp1abcdef1234567",
-    "status": "Running",
-    "vcpus": 2,
-    "memory_mb": 8192
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "ecs-contract(i-001)",
+      "resource_name": "ecs-contract",
+      "resource_id": "i-001",
+      "ip_addr": "192.0.2.9",
+      "public_ip": "192.0.2.9",
+      "region": "cn-hangzhou",
+      "zone": "cn-hangzhou-h",
+      "vpc": "vpc-aliyun",
+      "status": "RUNNING",
+      "instance_type": "aliyun_account",
+      "os_name": "Linux",
+      "vcpus": 2,
+      "memory_mb": 4096,
+      "charge_type": "POSTPAID_BY_HOUR",
+      "create_time": "2026-01-01T08:00:00+00:00",
+      "assos": [
+        {
+          "model_id": "aliyun_account",
+          "inst_name": "aliyun_account-contract",
+          "asst_id": "belong",
+          "model_asst_id": "aliyun_ecs_belong_aliyun_account"
+        }
+      ]
+    }
+  ],
+  "optional_absent_fields": [
+    "expired_time"
+  ]
 }

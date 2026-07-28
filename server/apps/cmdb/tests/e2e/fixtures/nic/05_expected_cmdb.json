@@ -1,12 +1,26 @@
 {
   "model_id": "nic",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "0000:01:00.0-192.0.2.80",
-    "self_device": "192.0.2.80",
-    "nic_pci_addr": "0000:01:00.0",
-    "nic_iface": "eth0",
-    "nic_mac": "02:00:00:00:00:01"
-  },
-  "review_basis": "独立审阅NIC PCI复合身份及nic_name/mac源字段别名"
+  "review_basis": "独立审阅NIC PCI复合身份及nic_name/mac源字段别名",
+  "expected_instances": [
+    {
+      "inst_name": "0000:01:00.0-192.0.2.80",
+      "self_device": "192.0.2.80",
+      "nic_pci_addr": "0000:01:00.0",
+      "nic_type": "",
+      "nic_vendor": "",
+      "nic_model": "",
+      "nic_iface": "eth0",
+      "nic_mac": "02:00:00:00:00:01",
+      "assos": [
+        {
+          "model_id": "physcial_server",
+          "inst_name": "192.0.2.80",
+          "asst_id": "contains",
+          "model_asst_id": "physcial_server_contains_nic"
+        }
+      ]
+    }
+  ],
+  "optional_absent_fields": []
 }

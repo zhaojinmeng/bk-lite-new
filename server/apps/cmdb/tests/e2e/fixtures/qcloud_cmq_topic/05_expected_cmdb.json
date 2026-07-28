@@ -1,12 +1,28 @@
 {
   "model_id": "qcloud_cmq_topic",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "topic-contract_topic-001",
-    "resource_name": "topic-contract",
-    "resource_id": "topic-001",
-    "qps": "5000",
-    "status": "未知"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "topic-contract_topic-001",
+      "assos": [
+        {
+          "model_id": "qcloud",
+          "inst_name": "qcloud-contract",
+          "asst_id": "belong",
+          "model_asst_id": "qcloud_cmq_topic_belong_qcloud"
+        }
+      ],
+      "resource_name": "topic-contract",
+      "resource_id": "topic-001",
+      "tag": "",
+      "region": "ap-shanghai",
+      "status": "未知",
+      "max_retention_s": "",
+      "max_message_b": "",
+      "filter_type": "未知",
+      "qps": "5000"
+    }
+  ],
+  "optional_absent_fields": []
 }

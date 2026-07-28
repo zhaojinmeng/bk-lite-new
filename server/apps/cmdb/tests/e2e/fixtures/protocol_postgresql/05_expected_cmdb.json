@@ -1,12 +1,19 @@
 {
   "model_id": "postgresql",
   "instance_count_min": 1,
-  "expected_instance_subset": {
-    "inst_name": "127.0.0.1-postgresql-15432",
-    "ip_addr": "127.0.0.1",
-    "port": "15432",
-    "version": "16.14",
-    "data_path": "/var/lib/postgresql/data"
-  },
-  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping"
+  "review_basis": "独立审阅 VM 标签、命名规则与类型转换；未读取生产 mapping",
+  "expected_instances": [
+    {
+      "inst_name": "127.0.0.1-postgresql-15432",
+      "ip_addr": "127.0.0.1",
+      "port": "15432",
+      "version": "16.14",
+      "config": "/var/lib/postgresql/data/postgresql.conf",
+      "data_path": "/var/lib/postgresql/data",
+      "max_connect": "100",
+      "shared_buffer": "128",
+      "log_directory": "/var/lib/postgresql/data/log"
+    }
+  ],
+  "optional_absent_fields": []
 }
