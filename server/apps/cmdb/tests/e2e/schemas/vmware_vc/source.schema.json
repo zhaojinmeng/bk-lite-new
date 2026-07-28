@@ -1,1 +1,55 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["success","result"],"properties":{"success":{"const":true},"result":{"type":"object","required":["vmware_vc"],"additionalProperties":false,"properties":{"vmware_vc":{"type":"array","minItems":1,"items":{"type":"object","required":["vc_version","inst_name"],"properties":{"vc_version":{"const":"8.0"},"inst_name":{"const":"vcenter.example.invalid"}},"additionalProperties":false}}}}},"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "success",
+    "result"
+  ],
+  "properties": {
+    "success": {
+      "const": true
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "vmware_vc"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "vmware_vc": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "vc_version",
+              "inst_name"
+            ],
+            "properties": {
+              "vc_version": {
+                "type": "string"
+              },
+              "inst_name": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "x-drift-policy": {
+              "unknown_scalar_fields": "report_non_blocking",
+              "unknown_nested_fields": "reject"
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,1 +1,63 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["success","result"],"properties":{"success":{"const":true},"result":{"type":"object","required":["iis"],"additionalProperties":false,"properties":{"iis":{"type":"array","minItems":1,"items":{"type":"object","required":["inst_name","site_id","state","physical_path"],"properties":{"inst_name":{"const":"iis.example.invalid"},"site_id":{"const":"1"},"state":{"const":"Started"},"physical_path":{"const":"C:\\inetpub\\wwwroot"}},"additionalProperties":false}}}}},"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "success",
+    "result"
+  ],
+  "properties": {
+    "success": {
+      "const": true
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "iis"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "iis": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "inst_name",
+              "site_id",
+              "state",
+              "physical_path"
+            ],
+            "properties": {
+              "inst_name": {
+                "type": "string"
+              },
+              "site_id": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "physical_path": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "x-drift-policy": {
+              "unknown_scalar_fields": "report_non_blocking",
+              "unknown_nested_fields": "reject"
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

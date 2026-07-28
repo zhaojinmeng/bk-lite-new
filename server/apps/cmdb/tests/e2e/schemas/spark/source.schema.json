@@ -28,7 +28,36 @@
               "version",
               "webui_port"
             ],
-            "additionalProperties": true
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "properties": {
+              "inst_name": {
+                "type": "string"
+              },
+              "ip_addr": {
+                "type": "string"
+              },
+              "port": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "webui_port": {
+                "type": "string"
+              }
+            },
+            "x-drift-policy": {
+              "unknown_scalar_fields": "report_non_blocking",
+              "unknown_nested_fields": "reject"
+            }
           }
         }
       }

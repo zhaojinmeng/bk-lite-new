@@ -1,12 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["success", "result"],
+  "required": [
+    "success",
+    "result"
+  ],
   "properties": {
-    "success": {"const": true},
+    "success": {
+      "const": true
+    },
     "result": {
       "type": "object",
-      "required": ["oracle"],
+      "required": [
+        "oracle"
+      ],
       "additionalProperties": false,
       "properties": {
         "oracle": {
@@ -14,20 +21,63 @@
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": ["version", "max_mem", "max_conn", "db_name", "database_role", "sid", "ip_addr", "port", "service_name", "inst_name"],
+            "required": [
+              "version",
+              "max_mem",
+              "max_conn",
+              "db_name",
+              "database_role",
+              "sid",
+              "ip_addr",
+              "port",
+              "service_name",
+              "inst_name"
+            ],
             "properties": {
-              "version": {"type": "string"},
-              "max_mem": {"type": "string"},
-              "max_conn": {"type": "string"},
-              "db_name": {"type": "string"},
-              "database_role": {"type": "string"},
-              "sid": {"type": "string"},
-              "ip_addr": {"type": "string"},
-              "port": {"type": "integer"},
-              "service_name": {"type": "string"},
-              "inst_name": {"type": "string"}
+              "version": {
+                "type": "string"
+              },
+              "max_mem": {
+                "type": "string"
+              },
+              "max_conn": {
+                "type": "string"
+              },
+              "db_name": {
+                "type": "string"
+              },
+              "database_role": {
+                "type": "string"
+              },
+              "sid": {
+                "type": "string"
+              },
+              "ip_addr": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "service_name": {
+                "type": "string"
+              },
+              "inst_name": {
+                "type": "string"
+              }
             },
-            "additionalProperties": false
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "x-drift-policy": {
+              "unknown_scalar_fields": "report_non_blocking",
+              "unknown_nested_fields": "reject"
+            }
           }
         }
       }

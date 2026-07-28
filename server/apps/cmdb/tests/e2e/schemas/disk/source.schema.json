@@ -1,1 +1,63 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["success","result"],"properties":{"success":{"const":true},"result":{"type":"object","required":["disk"],"additionalProperties":false,"properties":{"disk":{"type":"array","minItems":1,"items":{"type":"object","required":["disk_name","disk_size","disk_type","self_device"],"properties":{"disk_name":{"const":"sda"},"disk_size":{"const":"100"},"disk_type":{"const":"SSD"},"self_device":{"const":"192.0.2.80"}},"additionalProperties":false}}}}},"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "success",
+    "result"
+  ],
+  "properties": {
+    "success": {
+      "const": true
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "disk"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "disk": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "disk_name",
+              "disk_size",
+              "disk_type",
+              "self_device"
+            ],
+            "properties": {
+              "disk_name": {
+                "type": "string"
+              },
+              "disk_size": {
+                "type": "string"
+              },
+              "disk_type": {
+                "type": "string"
+              },
+              "self_device": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "x-drift-policy": {
+              "unknown_scalar_fields": "report_non_blocking",
+              "unknown_nested_fields": "reject"
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

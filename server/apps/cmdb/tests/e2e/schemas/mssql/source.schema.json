@@ -32,7 +32,48 @@
               "fill_factor",
               "boot_account"
             ],
-            "additionalProperties": true
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            },
+            "properties": {
+              "inst_name": {
+                "type": "string"
+              },
+              "ip_addr": {
+                "type": "string"
+              },
+              "port": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "max_conn": {
+                "type": "integer"
+              },
+              "max_mem_mb": {
+                "type": "integer"
+              },
+              "order_rule": {
+                "type": "string"
+              },
+              "fill_factor": {
+                "type": "integer"
+              },
+              "boot_account": {
+                "type": "string"
+              }
+            },
+            "x-drift-policy": {
+              "unknown_scalar_fields": "report_non_blocking",
+              "unknown_nested_fields": "reject"
+            }
           }
         }
       }
