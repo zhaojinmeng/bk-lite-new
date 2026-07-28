@@ -7,6 +7,8 @@
     "started_at",
     "finished_at",
     "command",
+    "working_directory",
+    "docker_context",
     "image",
     "platform",
     "image_digest",
@@ -37,6 +39,12 @@
       "minItems": 1,
       "items": {"type": "string", "minLength": 1}
     },
+    "working_directory": {
+      "type": "string",
+      "minLength": 1,
+      "not": {"pattern": "^/"}
+    },
+    "docker_context": {"type": "string", "minLength": 1},
     "image": {"type": "string", "minLength": 1},
     "platform": {"type": "string", "minLength": 1},
     "image_digest": {"type": ["string", "null"]},

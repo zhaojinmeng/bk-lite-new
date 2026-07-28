@@ -1,0 +1,48 @@
+{
+  "case_id": "keepalived",
+  "kind": "collector_cli",
+  "started_at": "2026-07-28T03:43:20.654649Z",
+  "finished_at": "2026-07-28T03:44:27.707424Z",
+  "command": [
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "tests.collect_fixtures.cli",
+    "keepalived"
+  ],
+  "working_directory": "agents/stargazer",
+  "docker_context": "desktop-linux",
+  "image": "ubuntu:22.04",
+  "platform": "linux/arm64",
+  "image_digest": "ubuntu@sha256:0e0a0fc6d18feda9db1590da249ac93e8d5abfea8f4c3c0c849ce512b5ef8982",
+  "resource_identifier": "40a9f4c5f492",
+  "container_id": "40a9f4c5f492",
+  "stdout": "==> [keepalived] 启动容器 (ubuntu:22.04)\n    container_id = 40a9f4c5f492\n==> [keepalived] bootstrap sshd (docker exec)\n==> [keepalived] 等待 SSH 就绪\n==> [keepalived] 安装服务\n==> [keepalived] 销毁容器\n",
+  "stderr": "WARN `pyproject.toml` does not contain a `project` table: `<HOME>/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests/agents/pyproject.toml`\nWARN `pyproject.toml` does not contain a `project` table: `<HOME>/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests/agents/pyproject.toml`\n❌ [keepalived] 失败: SSH cmd failed (exit=1): 'exit 1'\nstdout=''\nstderr=''\n",
+  "exit_code": 1,
+  "outcome": "failed",
+  "failure_stage": "service_install",
+  "sanitized": true,
+  "cleanup": {
+    "command": [
+      "docker",
+      "rm",
+      "-f",
+      "40a9f4c5f492"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "Error response from daemon: No such container: 40a9f4c5f492\n",
+    "residual_query": [
+      "docker",
+      "ps",
+      "-aq",
+      "--filter",
+      "id=40a9f4c5f492",
+      "--filter",
+      "name=40a9f4c5f492"
+    ],
+    "residual_count": 0
+  }
+}

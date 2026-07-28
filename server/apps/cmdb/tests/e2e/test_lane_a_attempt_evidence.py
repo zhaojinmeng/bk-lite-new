@@ -67,6 +67,8 @@ def test_attempt_schema拒绝成功退出伪装成降级证据():
         "started_at": "2026-07-28T01:00:00Z",
         "finished_at": "2026-07-28T01:00:01Z",
         "command": ["docker", "pull", "invalid.example/image:tag"],
+        "working_directory": ".",
+        "docker_context": "desktop-linux",
         "image": "invalid.example/image:tag",
         "platform": "linux/arm64",
         "image_digest": None,

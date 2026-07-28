@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 from datetime import datetime, timezone
@@ -27,14 +28,17 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _run(argv: list[str], *, timeout: int) -> tuple[int, str, str]:
+def _run(
+    argv: list[str], *, timeout: int, cwd: Path, env: dict[str, str]
+) -> tuple[int, str, str]:
     try:
         result = subprocess.run(
             argv,
-            cwd=REPOSITORY_ROOT,
+            cwd=cwd,
             capture_output=True,
             text=True,
             timeout=timeout,
+            env=env,
         )
         return result.returncode, result.stdout, result.stderr
     except subprocess.TimeoutExpired as error:
@@ -70,7 +74,36 @@ def _image_digest(image: str) -> str | None:
 def capture(args: argparse.Namespace) -> Path:
     resource_identifier = f"cmdb-task5-{args.case_id}"
     started_at = _utc_now()
-    exit_code, stdout, stderr = _run(args.command, timeout=args.timeout)
+    working_directory = REPOSITORY_ROOT / args.command_cwd
+    context = subprocess.run(
+        ["docker", "context", "show"],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    docker_host = subprocess.run(
+        [
+            "docker",
+            "context",
+            "inspect",
+            context,
+            "--format",
+            "{{.Endpoints.docker.Host}}",
+        ],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    command_env = os.environ.copy()
+    command_env["DOCKER_HOST"] = docker_host
+    exit_code, stdout, stderr = _run(
+        args.command,
+        timeout=args.timeout,
+        cwd=working_directory,
+        env=command_env,
+    )
     finished_at = _utc_now()
     match = _CONTAINER_ID.search(stdout)
     container_id = match.group(1) if match else None
@@ -109,6 +142,8 @@ def capture(args: argparse.Namespace) -> Path:
         "started_at": started_at,
         "finished_at": finished_at,
         "command": args.command,
+        "working_directory": args.command_cwd,
+        "docker_context": context,
         "image": args.image,
         "platform": args.platform,
         "image_digest": _image_digest(args.image),
@@ -168,6 +203,7 @@ def main() -> int:
         ),
     )
     parser.add_argument("--timeout", type=int, default=180)
+    parser.add_argument("--command-cwd", default=".")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     if args.command[:1] == ["--"]:

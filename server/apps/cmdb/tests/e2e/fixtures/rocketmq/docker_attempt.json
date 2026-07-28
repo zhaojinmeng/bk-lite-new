@@ -1,0 +1,48 @@
+{
+  "case_id": "rocketmq",
+  "kind": "collector_cli",
+  "started_at": "2026-07-28T03:46:08.472917Z",
+  "finished_at": "2026-07-28T03:47:26.215186Z",
+  "command": [
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "tests.collect_fixtures.cli",
+    "rocketmq"
+  ],
+  "working_directory": "agents/stargazer",
+  "docker_context": "desktop-linux",
+  "image": "ubuntu:22.04",
+  "platform": "linux/arm64",
+  "image_digest": "ubuntu@sha256:0e0a0fc6d18feda9db1590da249ac93e8d5abfea8f4c3c0c849ce512b5ef8982",
+  "resource_identifier": "f00249a2e996",
+  "container_id": "f00249a2e996",
+  "stdout": "==> [rocketmq] 启动容器 (ubuntu:22.04)\n    container_id = f00249a2e996\n==> [rocketmq] bootstrap sshd (docker exec)\n==> [rocketmq] 等待 SSH 就绪\n==> [rocketmq] 安装服务\n==> [rocketmq] 销毁容器\n",
+  "stderr": "WARN `pyproject.toml` does not contain a `project` table: `<HOME>/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests/agents/pyproject.toml`\nWARN `pyproject.toml` does not contain a `project` table: `<HOME>/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests/agents/pyproject.toml`\n❌ [rocketmq] 失败: SSH cmd failed (exit=1): 'exit 1'\nstdout=''\nstderr=''\n",
+  "exit_code": 1,
+  "outcome": "failed",
+  "failure_stage": "service_install",
+  "sanitized": true,
+  "cleanup": {
+    "command": [
+      "docker",
+      "rm",
+      "-f",
+      "f00249a2e996"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "Error response from daemon: No such container: f00249a2e996\n",
+    "residual_query": [
+      "docker",
+      "ps",
+      "-aq",
+      "--filter",
+      "id=f00249a2e996",
+      "--filter",
+      "name=f00249a2e996"
+    ],
+    "residual_count": 0
+  }
+}

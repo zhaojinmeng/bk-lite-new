@@ -8,6 +8,8 @@
     "pull",
     "harisekhon/hbase:2.1"
   ],
+  "working_directory": ".",
+  "docker_context": "desktop-linux",
   "image": "harisekhon/hbase:2.1",
   "platform": "linux/arm64",
   "image_digest": null,
