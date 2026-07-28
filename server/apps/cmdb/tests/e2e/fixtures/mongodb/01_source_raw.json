@@ -2,7 +2,7 @@
   "success": true,
   "result": {
     "mongodb": [{
-      "inst_name": "mongodb.example.invalid-mongodb-27017",
+      "inst_name": "mongodb-mongodb-27017.example.invalid",
       "ip_addr": "192.0.2.23",
       "obj_id": "mongodb",
       "bin_path": "/usr/bin",

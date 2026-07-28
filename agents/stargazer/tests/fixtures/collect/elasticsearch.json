@@ -12,8 +12,8 @@
     "es_port": 19200
   },
   "raw_stdout": {
-    "inst_name": "172.17.0.4-elasticsearch-9200",
-    "ip_addr": "172.17.0.4",
+    "inst_name": "es-elasticsearch-9200.example.invalid",
+    "ip_addr": "192.0.2.41",
     "obj_id": "elasticsearch",
     "port": "9200",
     "version": "8.19.18",

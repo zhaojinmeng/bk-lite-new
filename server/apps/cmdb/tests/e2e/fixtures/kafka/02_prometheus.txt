@@ -1,3 +1,3 @@
 # HELP kafka_info Auto-generated help for kafka_info
 # TYPE kafka_info gauge
-kafka_info{bin_path="/opt/kafka/bin",bk_obj_id="kafka",broker_count="0",cluster_id="(unparsed)",collect_status="success",config="/opt/kafka/config/kraft/server.properties",host="kafka.example.invalid",inst_name="kafka.example.invalid-kafka-9092",ip_addr="192.0.2.23",model_id="kafka",obj_id="kafka",pid="6348",port="9092",topics="(empty or query failed)",user="root",version="3.6.0"} 1 1700000000123
+kafka_info{bin_path="/opt/kafka/bin",bk_obj_id="kafka",broker_count="0",cluster_id="(unparsed)",collect_status="success",config="/opt/kafka/config/kraft/server.properties",host="kafka.example.invalid",inst_name="kafka-kafka-9092.example.invalid",ip_addr="192.0.2.23",model_id="kafka",obj_id="kafka",pid="6348",port="9092",topics="(empty or query failed)",user="root",version="3.6.0"} 1 1700000000123

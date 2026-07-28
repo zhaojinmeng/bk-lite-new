@@ -2,7 +2,7 @@
   "success": true,
   "result": {
     "postgresql": [{
-      "inst_name": "postgresql.example.invalid-pg-15432",
+      "inst_name": "postgresql-pg-15432.example.invalid",
       "ip_addr": "127.0.0.1",
       "port": 15432,
       "version": "16.14",

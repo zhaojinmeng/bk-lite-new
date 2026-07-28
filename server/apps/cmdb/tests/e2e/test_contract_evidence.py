@@ -558,3 +558,27 @@ def test_私有云六个三元组LaneA_evidence全部ready且来源独立分栏(
     assert all(item.status == "ready" for item in private_items)
     grouped = audit.ready_by_source_kind()
     assert private_case_ids <= set(grouped["private_api_mock"])
+
+
+def test_LaneA全部79个生产三元组ready且K8s豁免不冒充通过():
+    manifest = load_manifest()
+    audit = audit_lane_a_evidence(manifest)
+    expected_contracts = {
+        entry.contract_id for entry in manifest.validation_entries
+    }
+    ready_contracts = {
+        item.contract_id
+        for item in audit.validation
+        if item.status == "ready"
+    }
+    exempt_contracts = {
+        exemption.contract_id
+        for exemption in manifest.production_exemptions
+    }
+
+    assert len(expected_contracts) == 79
+    assert ready_contracts == expected_contracts
+    assert exempt_contracts.isdisjoint(ready_contracts)
+    assert {
+        exemption.case_id for exemption in manifest.production_exemptions
+    } == {"k8s_cluster"}

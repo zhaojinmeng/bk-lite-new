@@ -1,5 +1,5 @@
 {"success":true,"result":{"etcd":[
-{"inst_name":"etcd.example.invalid-etcd-2379","obj_id":"etcd","ip_addr":"192.0.2.22","port":"2379","install_path":"/usr/bin","version":"3.3.25","data_dir":"/var/lib/etcd","conf_file_path":"","peer_port":"2380"},
-{"inst_name":"etcd.example.invalid-etcd-2379","obj_id":"etcd","ip_addr":"192.0.2.22","port":"2379","install_path":"/usr/bin","version":"","data_dir":"default.etcd","conf_file_path":"","peer_port":"2380"},
-{"inst_name":"etcd.example.invalid-etcd-2379","obj_id":"etcd","ip_addr":"192.0.2.22","port":"2379","install_path":"","version":"","data_dir":"default.etcd","conf_file_path":"","peer_port":"2380"},
-{"inst_name":"etcd.example.invalid-etcd-2379","obj_id":"etcd","ip_addr":"192.0.2.22","port":"2379","install_path":"","version":"","data_dir":"default.etcd","conf_file_path":"","peer_port":"2380"}]}}
+{"inst_name":"etcd-etcd-2379.example.invalid","obj_id":"etcd","ip_addr":"192.0.2.22","port":"2379","install_path":"/usr/bin","version":"3.3.25","data_dir":"/var/lib/etcd","conf_file_path":"","peer_port":"2380"},
+{"inst_name":"etcd-etcd-2379.example.invalid","obj_id":"etcd","ip_addr":"192.0.2.22","port":"2379","install_path":"/usr/bin","version":"","data_dir":"default.etcd","conf_file_path":"","peer_port":"2380"},
+{"inst_name":"etcd-etcd-2379.example.invalid","obj_id":"etcd","ip_addr":"192.0.2.22","port":"2379","install_path":"","version":"","data_dir":"default.etcd","conf_file_path":"","peer_port":"2380"},
+{"inst_name":"etcd-etcd-2379.example.invalid","obj_id":"etcd","ip_addr":"192.0.2.22","port":"2379","install_path":"","version":"","data_dir":"default.etcd","conf_file_path":"","peer_port":"2380"}]}}
