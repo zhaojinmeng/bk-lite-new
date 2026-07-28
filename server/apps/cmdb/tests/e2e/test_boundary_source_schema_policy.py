@@ -4,26 +4,10 @@ from pathlib import Path
 import jsonschema
 import pytest
 
+from apps.cmdb.tests.e2e.boundary_schema_drift import BOUNDARY_CASES
+
 
 E2E_ROOT = Path(__file__).parent
-BOUNDARY_CASES = {
-    "disk",
-    "gpu",
-    "hbase",
-    "host_physcial_server",
-    "iis",
-    "keepalived",
-    "memory",
-    "mssql",
-    "network",
-    "nic",
-    "openresty",
-    "oracle",
-    "physcial_server",
-    "rocketmq",
-    "spark",
-    "vmware_vc",
-}
 SCALAR_DRIFT_TYPES = {
     "string",
     "number",

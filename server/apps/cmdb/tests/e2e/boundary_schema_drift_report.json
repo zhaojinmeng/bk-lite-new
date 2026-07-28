@@ -1,0 +1,73 @@
+{
+  "generated_from": {
+    "evidence_version": 1,
+    "source_artifact": "fixtures/<case_id>/01_source_raw.json",
+    "schema_artifact": "schemas/<case_id>/source.schema.json"
+  },
+  "cases": [
+    {
+      "case_id": "disk",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "gpu",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "hbase",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "host_physcial_server",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "iis",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "keepalived",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "memory",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "mssql",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "network",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "nic",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "openresty",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "oracle",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "physcial_server",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "rocketmq",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "spark",
+      "unknown_optional_fields": []
+    },
+    {
+      "case_id": "vmware_vc",
+      "unknown_optional_fields": []
+    }
+  ]
+}
