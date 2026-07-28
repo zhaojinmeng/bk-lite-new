@@ -338,6 +338,50 @@ def test_敏感键多种拼写在明确脱敏后允许通过(complete_evidence):
     load_evidence(complete_evidence.case_id, root=complete_evidence.root).assert_no_secrets()
 
 
+def test_敏感信息门禁允许RFC5737文档地址作为host标签(complete_evidence):
+    prometheus_path = (
+        complete_evidence.root
+        / "fixtures"
+        / complete_evidence.case_id
+        / "02_prometheus.txt"
+    )
+    prometheus_path.write_text(
+        'sample_info{host="192.0.2.60",inst_name="node.example.invalid"} 1\n',
+        encoding="utf-8",
+    )
+    line_protocol_path = (
+        complete_evidence.root
+        / "fixtures"
+        / complete_evidence.case_id
+        / "03_line_protocol.txt"
+    )
+    line_protocol_path.write_text(
+        "sample,host=198.51.100.10,inst_name=node.example.invalid value=1i\n",
+        encoding="utf-8",
+    )
+
+    load_evidence(
+        complete_evidence.case_id, root=complete_evidence.root
+    ).assert_no_secrets()
+
+
+def test_敏感信息门禁仍拒绝真实私网host地址(complete_evidence):
+    line_protocol_path = (
+        complete_evidence.root
+        / "fixtures"
+        / complete_evidence.case_id
+        / "03_line_protocol.txt"
+    )
+    line_protocol_path.write_text(
+        "sample,host=10.23.4.5 value=1i\n", encoding="utf-8"
+    )
+
+    with pytest.raises(EvidenceValidationError, match="10.23.4.5"):
+        load_evidence(
+            complete_evidence.case_id, root=complete_evidence.root
+        ).assert_no_secrets()
+
+
 def test_生产缺口与非生产归档状态由结构化_audit_返回():
     manifest = load_manifest()
 

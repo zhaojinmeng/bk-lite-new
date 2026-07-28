@@ -1,4 +1,5 @@
 import json
+import ipaddress
 import re
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -439,4 +440,15 @@ def _is_unredacted_hostname(value: Any) -> bool:
     if not isinstance(value, str) or not value.strip() or _is_redacted(value):
         return False
     lowered = value.lower()
+    try:
+        address = ipaddress.ip_address(lowered)
+    except ValueError:
+        address = None
+    if address is not None:
+        documentation_networks = (
+            ipaddress.ip_network("192.0.2.0/24"),
+            ipaddress.ip_network("198.51.100.0/24"),
+            ipaddress.ip_network("203.0.113.0/24"),
+        )
+        return not (address.is_loopback or any(address in network for network in documentation_networks))
     return not any(reserved in lowered for reserved in ("example.invalid", "example.com", "example.net", "example.org"))
