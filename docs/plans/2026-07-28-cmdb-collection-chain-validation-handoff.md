@@ -58,16 +58,17 @@ Task 9
 codex/cmdb-collection-chain-tests
 ```
 
-当前已提交代码基线：
+最终验收代码基线：
 
 ```text
-d910283d9 fix(cmdb): 修复VM新鲜采集数据查询
+8fc14dd76 fix(cmdb): 修正模型字段元数据占位值
 ```
 
-Task 9 已完成实现和真实运行，当前尚待正式评审收口与提交；接手时以
-`git log -3 --oneline` 和 `git status --short` 显示的现场为准。
+Task 1–10 已全部完成，最终规格与仓库标准双轴评审均已批准。接手时以
+`git log -6 --oneline` 和 `git status --short` 显示的现场为准。
 
-必须直接使用上述现有 worktree。当前 Task 9 有未提交改动；不要在仓库主工作区重新开始，不要执行 `git reset`、`git checkout --` 或清理工作区。
+必须直接使用上述现有 worktree，不要在仓库主工作区重新开始，不要执行
+`git reset`、`git checkout --` 或清理工作区。
 
 进入现场后先运行：
 
@@ -141,7 +142,7 @@ git log -12 --oneline
 
 ## 4. 当前完成度
 
-按最终门禁估算约 90%–95%。
+完成度：100%（代码、离线合同、真实基础设施 smoke、最终回归和双轴评审均完成）。
 
 | Task | 状态 | 结论 |
 |---|---|---|
@@ -153,8 +154,8 @@ git log -12 --oneline
 | Task 6：79/79 VM → CMDB | 完成、正式双轴评审通过 | 79/79 完整 Golden、模型反射、精确关联 |
 | Task 7：图库写入意图 | 完成、正式双轴评审通过 | 43 项图库意图合同；真实 MetricsCannula/Management |
 | Task 8：真实 smoke 安全框架 | 完成、正式双轴评审通过 | 有界资源、精确清理、失败证据保留 |
-| Task 9：七类真实基础设施 smoke | 实现、增强运行、双轴复审完成，待提交 | 1 passed / 106.35s；482 项来源合同；容器与网络零残留 |
-| Task 10：最终全量回归和 PR | 待开始 | Task 9 提交后运行完整回归和最终双轴评审 |
+| Task 9：七类真实基础设施 smoke | 完成、正式双轴评审通过 | 当前 HEAD 1 passed / 115.26s；482 项来源合同；容器与网络零残留 |
+| Task 10：最终全量回归和 PR | 验收完成 | 1107 passed；最终规格与仓库标准复审均 APPROVED；等待发布 PR |
 
 ## 5. 已完成的关键提交
 
@@ -250,41 +251,43 @@ caa5e6363 fix(cmdb): 补齐Redis与Docker采集字段模型
 - 新增 `attr-consul`；
 - `attr-redis` 新增 `topo_mode/cluster_uuid/slaves/master`；
 - `attr-docker` 新增 `status`；
-- 348 个 sheet 无增删；
-- 除目标 sheet 外既有非空单元格语义保持一致；
+- 基线 347 个 sheet，仅新增 `attr-consul`，最终共 348 个；
+- 除 `models`、`attr-redis`、`attr-docker` 和新增 `attr-consul` 外，344 个 worksheet XML 与基线逐字节一致；
+- 新增字段不含错误占位值 `"684"`，`user_prompt` 和 `freshness` 按相邻模型合法语义锁定；
 - 公式错误为 0。
 
-## 6. 当前 Task 9 现场（以本节为准）
+## 6. 最终验收现场（以本节为准）
 
-Task 6 和 Task 7 均已完成、提交并通过正式双轴评审；Task 9 发现的 VM 查询生产
-缺陷也已独立提交。当前已提交基线：
+Task 1–10 均已完成、提交并通过最终双轴评审；Task 9 发现的 VM 查询生产
+缺陷和最终工作簿漂移均已独立修复。当前末端提交：
 
 ```text
+8fc14dd76 fix(cmdb): 修正模型字段元数据占位值
+bfcb3ff8a fix(cmdb): 清除模型工作簿非预期漂移
+bc11fe1a0 test(cmdb): 对齐华为云VPC布尔字段合同
+7ab169eb2 test(cmdb): 完成七类真实采集链路烟测
 d910283d9 fix(cmdb): 修复VM新鲜采集数据查询
 ```
 
-Task 9 的未提交内容包括：
-
-- `query_vm.py` 及回归测试：修复 `or` 联合查询的 range selector 位置，使
-  VictoriaMetrics 新鲜样本可以被稳定查询，并禁用结果缓存；
-- `smoke/collection_chain/`：七类真实 workload、完整 Stargazer 来源合同门禁、
-  精确 FalkorDB 字段/关联断言和安全框架增强；
-- `pytest.ini` 的 `real_smoke` marker；
-- 本交接文档。
-
-2026-07-29 最新证据：
+2026-07-29 最终证据：
 
 ```text
 Stargazer 来源合同：482 passed, 79 warnings in 3.57s
 Task 9 纯测试与 query_vm 回归：73 passed in 0.69s
 独立 Golden 关联聚焦测试：8 passed in 0.31s
-增强真实 smoke：1 passed in 106.35s
-成功 project：cmdb-collection-29b5c8d9
+工作簿与模型配置聚焦回归：11 passed in 6.49s
+完整相关 Server 门禁：1107 passed, 91 skipped, 1 deselected in 94.50s
+增强真实 smoke（当前 HEAD）：1 passed in 115.26s
+成功 project：cmdb-collection-7f29bca1
 成功后容器残留：0
 成功后网络残留：0
-Task 9 规格复审：APPROVED
-Task 9 仓库标准复审：APPROVED
+最终规格复审：APPROVED
+最终仓库标准复审：APPROVED（无 Blocker、Important 或 Minor）
 ```
+
+其中 91 个 skip 属于历史归档、许可证阻塞或 placeholder 路径；真实 smoke 在普通
+组合回归中未显式 opt-in，因此 1 个入口 deselected。独立生产门禁证明 79 个生产
+三元组 Lane A/Lane B 全部 ready，且没有 `skip/xfail`；K8s 豁免不计入通过。
 
 增强真实链路为：
 
@@ -307,12 +310,7 @@ Task 9 仓库标准复审：APPROVED
 - `network`：设备边界 Mock，来源模型 `network`、最终图库模型 `switch`；
 - K8s 仍完全排除。
 
-下一步：
-
-1. 将 `query_vm.py` 与其回归测试独立提交；
-2. 将其余 Task 9 smoke 和文档提交；
-3. 运行第 11 节 Task 10 全量门禁并对完整 diff 做最终双轴评审；
-4. 全部通过后才 push 和创建 PR。
+下一步仅剩发布动作：推送 `codex/cmdb-collection-chain-tests` 并创建非 Draft PR。
 
 ## 6A. 历史记录：Task 6 当时的未提交现场（已完成）
 
@@ -718,9 +716,8 @@ DB_NAME=:memory: \
 > `/Users/windyzhao/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests`
 > 的 `codex/cmdb-collection-chain-tests` 分支继续。先阅读
 > `docs/plans/2026-07-28-cmdb-collection-chain-validation-handoff.md`，
-> 保留当前 Task 9 未提交文件，不执行 reset/checkout/clean。Task 1–8 已完成；
-> Task 9 的增强真实 smoke 已 `1 passed in 106.35s`，完整来源合同 482 passed，
-> Docker 容器和网络零残留，规格与仓库标准复审均 APPROVED。第一项工作是按第 6 节
-> 拆分提交 Task 9，然后执行第 11 节 Task 10 全量回归和最终双轴评审。K8s 不测试，
-> 特殊环境对象使用明确边界 Mock，不创建或恢复任何本任务 Superpowers 产物，
-> 全部通过后才 push 并创建 PR。
+> 不执行 reset/checkout/clean。Task 1–10 已全部完成；79 个生产三元组 Lane A/Lane B
+> 全部 ready，完整相关 Server 门禁 `1107 passed`，当前 HEAD 的七类增强真实 smoke
+> `1 passed in 115.26s`，Docker 容器和网络零残留，最终规格与仓库标准复审均
+> APPROVED。K8s 不测试，特殊环境对象使用明确边界 Mock，没有本任务 Superpowers
+> 产物。若 PR 尚未创建，只需推送 `codex/cmdb-collection-chain-tests` 并创建非 Draft PR。
