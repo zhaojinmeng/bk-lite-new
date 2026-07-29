@@ -29,14 +29,25 @@ class Collection:
 
         对连接类异常与 5xx 做有限次退避重试；4xx 直接失败（重试无意义）。
         """
-        query_with_time = f"last_over_time(({sql})[1h:])"
-        params = {"query": query_with_time}
+        selectors = sql.split(" or ")
+        query_with_time = " or ".join(
+            f"last_over_time({selector}[1h])" for selector in selectors
+        )
+        # 配置采集紧接指标写入执行，VM 的查询结果缓存可能仍保存写入前的空结果。
+        # 这里要求读取本轮最新样本，不能复用陈旧空缓存。
+        data = {"query": query_with_time}
+        params = {"nocache": "1"}
         attempts = max(1, int(retries))
         last_error: Exception | None = None
 
         for attempt in range(1, attempts + 1):
             try:
-                resp = requests.post(self.url, data=params, timeout=timeout)
+                resp = requests.post(
+                    self.url,
+                    params=params,
+                    data=data,
+                    timeout=timeout,
+                )
             except requests.RequestException as exc:
                 last_error = exc
                 logger.warning(

@@ -44,14 +44,21 @@ def test_query_retries_on_connection_error_then_succeeds():
     assert post.call_count == 2
 
 
-def test_query_applies_time_range_to_entire_union_expression():
+def test_query_applies_latest_range_to_each_union_selector_before_union():
     with mock.patch(f"{MODULE}.requests.post", return_value=_ok_response()) as post:
         Collection().query("metric_a or metric_b", retries=1)
 
     assert post.call_args.kwargs["data"]["query"] == (
-        "last_over_time((metric_a or metric_b)[1h:])"
+        "last_over_time(metric_a[1h]) or last_over_time(metric_b[1h])"
     )
     assert post.call_args.kwargs["timeout"] == 60
+
+
+def test_collection_query_disables_vm_result_cache_for_fresh_collection_data():
+    with mock.patch(f"{MODULE}.requests.post", return_value=_ok_response()) as post:
+        Collection().query("host_info_gauge", retries=1)
+
+    assert post.call_args.kwargs["params"]["nocache"] == "1"
 
 
 def test_query_propagates_explicit_timeout():
