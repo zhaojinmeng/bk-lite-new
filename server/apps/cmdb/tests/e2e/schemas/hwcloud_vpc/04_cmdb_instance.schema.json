@@ -11,7 +11,7 @@
     "region":        {"type": "string"},
     "status":        {"type": "string", "enum": ["ACTIVE", "PENDING", "DELETED", "ERROR"]},
     "cidr":          {"type": "string"},
-    "is_default":    {"type": "string"},
+    "is_default":    {"type": "boolean"},
     "assos":         {"type": ["array", "object"], "description": "belong hwcloud 关联"}
   }
 }

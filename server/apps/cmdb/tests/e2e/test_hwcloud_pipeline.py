@@ -316,6 +316,6 @@ def test_hwcloud_vpc_a_b_alignment(load_fixture, load_schema, monkeypatch):
     missing = model_field_names - inst_fields
     assert not missing, f"B 端 04 实例缺 model 字段: {missing}"
 
-    # B 端:cidr / is_default 是 string
+    # B 端：cidr 是字符串，is_default 按生产模型清洗为布尔值。
     assert inst.get("cidr") == "192.168.0.0/16"
-    assert inst.get("is_default") == "false"
+    assert inst.get("is_default") is False
