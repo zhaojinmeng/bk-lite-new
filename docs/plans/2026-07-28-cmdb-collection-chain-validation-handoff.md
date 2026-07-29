@@ -1,6 +1,6 @@
 # CMDB 配置采集全链路验证 AI 交接文档
 
-更新时间：2026-07-28（Asia/Shanghai）
+更新时间：2026-07-29（Asia/Shanghai）
 
 ## 1. 交接目标
 
@@ -58,16 +58,16 @@ Task 9
 codex/cmdb-collection-chain-tests
 ```
 
-Task 6 当前未提交实现所基于的代码基线：
+当前已提交代码基线：
 
 ```text
-caa5e6363 fix(cmdb): 补齐Redis与Docker采集字段模型
+d910283d9 fix(cmdb): 修复VM新鲜采集数据查询
 ```
 
-交接文档本身已经单独提交在该基线之后；接手时以 `git log -3 --oneline`
-显示的当前 HEAD 为准。
+Task 9 已完成实现和真实运行，当前尚待正式评审收口与提交；接手时以
+`git log -3 --oneline` 和 `git status --short` 显示的现场为准。
 
-必须直接使用上述现有 worktree。当前 Task 6 有重要未提交改动；不要在仓库主工作区重新开始，不要执行 `git reset`、`git checkout --` 或清理工作区。
+必须直接使用上述现有 worktree。当前 Task 9 有未提交改动；不要在仓库主工作区重新开始，不要执行 `git reset`、`git checkout --` 或清理工作区。
 
 进入现场后先运行：
 
@@ -141,7 +141,7 @@ git log -12 --oneline
 
 ## 4. 当前完成度
 
-按最终门禁估算约 70%–75%。
+按最终门禁估算约 90%–95%。
 
 | Task | 状态 | 结论 |
 |---|---|---|
@@ -150,11 +150,11 @@ git log -12 --oneline
 | Task 3：Lane A 语义与 NATS 发布边界 | 完成、正式评审通过 | 真实转换、解析、时间精度、零投递安全重试 |
 | Task 4：合法假值 | 完成、正式评审通过 | `0`、`False`、空字符串不被 truthiness 丢弃 |
 | Task 5：79/79 Lane A | 完成、正式双轴评审通过 | 40 个真实父 collector，79 个最终三元组 |
-| Task 6：79/79 VM → CMDB | 接近完成，尚未提交/复审 | 最新聚焦测试 319 passed、1 个过期断言失败 |
-| Task 7：图库写入意图 | 未开始 | 需要 GraphIntentSpy + MetricsCannula/Management |
-| Task 8：真实 smoke 安全框架 | 完成、正式双轴评审通过 | 53/53 safety tests；尚未运行真实业务 smoke |
-| Task 9：七类真实基础设施 smoke | 未开始 | `test_collection_chain.py` 尚不存在 |
-| Task 10：最终全量回归和 PR | 未开始 | 只有全部门禁通过后才执行 |
+| Task 6：79/79 VM → CMDB | 完成、正式双轴评审通过 | 79/79 完整 Golden、模型反射、精确关联 |
+| Task 7：图库写入意图 | 完成、正式双轴评审通过 | 43 项图库意图合同；真实 MetricsCannula/Management |
+| Task 8：真实 smoke 安全框架 | 完成、正式双轴评审通过 | 有界资源、精确清理、失败证据保留 |
+| Task 9：七类真实基础设施 smoke | 实现、增强运行、双轴复审完成，待提交 | 1 passed / 106.35s；482 项来源合同；容器与网络零残留 |
+| Task 10：最终全量回归和 PR | 待开始 | Task 9 提交后运行完整回归和最终双轴评审 |
 
 ## 5. 已完成的关键提交
 
@@ -230,7 +230,7 @@ server/apps/cmdb/tests/smoke/collection_chain/
 - 容器和网络零残留确认；
 - 业务失败与清理失败同时保留。
 
-尚未拉取镜像或执行七类真实业务 smoke。
+固定镜像已经拉取；Task 9 已用真实 Docker 栈执行七类业务 smoke。
 
 ### Task 6 已提交部分
 
@@ -254,7 +254,67 @@ caa5e6363 fix(cmdb): 补齐Redis与Docker采集字段模型
 - 除目标 sheet 外既有非空单元格语义保持一致；
 - 公式错误为 0。
 
-## 6. Task 6 当前未提交现场
+## 6. 当前 Task 9 现场（以本节为准）
+
+Task 6 和 Task 7 均已完成、提交并通过正式双轴评审；Task 9 发现的 VM 查询生产
+缺陷也已独立提交。当前已提交基线：
+
+```text
+d910283d9 fix(cmdb): 修复VM新鲜采集数据查询
+```
+
+Task 9 的未提交内容包括：
+
+- `query_vm.py` 及回归测试：修复 `or` 联合查询的 range selector 位置，使
+  VictoriaMetrics 新鲜样本可以被稳定查询，并禁用结果缓存；
+- `smoke/collection_chain/`：七类真实 workload、完整 Stargazer 来源合同门禁、
+  精确 FalkorDB 字段/关联断言和安全框架增强；
+- `pytest.ini` 的 `real_smoke` marker；
+- 本交接文档。
+
+2026-07-29 最新证据：
+
+```text
+Stargazer 来源合同：482 passed, 79 warnings in 3.57s
+Task 9 纯测试与 query_vm 回归：73 passed in 0.69s
+独立 Golden 关联聚焦测试：8 passed in 0.31s
+增强真实 smoke：1 passed in 106.35s
+成功 project：cmdb-collection-29b5c8d9
+成功后容器残留：0
+成功后网络残留：0
+Task 9 规格复审：APPROVED
+Task 9 仓库标准复审：APPROVED
+```
+
+增强真实链路为：
+
+```text
+完整 Stargazer Task 5 来源合同
+  → 已证明的 Line Protocol 注入唯一 run_id/task_id/新鲜时间
+  → 真实 NATS → Telegraf → VictoriaMetrics
+  → 真实 Collection.query / collection plugin
+  → 真实 MetricsCannula / Management
+  → 真实 FalkorDB 节点与边
+  → 独立 Lane B Golden 精确字段/关联断言
+  → 精确清理与零残留确认
+```
+
+来源边界：
+
+- `host/mysql/influxdb/nginx`：真实环境采集合同证据；
+- `qcloud_cvm`：官方 SDK 网络边界 Mock；
+- `vmware_vc`：私有 API 边界 Mock；
+- `network`：设备边界 Mock，来源模型 `network`、最终图库模型 `switch`；
+- K8s 仍完全排除。
+
+下一步：
+
+1. 将 `query_vm.py` 与其回归测试独立提交；
+2. 将其余 Task 9 smoke 和文档提交；
+3. 运行第 11 节 Task 10 全量门禁并对完整 diff 做最终双轴评审；
+4. 全部通过后才 push 和创建 PR。
+
+## 6A. 历史记录：Task 6 当时的未提交现场（已完成）
 
 当前 `git status --short`：
 
@@ -329,7 +389,7 @@ server/apps/cmdb/tests/e2e/test_lane_b_contract.py
 - 增加“两天前 VM 数据必须被过滤”的负向测试；
 - IPAM 特例保留，但 `prom_sql` 和 identity 也必须精确匹配。
 
-## 7. 最新可复现测试状态
+## 7. 历史记录：Task 6 当时的测试状态（已完成）
 
 2026-07-28 最新命令：
 
@@ -379,7 +439,7 @@ assert audit.incomplete_validation == ()
 
 交接后的第一步就是按 RED/GREEN 更新此测试，再重跑同一命令；预期为 320 passed。
 
-## 8. Task 6 收口步骤
+## 8. 历史记录：Task 6 收口步骤（已完成）
 
 ### 8.1 修复唯一旧断言
 
@@ -480,7 +540,7 @@ DB_NAME=:memory:
 
 Task 6 未正式批准前不要进入 Task 7。
 
-## 9. Task 7：图库写入意图合同
+## 9. 历史记录：Task 7 图库写入意图合同（已完成）
 
 目标：证明 Lane B 清洗结果经过真实 `MetricsCannula` 和 `Management` 后，会产生正确的 FalkorDB 节点和边操作。
 
@@ -526,7 +586,7 @@ GraphIntentSpy 至少记录：
 
 Task 7 完成后也要独立做规格与代码质量双轴评审。
 
-## 10. Task 9：真实基础设施 smoke
+## 10. Task 9：真实基础设施 smoke 运行参考
 
 安全框架说明：
 
@@ -573,7 +633,7 @@ docker compose \
   config --quiet
 ```
 
-然后实现当前缺失的：
+业务 smoke 已实现于：
 
 ```text
 server/apps/cmdb/tests/smoke/collection_chain/test_collection_chain.py
@@ -591,7 +651,7 @@ vmware
 network
 ```
 
-要求：
+已满足：
 
 - `host/mysql/influxdb/nginx` 尽量走本地真实可启动采集源；
 - `qcloud/vmware/network` 可按用户决策使用明确 source boundary Mock；
@@ -607,6 +667,8 @@ network
 ```bash
 CMDB_COLLECTION_SMOKE=1 \
 CMDB_SMOKE_RUN_ID=cmdb-a1b2c3d4 \
+DB_ENGINE=sqlite \
+DB_NAME=:memory: \
 /Users/windyzhao/.local/bin/uv run pytest -q -o addopts='' \
   apps/cmdb/tests/smoke/collection_chain/test_collection_chain.py
 ```
@@ -656,10 +718,9 @@ CMDB_SMOKE_RUN_ID=cmdb-a1b2c3d4 \
 > `/Users/windyzhao/Documents/Canway/weops_X/cmdb/bk-lite/.worktrees/cmdb-collection-chain-tests`
 > 的 `codex/cmdb-collection-chain-tests` 分支继续。先阅读
 > `docs/plans/2026-07-28-cmdb-collection-chain-validation-handoff.md`，
-> 保留当前 168 个未提交文件，不执行 reset/checkout/clean。
-> 第一项工作是修正
-> `test_生产缺口与非生产归档状态由结构化_audit_返回`
-> 的过期断言，使 79 个生产三元组零缺口成为最终合同；重跑文档第 7 节命令，目标
-> 320 passed。随后按第 8 节完成 Task 6 回归、拆分提交和双轴评审。Task 6 正式批准后，
-> 依次完成 Task 7、Task 9、Task 10。K8s 不测试，特殊环境对象使用明确边界 Mock，
-> 不创建或恢复任何本任务 Superpowers 产物，全部通过后才创建 PR。
+> 保留当前 Task 9 未提交文件，不执行 reset/checkout/clean。Task 1–8 已完成；
+> Task 9 的增强真实 smoke 已 `1 passed in 106.35s`，完整来源合同 482 passed，
+> Docker 容器和网络零残留，规格与仓库标准复审均 APPROVED。第一项工作是按第 6 节
+> 拆分提交 Task 9，然后执行第 11 节 Task 10 全量回归和最终双轴评审。K8s 不测试，
+> 特殊环境对象使用明确边界 Mock，不创建或恢复任何本任务 Superpowers 产物，
+> 全部通过后才 push 并创建 PR。

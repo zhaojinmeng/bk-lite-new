@@ -85,6 +85,20 @@ def test_settings_expose_all_resource_deadlines_and_log_bound(tmp_path: Path) ->
     assert settings.log_max_bytes == 4096
 
 
+def test_compose为Telegraf保留实测可启动且有上限的内存预算() -> None:
+    compose = Path(__file__).with_name("compose.yaml").read_text(encoding="utf-8")
+    telegraf = compose.split("  telegraf:", 1)[1].split("\nconfigs:", 1)[0]
+
+    assert "mem_limit: 384m" in telegraf
+    assert "mem_limit:" in telegraf
+
+
+def test_compose真实运行只使用预先拉取并验证的固定镜像() -> None:
+    compose = Path(__file__).with_name("compose.yaml").read_text(encoding="utf-8")
+
+    assert compose.count("pull_policy: never") == 4
+
+
 @pytest.mark.parametrize(
     ("name", "value"),
     [
@@ -533,7 +547,7 @@ class HealthyDocker:
                     '[{"Service":"nats","Health":"healthy"},'
                     '{"Service":"victoriametrics","Health":"healthy"},'
                     '{"Service":"falkordb","Health":"healthy"},'
-                    '{"Service":"telegraf","State":"running"}]'
+                    '{"Service":"telegraf","Health":"healthy"}]'
                 ),
                 "",
             )

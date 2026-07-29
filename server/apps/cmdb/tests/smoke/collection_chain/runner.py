@@ -268,6 +268,19 @@ class OwnershipLedger:
             )
         self._resources.append((kind, identifier, owner_run_id or self.run_id))
 
+    def contains(self, kind: str, identifier: str) -> bool:
+        return any(
+            resource_kind == kind and resource_id == identifier
+            for resource_kind, resource_id, _ in self._resources
+        )
+
+    def identifiers(self, kind: str) -> set[str]:
+        return {
+            identifier
+            for resource_kind, identifier, _ in self._resources
+            if resource_kind == kind
+        }
+
     def cleanup(self, remover: Callable[[str, str], None]) -> None:
         for kind, identifier, owner in reversed(self._resources):
             if owner != self.run_id:
@@ -295,6 +308,7 @@ class CollectionChainSmokeRunner:
         "nats": "healthy",
         "victoriametrics": "healthy",
         "falkordb": "healthy",
+        "telegraf": "healthy",
     }
     _PUBLISHED_PORTS = {
         "nats": (4222, "nats"),
@@ -425,6 +439,7 @@ class CollectionChainSmokeRunner:
         nats_url = urlparse(self.published_endpoint("nats", 4222))
         vm_url = self.published_endpoint("victoriametrics", 8428)
         metric = "cmdb_collection_smoke_canary"
+        queried_metric = f"{metric}_value"
         line = (
             f"{metric},run_id={context.settings.run_id} value=1i "
             f"{time.time_ns()}\n"
@@ -437,9 +452,11 @@ class CollectionChainSmokeRunner:
             subject = f"metrics.{context.settings.run_id}".encode()
             publish_nats_canary(connection, subject=subject, payload=line)
 
-        query = quote(f'{metric}{{run_id="{context.settings.run_id}"}}')
+        query = quote(
+            f'{queried_metric}{{run_id="{context.settings.run_id}"}}'
+        )
         with urlopen(
-            f"{vm_url}/api/v1/query?query={query}",
+            f"{vm_url}/api/v1/query?nocache=1&query={query}",
             timeout=self.settings.command_timeout,
         ) as response:
             payload = json.loads(response.read(1_048_577))
@@ -448,13 +465,16 @@ class CollectionChainSmokeRunner:
 
     def _wait_until_healthy(self) -> None:
         deadline = self._monotonic() + self.settings.startup_timeout
+        last_status = ""
         while self._monotonic() < deadline:
             result = self._compose("ps", "--format", "json", check=False)
+            last_status = result.stderr or result.stdout
             if result.returncode == 0 and self._services_are_ready(result.stdout):
                 return
             self._wait(self.settings.poll_interval)
         raise SmokeTimeoutError(
-            f"Compose 服务未在 {self.settings.startup_timeout:g}s 内达到健康状态"
+            f"Compose 服务未在 {self.settings.startup_timeout:g}s 内达到健康状态: "
+            f"{last_status[:4096]}"
         )
 
     def _services_are_ready(self, output: str) -> bool:
@@ -479,7 +499,7 @@ class CollectionChainSmokeRunner:
         }
         if any(states.get(service) != health for service, health in self._REQUIRED_HEALTH.items()):
             return False
-        return states.get("telegraf") in {"running", "healthy"}
+        return True
 
     def _capture_logs(self) -> None:
         command = self._compose_command(

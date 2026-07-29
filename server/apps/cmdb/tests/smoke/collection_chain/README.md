@@ -22,6 +22,9 @@ pytest/CI 默认不启动 Docker；只有显式设置 `CMDB_COLLECTION_SMOKE=1` 
 应在受信任 CI 中拉取多架构 manifest 后，将对应 digest 补入此文件和 Compose，
 不能猜测 digest。
 
+真实运行设置了 `pull_policy: never`，只允许使用已按上述流程预拉取、核验的固定
+镜像，防止测试期间隐式访问镜像仓库。
+
 ## 本地安全合同
 
 ```bash
@@ -49,6 +52,8 @@ docker compose \
 ```bash
 CMDB_COLLECTION_SMOKE=1 \
 CMDB_SMOKE_RUN_ID=cmdb-a1b2c3d4 \
+DB_ENGINE=sqlite \
+DB_NAME=:memory: \
 uv run pytest -q -o addopts='' \
   apps/cmdb/tests/smoke/collection_chain/test_collection_chain.py
 ```
@@ -80,8 +85,9 @@ project 执行 `down --remove-orphans`。Compose 使用 tmpfs，不创建持久 
 `${COMPOSE_PROJECT_NAME}_default` 的网络不存在。若业务与清理同时失败，运行器用
 `ExceptionGroup` 同时保留两类异常，不能以清理异常覆盖业务根因。
 
-VictoriaMetrics 使用 `-influxSkipSingleField`，因此 canary 的单字段 `value`
-保持原 measurement 名；查询不会错误寻找自动追加的 `_value` 后缀。
+VictoriaMetrics 保持生产 Influx 字段后缀语义：业务行的 `gauge` 字段形成
+`*_gauge` 指标，专用 canary 的 `value` 字段形成 `*_value` 指标。不得使用
+`-influxSkipSingleField` 改写生产插件查询的指标名。
 
 ## Task 9 接入点
 
@@ -95,4 +101,7 @@ Task 9 在 `CollectionChainSmokeRunner.run(workload)` 的 workload 中接入七�
 - 容器端口通过 `docker compose port` 查询，不写固定宿主端口；
 - 用有界查询轮询等待 VM/图库可见，不允许依赖固定睡眠。
 
-Task 9 完成前，本目录不声称七个业务对象已通过真实 smoke。
+workload 会先重跑 Stargazer 全部来源合同，再投递已由合同证明的冻结 Line
+Protocol；最终按独立 Lane B Golden 精确比较真实 FalkorDB 节点字段和关联边。
+2026-07-29 使用唯一 project `cmdb-collection-29b5c8d9` 完成验证：
+`1 passed in 106.35s`，随后确认该 project 容器和网络均为零残留。

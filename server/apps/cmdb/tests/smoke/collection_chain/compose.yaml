@@ -1,6 +1,7 @@
 services:
   nats:
     image: nats:2.10.26-alpine
+    pull_policy: never
     command: ["-js", "-m", "8222", "--store_dir", "/data"]
     ports:
       - "127.0.0.1::4222"
@@ -16,10 +17,10 @@ services:
 
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.115.0
+    pull_policy: never
     command:
       - "-storageDataPath=/storage"
       - "-retentionPeriod=1d"
-      - "-influxSkipSingleField"
     ports:
       - "127.0.0.1::8428"
     tmpfs:
@@ -34,6 +35,7 @@ services:
 
   falkordb:
     image: falkordb/falkordb:v4.4.0
+    pull_policy: never
     ports:
       - "127.0.0.1::6379"
     tmpfs:
@@ -48,6 +50,7 @@ services:
 
   telegraf:
     image: telegraf:1.34.0-alpine
+    pull_policy: never
     depends_on:
       nats:
         condition: service_healthy
@@ -56,7 +59,12 @@ services:
     configs:
       - source: telegraf_config
         target: /etc/telegraf/telegraf.conf
-    mem_limit: 192m
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    mem_limit: 384m
     cpus: 0.50
 
 configs:

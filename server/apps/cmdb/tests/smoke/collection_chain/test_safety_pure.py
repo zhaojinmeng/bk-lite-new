@@ -76,6 +76,16 @@ def test_ledger_never_removes_resources_owned_by_another_run() -> None:
     assert ledger.skipped == [("graph_entity", "node-1")]
 
 
+def test_ledger公开只读资源查询而不泄露内部存储() -> None:
+    ledger = OwnershipLedger("cmdb-a1b2c3d4")
+    ledger.record("graph_entity", "node-1")
+    ledger.record("graph_edge", "edge-1")
+
+    assert ledger.contains("graph_entity", "node-1")
+    assert not ledger.contains("graph_entity", "missing")
+    assert ledger.identifiers("graph_edge") == {"edge-1"}
+
+
 def test_runner_times_out_and_still_cleans_up(tmp_path: Path) -> None:
     commands: list[list[str]] = []
 
@@ -127,7 +137,7 @@ def test_workload_failure_preserves_evidence_and_cleans_exact_project(tmp_path: 
                     '[{"Service":"nats","Health":"healthy"},'
                     '{"Service":"victoriametrics","Health":"healthy"},'
                     '{"Service":"falkordb","Health":"healthy"},'
-                    '{"Service":"telegraf","State":"running"}]'
+                    '{"Service":"telegraf","Health":"healthy"}]'
                 ),
                 "",
             )
@@ -165,7 +175,7 @@ def test_compose_commands_never_use_wide_prune_or_down_volumes(tmp_path: Path) -
                     '[{"Service":"nats","Health":"healthy"},'
                     '{"Service":"victoriametrics","Health":"healthy"},'
                     '{"Service":"falkordb","Health":"healthy"},'
-                    '{"Service":"telegraf","State":"running"}]'
+                    '{"Service":"telegraf","Health":"healthy"}]'
                 ),
                 "",
             )
@@ -197,7 +207,7 @@ def test_runner_only_removes_ledger_resources_owned_by_current_run(tmp_path: Pat
                     '[{"Service":"nats","Health":"healthy"},'
                     '{"Service":"victoriametrics","Health":"healthy"},'
                     '{"Service":"falkordb","Health":"healthy"},'
-                    '{"Service":"telegraf","State":"running"}]'
+                    '{"Service":"telegraf","Health":"healthy"}]'
                 ),
                 "",
             )
@@ -242,7 +252,7 @@ def test_log_capture_failure_cannot_prevent_compose_cleanup(tmp_path: Path) -> N
                     '[{"Service":"nats","Health":"healthy"},'
                     '{"Service":"victoriametrics","Health":"healthy"},'
                     '{"Service":"falkordb","Health":"healthy"},'
-                    '{"Service":"telegraf","State":"running"}]'
+                    '{"Service":"telegraf","Health":"healthy"}]'
                 ),
                 "",
             )
