@@ -31,7 +31,7 @@ REDIS_ADDITIONS = {
         True,
         False,
         None,
-        "684",
+        "",
         False,
         "occasional",
     ),
@@ -44,7 +44,7 @@ REDIS_ADDITIONS = {
         True,
         False,
         None,
-        "684",
+        "",
         False,
         "occasional",
     ),
@@ -57,7 +57,7 @@ REDIS_ADDITIONS = {
         True,
         False,
         None,
-        "684",
+        "",
         False,
         "occasional",
     ),
@@ -70,7 +70,7 @@ REDIS_ADDITIONS = {
         True,
         False,
         None,
-        "684",
+        "",
         False,
         "occasional",
     ),
@@ -84,9 +84,9 @@ DOCKER_ADDITION = (
     True,
     False,
     None,
-    "684",
+    "",
     False,
-    "684",
+    "occasional",
 )
 CONSUL_ATTR_IDS = [
     "inst_name",
@@ -105,6 +105,23 @@ CONSUL_ATTR_IDS = [
     "collect_time",
     "collect_task",
 ]
+CONSUL_FRESHNESS = {
+    "inst_name": "",
+    "organization": "",
+    "ip_addr": "occasional",
+    "port": "occasional",
+    "tag": "",
+    "version": "occasional",
+    "install_path": "occasional",
+    "data_dir": "occasional",
+    "conf_path": "occasional",
+    "role": "occasional",
+    "operator": "occasional",
+    "bak_operator": "occasional",
+    "auto_collect": "",
+    "collect_time": "",
+    "collect_task": "",
+}
 
 
 def _digest(value) -> str:
@@ -180,3 +197,14 @@ def test_consul_字段集合完整且无额外行():
     assert rows[0][:8] == ["英文名", "名称", "类型", "数据配置", "分组", "是否唯一", "是否可编辑", "是否必填"]
     assert rows[1][:8] == ["attr_id", "attr_name", "attr_type", "option", "attr_group", "is_only", "editable", "is_required"]
     assert [row[0] for row in rows[2:]] == CONSUL_ATTR_IDS
+    expected_prompts = {attr_id: "" for attr_id in CONSUL_ATTR_IDS}
+    expected_prompts["tag"] = None
+    assert {row[0]: row[9] for row in rows[2:]} == expected_prompts
+    assert {row[0]: row[11] for row in rows[2:]} == CONSUL_FRESHNESS
+
+
+def test_新增字段不含错误占位值():
+    workbook = openpyxl.load_workbook(MODEL_CONFIG, read_only=True, data_only=False)
+
+    for sheet_name in ("attr-redis", "attr-docker", "attr-consul"):
+        assert all(value != "684" for row in _rows(workbook, sheet_name) for value in row)
